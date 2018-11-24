@@ -83,17 +83,11 @@ void actuateMotors(uint16_t period, uint16_t num_cycles, bool forward, String mo
       // ASSUME DIR = HIGH goes forward
       if (forward){
         digitalWrite(12,HIGH);
-        for (uint16_t i = 0; i < num_cycles; i++) {
-          delay(delayTime);
-          digitalWrite(11,HIGH);
-          delay(delayTime);
-          digitalWrite(11,LOW);
-          delay(delayTime);
-        }
       }
       else{
         digitalWrite(12,LOW);
-        for (uint16_t i = 0; i < num_cycles; i++) {
+        }
+      for (uint16_t i = 0; i < num_cycles; i++) {
           delay(delayTime);
           digitalWrite(11,HIGH);
           delay(delayTime);
