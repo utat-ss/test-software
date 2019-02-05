@@ -20,6 +20,7 @@ from multiprocessing import Process
 
 try:
     import serial
+    import serial.tools.list_ports
 except ImportError:
     print("Error: This program requires the pyserial module. To install " +
         "pyserial,\nvisit https://pypi.org/project/pyserial/ or run\n" +
@@ -39,10 +40,8 @@ def uart_offset():
 
 def read_board(ser):
     while True:
-        val = ser.readLine()
-        #Print given hex value
-        #hex_val = hex(int.from_bytes(in_bin, byteorder='little'))
-        print(ser.readline().decode("utf-8", errors='ignore'))
+        feedback = ser.readline().decode("utf-8", errors='ignore')
+        #print(':'.join(a+b for a,b in zip(feedback[::2],feedback[1:2])))
 
 if __name__ == "__main__":
     # Detects if correct python version is being run
@@ -55,50 +54,27 @@ if __name__ == "__main__":
         print("Unknown error. Exiting....")
         sys.exit(1)
 
-    # It is necessary for the user to specify the programming port and appropriate directory
-    # In most cases, this should be the tests directory
-    # The uart port only needs to be specified when it is not able to be inferred from the
-    # uart_offset() method
-    parser = argparse.ArgumentParser(description=harness_description)
-    # Method arguments include (in order), expected shell text, name of that argument (used below),
-    # nargs specifies the number of arguments, with '+' inserting arguments of that type into a list
-    # required is self-explanatory, metavar assigns a displayed name to each argument when using the help argument
-    parser.add_argument('-p', '--prog', nargs='+', required=True,
-            metavar=('port1', 'port2'),
-            help='list of programming ports')
-    parser.add_argument('-u', '--uart', nargs='+', required=False,
-            metavar=('uart1', 'uart2'), default=[],
-            help='list of UART ports')
-    parser.add_argument('-d', '--test-dir', required=True,
-            metavar='test_dir',
-            help='directory in which to search for tests') #I DON"T THINK THIS IS NEEDED?
+    #Get ports
+    ports = list(serial.tools.list_ports.comports())
 
-    # Converts strings to objects, which are then assigned to variables below
-    args = parser.parse_args()
-    test_path = args.test_dir
-    port = args.prog
-    uart = args.uart
-
-    # If there is no uart argument, add port using uart offset
-    # This is done by removing the last digit and adding uart_offset()
-    # Then, it adds it to the uart variable (list)
-    # However, this will not work for cases when port ends in 8 or 9
-    if len(uart) == 0:
-        for p in port:
-            (head, tail) = os.path.split(p)
-            tail = tail[:-1] + str(int(tail[-1]) + uart_offset())
-            uart.append(os.path.join(head, tail))
-
-    #Find ports
     baud_rate = 9600
 
     print("Transceiver simulation starting...")
 
+    ser = ['' for x in range (2)] #There are 2 ports in this project, no more, no less
     i = 0
-    for p in port:
-        ser[i] = serial.Serial(p, baud_rate, timeout = None)
+    for p in ports:
+        if os.name == 'posix': #Mac, linux system
+            if p[0].endswith('4'): #UART Port
+                ser[i] = serial.Serial(p[0], baud_rate, timeout = None)
+                i += 1
+        elif os.name == 'nt': #Windows
+            ser[i] = serial.Serial(p[i], baud_rate, timeout = None) #TODO: Check if this is wrong
+            i += 1
 
-    proc = Process(target = read_board, args=(ser[0]))
+    print("(Connect Coolterm to) Reading board info from", ser[0].port)
+    print("Writing info to board through", ser[1].port)
+    proc = Process(target = read_board, args=(ser[0],))
     proc.start() #Start reading from board
 
     cmd = None #Command to board
@@ -107,15 +83,10 @@ if __name__ == "__main__":
         if cmd == ("quit"):
             proc.terminate()
         else:
-            cmd.split(":")
-            for i in range (len(cmd)):
-                cmd[i] = int(cmd[i], 16) #Convert to hex number
-                #cmd = "".join(cmd) #Made cmd one string
-                #bytes.fromhex(cmd) Gives \xAA\x0A\x0B etc
-                ser[1].to_bytes(cmd[i]) #Send hex command
-                #ser[1].write(b"%s" % cmd[i])
-                #ser[1].write(bytes(cmd[i]))
+            bytes_cmd = bytes(cmd+"\r\n", 'utf-8')
+            ser[1].write(bytes_cmd)
 
-for i in range len(port):
-    ser[i].close()
-print("Quit Transceiver Simulator")
+
+    for i in range (2):
+        ser[i].close()
+    print("Quit Transceiver Simulator")
