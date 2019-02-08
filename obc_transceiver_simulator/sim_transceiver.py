@@ -9,14 +9,14 @@
 # On Mac, port numbers can be found by using the command 'ls /dev/tty.*' in terminal
 
 from __future__ import print_function
-import subprocess
-import argparse
 import select
 import time
 import sys
 import os
 import re
 from multiprocessing import Process
+import codecs
+import io
 
 try:
     import serial
@@ -37,11 +37,12 @@ def uart_offset():
         return 2
     elif os.name == 'nt':
         return -1
-
+        S
 def read_board(ser):
     while True:
-        feedback = ser.readline().decode("utf-8", errors='ignore')
-        #print(':'.join(a+b for a,b in zip(feedback[::2],feedback[1:2])))
+        bytes_read = ser.readline().decode("utf-8", errors='ignore')
+        print(bytes_read)
+        print(':'.join([bytes_read[i:i+2] for i in range(0, len(bytes_read), 2)]))
 
 if __name__ == "__main__":
     # Detects if correct python version is being run
@@ -61,19 +62,21 @@ if __name__ == "__main__":
 
     print("Transceiver simulation starting...")
 
-    ser = ['' for x in range (2)] #There are 2 ports in this project, no more, no less
+    ser = [0] #1 port is used
     i = 0
     for p in ports:
-        if os.name == 'posix': #Mac, linux system
-            if p[0].endswith('4'): #UART Port
-                ser[i] = serial.Serial(p[0], baud_rate, timeout = None)
-                i += 1
-        elif os.name == 'nt': #Windows
-            ser[i] = serial.Serial(p[i], baud_rate, timeout = None) #TODO: Check if this is wrong
-            i += 1
+        if os.name == 'posix' and p[0].endswith('4'): #Mac, linux system, UART port
+            try :
+                ser[0] = serial.Serial(p[0], baud_rate, timeout = 5)
+            except serial.SerialException as e:
+                print("Port " + p[0] + " is in use")
+        elif os.name == 'nt' and p[0].startswith('COM'): #Windows
+            try :
+                ser[0] = serial.Serial(p[0], baud_rate, timeout = None)
+            except serial.SerialException as e:
+                print("Port " + p[0] + " is in use")
 
-    print("(Connect Coolterm to) Reading board info from", ser[0].port)
-    print("Writing info to board through", ser[1].port)
+    print("Reading and writing board info from" + ser[0].port)
     proc = Process(target = read_board, args=(ser[0],))
     proc.start() #Start reading from board
 
@@ -83,10 +86,12 @@ if __name__ == "__main__":
         if cmd == ("quit"):
             proc.terminate()
         else:
-            bytes_cmd = bytes(cmd+"\r\n", 'utf-8')
-            ser[1].write(bytes_cmd)
+            try:
+                bytes_cmd = codecs.decode(cmd, 'hex')
+            except:
+                print("ERROR! Enter an even lengthed, hexadecimal value")
+            else: #Error did not occur
+                ser[0].write(bytes_cmd)
 
-
-    for i in range (2):
-        ser[i].close()
+    ser[0].close()
     print("Quit Transceiver Simulator")
