@@ -9,14 +9,11 @@
 # On Mac, port numbers can be found by using the command 'ls /dev/tty.*' in terminal
 
 from __future__ import print_function
-import select
+from multiprocessing import Process
 import time
 import sys
 import os
-import re
-from multiprocessing import Process
 import codecs
-import io
 
 try:
     import serial
@@ -28,21 +25,16 @@ except ImportError:
         "in the command line.")
     sys.exit(1)
 
-# This function assumes an offset between the programming and uart ports of 2 for
-# mac or linux devices (posix)(i.e. uart is 2 more than programming port), or -1 for windows (nt)
-# devices. Mac USB serial ports should be of the form /dev/tty.usbmodem00xxxxxx,
-# while windows ports have the form COMx.
-def uart_offset():
-    if os.name == 'posix':
-        return 2
-    elif os.name == 'nt':
-        return -1
-        S
 def read_board(ser):
     while True:
         bytes_read = ser.readline().decode("utf-8", errors='ignore')
-        print(bytes_read)
-        print(':'.join([bytes_read[i:i+2] for i in range(0, len(bytes_read), 2)]))
+        if bytes_read != '': #If not a blank line
+            length = len(bytes_read)
+            if length % 2 == 0: #Even length hex value returned
+                print(':'.join([bytes_read[i:i+2] for i in range(0, length, 2)]))
+            else:
+                print(bytes_read[0] + ':', end = '')
+                print(':'.join([bytes_read[i:i+2] for i in range(1, length, 2)]))
 
 if __name__ == "__main__":
     # Detects if correct python version is being run
