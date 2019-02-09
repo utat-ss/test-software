@@ -1,12 +1,13 @@
 # Transceiver simulator that uses python/terminal consol
 # Input: String from serial.read()
 # Output to microcontroller: hex/bytes using serial.write()
+#
+# Uses processes (versus threads) to execute two functions, read_board and main
+# at once
+#
+# By: Brytni Richards
 
-# Use the following command to run the harness from the lib-common local directory:
-# python ./bin/harness.py -p <Programming port> -u <UART port> -d tests
-
-# When the uart port (-u option) is not specified, the program guesses using uart_offset()
-# On Mac, port numbers can be found by using the command 'ls /dev/tty.*' in terminal
+# TODO: Check if this program works for windows computers
 
 from __future__ import print_function
 from multiprocessing import Process
@@ -25,12 +26,16 @@ except ImportError:
         "in the command line.")
     sys.exit(1)
 
+# Process to poll for information from the board. It prints out values
+# in the string buffer every 5 seconds. Otherwise, it does not print out data
+# Values read from the board are assumed to be bytes
 def read_board(ser):
     while True:
+        # Read from serial
         bytes_read = ser.readline().decode("utf-8", errors='ignore')
-        if bytes_read != '': #If not a blank line
+        if bytes_read != '': # If not a blank line
             length = len(bytes_read)
-            if length % 2 == 0: #Even length hex value returned
+            if length % 2 == 0: # Even length hex value returned
                 print(':'.join([bytes_read[i:i+2] for i in range(0, length, 2)]))
             else:
                 print(bytes_read[0] + ':', end = '')
@@ -47,43 +52,44 @@ if __name__ == "__main__":
         print("Unknown error. Exiting....")
         sys.exit(1)
 
-    #Get ports
+    #Get port names
     ports = list(serial.tools.list_ports.comports())
 
     baud_rate = 9600
 
     print("Transceiver simulation starting...")
 
-    ser = [0] #1 port is used
-    i = 0
+    ser = [0] # One port is used
     for p in ports:
-        if os.name == 'posix' and p[0].endswith('4'): #Mac, linux system, UART port
+        #Mac, linux system, UART port
+        if os.name == 'posix' and p[0].endswith('4'):
             try :
                 ser[0] = serial.Serial(p[0], baud_rate, timeout = 5)
             except serial.SerialException as e:
                 print("Port " + p[0] + " is in use")
-        elif os.name == 'nt' and p[0].startswith('COM'): #Windows
+        #Windows
+        elif os.name == 'nt' and p[0].startswith('COM'):
             try :
-                ser[0] = serial.Serial(p[0], baud_rate, timeout = None)
+                ser[0] = serial.Serial(p[0], baud_rate, timeout = 5)
             except serial.SerialException as e:
                 print("Port " + p[0] + " is in use")
 
     print("Reading and writing board info from" + ser[0].port)
     proc = Process(target = read_board, args=(ser[0],))
-    proc.start() #Start reading from board
+    proc.start() #Start process/reading from board
 
-    cmd = None #Command to board
-    while cmd != ("quit"):
-        cmd = input()
+    cmd = None # Command to board
+    while cmd != ("quit"): # Enter quit to stop program
+        cmd = input() # User input typed through terminal consol
         if cmd == ("quit"):
             proc.terminate()
         else:
             try:
-                bytes_cmd = codecs.decode(cmd, 'hex')
+                bytes_cmd = codecs.decode(cmd, 'hex') # Make input a hex type
             except:
                 print("ERROR! Enter an even lengthed, hexadecimal value")
             else: #Error did not occur
                 ser[0].write(bytes_cmd)
 
-    ser[0].close()
+    ser[0].close() # Close serial port when program done
     print("Quit Transceiver Simulator")
