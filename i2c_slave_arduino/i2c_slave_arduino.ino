@@ -30,7 +30,7 @@ void loop() {
 // function that executes whenever data is requested by master
 // this function is registered as an event, see setup()
 void requestEvent() {
-    Serial.print("request");
+    Serial.println("sent hello");
     Wire.write("hello"); // respond with message of 5 bytes
     // as expected by master
 }
@@ -38,9 +38,10 @@ void requestEvent() {
 // function that executes whenever data is received from master
 // this function is registered as an event, see setup()
 void receiveEvent(int howMany) {
-    Serial.print("receive");
+    Serial.print("received ");
     while (Wire.available() > 0) { // loop through all but the last
         char c = Wire.read(); // receive byte as a character
         Serial.print(c);         // print the character
     }
+    Serial.println();
 }
