@@ -41,6 +41,31 @@ def read_board(ser):
                 print(bytes_read[0] + ':', end = '')
                 print(':'.join([bytes_read[i:i+2] for i in range(1, length, 2)]))
 
+def message(type, num_chars, arg1, arg2 = None):
+    print("Have yet to implement")
+    #Special character to indicate start of message
+    start = b'\x00'
+    #TODO change length to binary
+
+    #convert arguement into binary hexadecimal
+    bytes_data = codecs.decode(arg1, 'hex')
+
+    if arg2 != None:
+        bytes_data += codecs.decode(arg2, 'hex')
+
+    bytes_message = start + bytes_data
+
+    ser[0].write(bytes_cmd)
+
+def block_message(sender):
+    print("Have yet to implement")
+
+def memory_message():
+    print("Have yet to implement")
+
+def heater_message():
+    print("have yet to implement")
+
 if __name__ == "__main__":
     # Detects if correct python version is being run
     if sys.version_info[0] == 2:
@@ -62,7 +87,7 @@ if __name__ == "__main__":
     ser = [0] # One port is used
     for p in ports:
         #Mac, linux system, UART port
-        if os.name == 'posix' and p[0].endswith('4'):
+        if os.name == 'posix' and p[0].startswith ('/dev/tty') and p[0].endswith('4'):
             try :
                 ser[0] = serial.Serial(p[0], baud_rate, timeout = 5)
             except serial.SerialException as e:
@@ -80,16 +105,44 @@ if __name__ == "__main__":
 
     cmd = None # Command to board
     while cmd != ("quit"): # Enter quit to stop program
+        print("Enter a number corresponding to the command")
+        print("1. Status/Ping")
+        print("2. EPS Housekeeping")
+        print("3. PAY Housekeeping")
+        print("4. PAY Optical")
+        print("5. PAY Control")
+        print("6. Experiment")
+        print("7. Memory")
+        print("8. Heater DAC Setpoints")
         cmd = input() # User input typed through terminal consol
+
         if cmd == ("quit"):
             proc.terminate()
+        elif cmd == ("1"):
+            message(0, 4, "UTAT")
+        elif cmd == ("2"):
+            block_message("EPS")
+        elif cmd == ("3"):
+            block_message("PAY H")
+        elif cmd == ("4"):
+            block_message("PAY O")
+        elif cmd == ("5"):
+            print("Type 0 to move plate down, 1 to move up")
+            option = input() #Failsafe this
+            message(0x0A, option)
+        elif cmd == ("6"):
+            print("For automatic data collection:")
+            print("Type 0 to disable, 1 to enable")
+            option = input() #Failsafe this
+            message(0x0B, option)
+        elif cmd == ("7"):
+            memory_message()
+        elif cmd == ("8"):
+            heater_message()
         else:
-            try:
-                bytes_cmd = codecs.decode(cmd, 'hex') # Make input a hex type
-            except:
-                print("ERROR! Enter an even lengthed, hexadecimal value")
-            else: #Error did not occur
-                ser[0].write(bytes_cmd)
+            print("Invalid option")
+
+        time.sleep(2) #Wait for reply
 
     ser[0].close() # Close serial port when program done
     print("Quit Transceiver Simulator")
