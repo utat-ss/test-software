@@ -9,6 +9,9 @@
 
 # TODO: Check if this program works for windows computers
 
+# Note: This program IS NOT completely error-proof. Incorrect messages may be
+# sent to the microcontroller if the user enters wrong values
+
 from __future__ import print_function
 from multiprocessing import Process
 import time
@@ -44,13 +47,10 @@ def read_board(ser):
 #Type and num_chars must be an integer
 #if string is true, s are string hexadecimal values
 def message(type, num_chars, string=False, arg1=None, arg2 = None):
-    print("Have yet to implement")
     #Special character to indicate start of message
     start = b'\x00'
     #checksum = b'\xFF'
 
-    if num_chars % 2 != 0: #message must be even-bit lengthed
-        num_chars += 1
     #change length and type to binary
     byteType = bytes([type])
     byteLen = bytes([num_chars])
@@ -73,11 +73,15 @@ def message(type, num_chars, string=False, arg1=None, arg2 = None):
             bytes_message += arg2
 
     #Pad unused message part with zeros
-    bytes_message += bytes(4 - len(arg2))
+    if num_chars > 4 or num_chars == 0:
+        bytes_message += bytes(8 - num_chars)
+    else:
+        bytes_message += bytes(4)
 
     #bytes_message +=  checksum
 
     ser[0].write(bytes_message)
+
 
 # prompt is the message information
 # Valid len is the amount of characters that the user must type
@@ -85,8 +89,8 @@ def message(type, num_chars, string=False, arg1=None, arg2 = None):
 def argument(prompt, valid_len, string, max_val = float("inf")):
     while True:
         ret = input(prompt)
-        if len(usr) != valid_len:
-            print("Error! Input must be ", valid_len, " characters long")
+        if len(ret) != valid_len:
+            print("Error! Input must be ", valid_len, " character(s) long")
         elif string == False:
             try : #Check to see if input is an integer
                 int(ret)
@@ -94,23 +98,14 @@ def argument(prompt, valid_len, string, max_val = float("inf")):
                 print("Error! Input must be an integer")
             else:
                 if int(ret) > max_val:
-                    print("Error! Input value must be less than", max_val)
+                    print("Error! Input value must be equal or less than", max_val)
                 else: #Valid message and not wanted as a string
-                    ret = (ret).to_bytes(valid_len, byteorder = "little")
+                    ret = (int(ret)).to_bytes(valid_len, byteorder = "little")
                     break
         else: #Input wanted as string and valid
             break
 
     return ret
-
-def block_message(sender):
-    print("Have yet to implement")
-
-def memory_message():
-    print("Have yet to implement")
-
-def heater_message():
-    print("have yet to implement")
 
 if __name__ == "__main__":
     # Detects if correct python version is being run
@@ -125,6 +120,7 @@ if __name__ == "__main__":
 
     #Get port names
     ports = list(serial.tools.list_ports.comports())
+
 
     baud_rate = 9600
 
@@ -145,9 +141,11 @@ if __name__ == "__main__":
             except serial.SerialException as e:
                 print("Port " + p[0] + " is in use")
 
+
     print("Reading and writing board info from" + ser[0].port)
     proc = Process(target = read_board, args=(ser[0],))
     proc.start() #Start process/reading from board
+
 
     cmd = None # Command to board
     while cmd != ("quit"): # Enter quit to stop program
@@ -175,13 +173,13 @@ if __name__ == "__main__":
         elif cmd == ("3"): #Get RTC
             message(2, 0)
         elif cmd == ("4"): #Set RTC
-            arg1 = argument("Type in year", 2, True)
-            arg1 += argument("Type in month", 2, True)
-            arg1 += argument("Type in day", 2, True)
+            arg1 = argument("Type in year: ", 2, True)
+            arg1 += argument("Type in month: ", 2, True)
+            arg1 += argument("Type in day: ", 2, True)
 
-            arg2 = argument("Type in time in hours", 2, True)
-            arg2 += argument("Type in time in minutes", 2, True)
-            arg2 += argument("Type in time in seconds", 2, True)
+            arg2 = argument("Type in time in hours: ", 2, True)
+            arg2 += argument("Type in time in minutes: ", 2, True)
+            arg2 += argument("Type in time in seconds: ", 2, True)
             message (3, 7, True, arg1, arg2)
         elif cmd == ("5"): #Memory
             print("Enter a number corresponding to the command")
@@ -191,15 +189,15 @@ if __name__ == "__main__":
             next_cmd = input()
 
             if next_cmd == ("1"):
-                arg1 = argument("Type starting address (int): ", 4, False, 65526)
-                arg2 = argument("Type ending address: ", 4, False, 65526)
-                message(4, 8, False, arg1, arg2)
+                arg1 = argument("Type starting address (hex): ", 4, True)
+                arg2 = argument("Type ending address: ", 4, True)
+                message(4, 8, True, arg1, arg2)
             elif next_cmd == ("2"):
-                arg1 = argument("Type starting address (int): ", 4, False, 65526)
-                arg2 = argument("Type ending address: ", 4, False, 65526)
-                message(5, 8, False, arg1, arg2)
+                arg1 = argument("Type starting address (hex): ", 4, True)
+                arg2 = argument("Type ending address: ", 4, True)
+                message(5, 8, True, arg1, arg2)
             elif next_cmd == ("3"):
-                arg1 = "0" + argument("Type in subsystem: ", 1, True)
+                arg1 = argument("Type in subsystem: ", 1, True) + "0"
                 arg2  = argument("Type in address (hex): ", 4, True)
                 message(18, 8, True, arg1, arg2)
             else:
@@ -222,7 +220,6 @@ if __name__ == "__main__":
                 arg2 = argument("Type block number: ", 4, False, 65526)
                 message(8, 8, False, arg1, arg2)
             elif next_cmd == ("4"):
-                arg1 = argument("Type block type: ", 1, False, 2)
                 message(19, 1, False, arg1)
             else:
                 print("Invalid command")
@@ -251,9 +248,9 @@ if __name__ == "__main__":
             print("2. Set PAY DAC Setpoints")
             next_cmd = input()
 
-            arg1 = argument("Type 0 or 1: ", 1, True)
-            arg2 = "0" #Because 12 bits isn't divisible by 8
-            arg2 += argument("Type setpoint (hex): ", 3, True)
+            arg1 = "0" + argument("Type 0 or 1: ", 1, True)
+            arg2 = argument("Type setpoint (hex): ", 3, True) + "0"
+
 
             if next_cmd == ("1"):
                 message(12, 7, True, arg1, arg2)
@@ -274,8 +271,8 @@ if __name__ == "__main__":
             print("2. Send CAN to PAY")
             next_cmd = input()
 
-            arg1 = argument("Type 1st 4 bytes of message (hex): ", 8, True)
-            arg2 = argument("Type last 4 bytes of message (hex): ", 8, True)
+            arg1 = argument("Type 1st 4 bytes of message (hex): ", 4, True)
+            arg2 = argument("Type last 4 bytes of message (hex): ", 4, True)
 
             if next_cmd == ("1"):
                 message(16, 8, True, arg1, arg2)
@@ -289,4 +286,5 @@ if __name__ == "__main__":
         time.sleep(1) #Wait for reply
 
     ser[0].close() # Close serial port when program done
+
     print("Quit Transceiver Simulator")
