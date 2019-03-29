@@ -21,6 +21,8 @@ import os
 import codecs
 import argparse
 
+from conversions import *
+
 try:
     import serial
     import serial.tools.list_ports
@@ -38,7 +40,7 @@ def block_type_consts():
     return "(EPS_HK = 0, PAY_HK = 1, PAY_OPT = 2)"
 
 def print_header(data):
-    print("block number = %d, error = %d, date = %s, time = %s" % (bytes_to_uint24(data[0:3]), data[3], bytes_to_string(data[4:7]), bytes_to_string(data[7:10])))
+    print("block number = %d, error = %d, date = %s, time = %s" % (bytes_to_uint24(data[0:3]), data[3], date_time_to_str(data[4:7]), date_time_to_str(data[7:10])))
 
 def data_to_fields(data):
     fields = []
@@ -55,20 +57,20 @@ def print_block(arg1, data):
 
     if arg1 == 0:
         print("EPS_HK")
-        print_field(fields, 0, "BB Vol", "%f V" % ...)
-        print_field(fields, 1, "BB Cur", "%f V" % ...)
-        print_field(fields, 2, "-Y Vol", "%f V" % ...)
-        print_field(fields, 3, "+X Vol", "%f V" % ...)
-        print_field(fields, 4, "+Y Vol", "%f V" % ...)
-        print_field(fields, 5, "-X Vol", "%f V" % ...)
-        print_field(fields, 6, "Bat Temp 1", "%f V" % ...)
-        print_field(fields, 7, "Bat Temp 2", "%f V" % ...)
-        print_field(fields, 8, "Bat Vol", "%f V" % ...)
-        print_field(fields, 9, "Bat Cur", "%f V" % ...)
-        print_field(fields, 10, "BT Cur", "%f V" % ...)
-        print_field(fields, 11, "BT Vol", "%f V" % ...)
-        print_field(fields, 12, "Bat Heater Setpoint 1", "%f V" % ...)
-        print_field(fields, 13, "Bat Heater Setpoint 2", "%f V" % ...)
+        print_field(fields, 0, "BB Vol", "%f V" % adc_raw_data_to_eps_vol(fields[0]))
+        print_field(fields, 1, "BB Cur", "%f A" % adc_raw_data_to_eps_cur(fields[1]))
+        print_field(fields, 2, "-Y Cur", "%f A" % adc_raw_data_to_eps_cur(fields[2]))
+        print_field(fields, 3, "+X Cur", "%f A" % adc_raw_data_to_eps_cur(fields[3]))
+        print_field(fields, 4, "+Y Cur", "%f A" % adc_raw_data_to_eps_cur(fields[4]))
+        print_field(fields, 5, "-X Cur", "%f A" % adc_raw_data_to_eps_cur(fields[5]))
+        print_field(fields, 6, "Bat Temp 1", "%f C" % adc_raw_data_to_therm_temp(fields[6]))
+        print_field(fields, 7, "Bat Temp 2", "%f C" % adc_raw_data_to_therm_temp(fields[7]))
+        print_field(fields, 8, "Bat Vol", "%f V" % adc_raw_data_to_eps_vol(fields[8]))
+        print_field(fields, 9, "Bat Cur", "%f A" % adc_raw_data_to_eps_cur(fields[9]))
+        print_field(fields, 10, "BT Cur", "%f A" % adc_raw_data_to_eps_cur(fields[10]))
+        print_field(fields, 11, "BT Vol", "%f V" % adc_raw_data_to_eps_vol(fields[11]))
+        print_field(fields, 12, "Bat Heater Setpoint 1", "%f C" % therm_res_to_temp(therm_vol_to_res( dac_raw_data_to_vol(fields[12]))))
+        print_field(fields, 13, "Bat Heater Setpoint 2", "%f C" % therm_res_to_temp(therm_vol_to_res( dac_raw_data_to_vol(fields[13]))))
         print_field(fields, 14, "IMU Acceleration X", "")
         print_field(fields, 15, "IMU Acceleration Y", "")
         print_field(fields, 16, "IMU Acceleration Z", "")
@@ -81,28 +83,28 @@ def print_block(arg1, data):
 
     if arg1 == 1:
         print("PAY_HK")
-        print_field(fields, 0, "Temperature", "%f C" % ...)
-        print_field(fields, 1, "Humidity", "%f %%RH" % ...)
-        print_field(fields, 2, "Pressure", "%f kPa" % ...)
-        print_field(fields, 3, "MF Temp 0", "%f C" % ...)
-        print_field(fields, 4, "MF Temp 1", "%f C" % ...)
-        print_field(fields, 5, "MF Temp 2", "%f C" % ...)
-        print_field(fields, 6, "MF Temp 3", "%f C" % ...)
-        print_field(fields, 7, "MF Temp 4", "%f C" % ...)
-        print_field(fields, 8, "MF Temp 5", "%f C" % ...)
-        print_field(fields, 9, "MF Temp 6", "%f C" % ...)
-        print_field(fields, 10, "MF Temp 7", "%f C" % ...)
-        print_field(fields, 11, "MF Temp 8", "%f C" % ...)
-        print_field(fields, 12, "MF Temp 9", "%f C" % ...)
-        print_field(fields, 13, "MF Heater Setpoint 1", "%f C" % ...)
-        print_field(fields, 14, "MF Heater Setpoint 2", "%f C" % ...)
+        print_field(fields, 0, "Temperature", "%f C" % temp_raw_data_to_temperature(fields[0]))
+        print_field(fields, 1, "Humidity", "%f %%RH" % hum_raw_data_to_humidity(fields[1]))
+        print_field(fields, 2, "Pressure", "%f kPa" % pres_raw_data_to_pressure(fields[2]))
+        print_field(fields, 3, "MF Temp 0", "%f C" % adc_raw_data_to_therm_temp(fields[3]))
+        print_field(fields, 4, "MF Temp 1", "%f C" % adc_raw_data_to_therm_temp(fields[4]))
+        print_field(fields, 5, "MF Temp 2", "%f C" % adc_raw_data_to_therm_temp(fields[5]))
+        print_field(fields, 6, "MF Temp 3", "%f C" % adc_raw_data_to_therm_temp(fields[6]))
+        print_field(fields, 7, "MF Temp 4", "%f C" % adc_raw_data_to_therm_temp(fields[7]))
+        print_field(fields, 8, "MF Temp 5", "%f C" % adc_raw_data_to_therm_temp(fields[8]))
+        print_field(fields, 9, "MF Temp 6", "%f C" % adc_raw_data_to_therm_temp(fields[9]))
+        print_field(fields, 10, "MF Temp 7", "%f C" % adc_raw_data_to_therm_temp(fields[10]))
+        print_field(fields, 11, "MF Temp 8", "%f C" % adc_raw_data_to_therm_temp(fields[11]))
+        print_field(fields, 12, "MF Temp 9", "%f C" % adc_raw_data_to_therm_temp(fields[12]))
+        print_field(fields, 13, "MF Heater Setpoint 1", "%f C" % therm_res_to_temp(therm_vol_to_res( dac_raw_data_to_vol(fields[13]))))
+        print_field(fields, 14, "MF Heater Setpoint 2", "%f C" % therm_res_to_temp(therm_vol_to_res( dac_raw_data_to_vol(fields[14]))))
         print_field(fields, 15, "Left Proximity", "")
         print_field(fields, 16, "Right Proximity", "")
 
     if arg1 == 2:
         print("PAY_OPT")
         for i in range(36):
-            print_field(fields, i, "Well %d" % i, "%f %%" % ...)
+            print_field(fields, i, "Well %d" % i, "%f V" % opt_adc_raw_data_to_vol(fields[i], 1))
 
 
 # Process to poll for information from the board. It prints out values
@@ -127,17 +129,27 @@ def print_block(arg1, data):
 #                 print("Received UART (msg):", bytes_to_string(msg))
 #                 decode_rx_msg(msg)
 
-def decode_rx_msg(msg):
-    if len(msg) < 11:
+def print_div():
+    print("-" * 80)
+
+def date_time_to_str(data):
+    return "%02d %02d %02d" % (data[0], data[1], data[2])
+
+def decode_rx_msg(enc_msg):
+    if len(enc_msg) < 11:
         print("Message too short")
         return
 
-    if msg[0] != 0:
+    if enc_msg[0] != 0:
         print("Bad start character")
-    if msg[1] != len(msg) - 2:
+        return
+    if enc_msg[1] != len(enc_msg) - 2:
         print("Bad length")
+        return
 
-    dec_msg = msg[2:]
+    print_div()
+    print("enc_msg:", bytes_to_string(enc_msg))
+    dec_msg = enc_msg[2:]
     print("dec_msg:", bytes_to_string(dec_msg))
 
     type = dec_msg[0]
@@ -145,16 +157,23 @@ def decode_rx_msg(msg):
     arg2 = bytes_to_uint32(dec_msg[5:9])
     data = dec_msg[9:]
 
-    print("type = %d (0x%x), arg1 = %d (0x%x), arg2 = %d (0x%x), data (%d bytes) = %s" % (type, type, arg1, arg1, arg2, arg2, len(data), bytes_to_string(data)))
+    print("type = %d (0x%x)" % (type, type))
+    print("arg1 = %d (0x%x)" % (arg1, arg1))
+    print("arg2 = %d (0x%x)" % (arg2, arg2))
+    print("data (%d bytes) = %s" % (len(data), bytes_to_string(data)))
 
     if type == 0x00:
         print("Status/ping")
     if type == 0x01:
         print("Restart/uptime")
-        print("restart count = %d, restart date = %s, restart time = %s, uptime = %d" % (bytes_to_uint32(data[0:4]), bytes_to_string(data[4:7]), bytes_to_string(data[7:10]), bytes_to_uint32(data[10:14])))
+        print("restart count =", bytes_to_uint32(data[0:4]))
+        print("restart date =", date_time_to_str(data[4:7]))
+        print("restart time =", date_time_to_str(data[7:10]))
+        print("uptime =", bytes_to_uint32(data[10:14]))
     if type == 0x02:
         print("Get RTC")
-        print("date = %s, time = %s" % (bytes_to_string(data[0:3]), bytes_to_string(data[3:6])))
+        print("date =", date_time_to_str(data[0:3]))
+        print("time =", date_time_to_str(data[3:6]))
     if type == 0x03:
         print("Set RTC")
     if type == 0x04:
@@ -187,12 +206,17 @@ def decode_rx_msg(msg):
         print("Reset")
     if type == 0x10:
         print("Send CAN message to EPS")
+        print("message =", bytes_to_string(data))
     if type == 0x11:
         print("Send CAN message to PAY")
+        print("message =", bytes_to_string(data))
     if type == 0x12:
         print("Read EEPROM")
     if type == 0x13:
         print("Get current block number")
+        print("block number = %d" % bytes_to_uint32(data[0:4]))
+
+    print_div()
 
 
 def string_to_bytes(s):
@@ -439,18 +463,18 @@ if __name__ == "__main__":
                 print("Invalid command")
 
         elif cmd == ("8"): #Heater DAC Setpoints
-            print("1. Set EPS DAC Setpoints")
-            print("2. Set PAY DAC Setpoints")
+            print("1. Set EPS DAC Setpoint")
+            print("2. Set PAY DAC Setpoint")
             next_cmd = input("Enter command number: ")
 
-            arg1 = input_int("Enter 0 (heater 1) or 1 (heater 2): ")
-            arg2 = float(input("Enter setpoint (in C): "))
-            TODO - convert
+            heater = input_int("Enter 1 (heater 1) or 2 (heater 2): ")
+            setpoint = float(input("Enter setpoint (in C): "))
+            arg2 = dac_vol_to_raw_data(therm_res_to_vol(therm_temp_to_res(setpoint)))
 
             if next_cmd == ("1"):
-                send_message(12, arg1, arg2)
+                send_message(12, heater - 1, arg2)
             elif next_cmd == ("2"):
-                send_message(13, arg1, arg2)
+                send_message(13, heater - 1, arg2)
             else:
                 print("Invalid command")
 
@@ -490,7 +514,7 @@ if __name__ == "__main__":
         # DO NOT DECODE IT WITH UTF-8, IT DISCARDS ANY CHARACTERS > 127
         # See https://www.avrfreaks.net/forum/serial-port-data-corrupted-when-sending-specific-pattern-bytes
         # See https://stackoverflow.com/questions/14454957/pyserial-formatting-bytes-over-127-return-as-2-bytes-rather-then-one
-        raw = ser.read(4096)
+        raw = ser.read(2 ** 16)
 
         if len(raw) > 0: # If not a blank line
             print("Received UART (raw):", bytes_to_string(raw))

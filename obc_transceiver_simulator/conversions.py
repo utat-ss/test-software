@@ -162,7 +162,7 @@ def dac_vol_to_raw_data(voltage):
     # Din = (Vout x 2^n) / (Vref x Gain)
     num = voltage * (1 << DAC_NUM_BITS)
     denom = DAC_VREF * DAC_VREF_GAIN
-    result = (num / denom)
+    result = int(num / denom)
 
     return result
 
@@ -305,4 +305,7 @@ voltage - in V
 returns - resistance (in kilo-ohms)
 '''
 def therm_vol_to_res(voltage):
-    return THERM_R_REF * (THERM_V_REF / voltage - 1)
+    try:
+        return THERM_R_REF * (THERM_V_REF / voltage - 1)
+    except ZeroDivisionError:
+        return 0
