@@ -14,7 +14,6 @@
 
 # https://learn.sparkfun.com/tutorials/terminal-basics/tips-and-tricks
 
-from __future__ import print_function
 from multiprocessing import Process
 import time
 import sys
@@ -32,10 +31,10 @@ except ImportError:
     sys.exit(1)
 
 def subsys_consts():
-    return " (OBC = 0, EPS = 1, PAY = 2)"
+    return "(OBC = 0, EPS = 1, PAY = 2)"
 
 def block_type_consts():
-    return " (EPS_HK = 0, PAY_HK = 1, PAY_OPT = 2)"
+    return "(EPS_HK = 0, PAY_HK = 1, PAY_OPT = 2)"
 
 def print_header(data):
     print("block number = %d, error = %d, date = %s, time = %s" % (bytes_to_uint24(data[0:3]), data[3], bytes_to_string(data[4:7]), bytes_to_string(data[7:10])))
@@ -117,20 +116,28 @@ def read_board(ser):
         bytes_read = bytes(str_read, 'utf-8')
 
         if str_read != '': # If not a blank line
-            print("Received UART:", str_read)
-            print("Received UART:", bytes_to_string(bytes_read))
+            print("Received UART (string):", str_read)
+            print("Received UART (hex):", bytes_to_string(bytes_read))
 
             decode_rx_msg(bytes_read)
 
 def decode_rx_msg(msg):
-    if len(msg) < 9:
+    if len(msg) < 11:
         print("Message too short")
         return
 
-    type = msg[0]
-    arg1 = bytes_to_uint32(msg[1:5])
-    arg2 = bytes_to_uint32(msg[5:9])
-    data = msg[9:]
+    if msg[0] != 0:
+        print("Bad start character")
+    if msg[1] != len(msg) - 2:
+        print("Bad length")
+
+    dec_msg = msg[2:]
+    print("dec_msg:", bytes_to_string(dec_msg))
+
+    type = dec_msg[0]
+    arg1 = bytes_to_uint32(dec_msg[1:5])
+    arg2 = bytes_to_uint32(dec_msg[5:9])
+    data = dec_msg[9:]
 
     print("type = %d (0x%x), arg1 = %d (0x%x), arg2 = %d (0x%x), data (%d bytes) = %s" % (type, type, arg1, arg1, arg2, arg2, len(data), bytes_to_string(data)))
 
@@ -228,14 +235,14 @@ def send_message(type, arg1=0, arg2=0, data=bytes(0)):
 # Sends data back as an int
 def input_int(prompt):
     while True:
-        in = input(prompt)
+        in_str = input(prompt)
 
         try: #Check to see if input is an integer
             # See if the user tried to type in hex
-            if in.startswith("0x"):
-                ret = int(in.strip("0x"), 16)
+            if in_str.startswith("0x"):
+                ret = int(in_str.lstrip("0x"), 16)
             else:
-                ret = int(in)
+                ret = int(in_str)
             return ret
         except serial.SerialException as e:
             print("Error! Input must be an integer or in hex")
@@ -337,11 +344,10 @@ if __name__ == "__main__":
             send_message (3, arg1, arg2)
 
         elif cmd == ("5"): #Memory
-            print("Enter a number corresponding to the command")
             print("1. Read Flash Memory")
             print("2. Erase Flash Memory")
             print("3. Read EEPROM")
-            next_cmd = input()
+            next_cmd = input("Enter command number: ")
 
             if next_cmd == ("1"):
                 arg1 = input_int("Enter starting address: ")
@@ -352,21 +358,20 @@ if __name__ == "__main__":
                 arg2 = input_int("Enter number of bytes: ")
                 send_message(5, arg1, arg2)
             elif next_cmd == ("3"):
-                arg1 = input_int("Enter subsystem: " + subsys_consts())
+                arg1 = input_int("Enter subsystem %s: " % subsys_consts())
                 arg2  = input_int("Enter address: ")
                 send_message(18,  arg1, arg2)
             else:
                 print("Invalid command")
 
         elif cmd == ("6"): #Blocks
-            print("Enter a number corresponding to the command")
             print("1. Collect Block")
             print("2. Read Local Block")
             print("3. Read Memory Block")
             print("4. Get Current Block number")
-            next_cmd = input()
+            next_cmd = input("Enter command number: ")
 
-            arg1 = input_int("Enter block type: " + block_type_consts())
+            arg1 = input_int("Enter block type %s: " % block_type_consts())
 
             if next_cmd == ("1"):
                 send_message(6, arg1)
@@ -381,18 +386,17 @@ if __name__ == "__main__":
                 print("Invalid command")
 
         elif cmd == ("7"): #Auto-Data Collection
-            print("Enter a number corresponding to the command")
             print("1. Enable/Disable")
             print("2. Period")
             print("3. Resync")
-            next_cmd = input()
+            next_cmd = input("Enter command number: ")
 
             if next_cmd == ("1"):
-                arg1 = input_int("Enter block type: ")
+                arg1 = input_int("Enter block type %s: " % block_type_consts())
                 arg2 = input_int("Disable (0) or Enable (1): ")
                 send_message(9, arg1, arg2)
             elif next_cmd == ("2"):
-                arg1 = input_int("Enter block type: ")
+                arg1 = input_int("Enter block type %s: " % block_type_consts())
                 arg2 = input_int("Enter period in seconds: ")
                 send_message(10, arg1, arg2)
             elif next_cmd == ("3"):
@@ -401,10 +405,9 @@ if __name__ == "__main__":
                 print("Invalid command")
 
         elif cmd == ("8"): #Heater DAC Setpoints
-            print("Enter a number corresponding to the command")
             print("1. Set EPS DAC Setpoints")
             print("2. Set PAY DAC Setpoints")
-            next_cmd = input()
+            next_cmd = input("Enter command number: ")
 
             arg1 = input_int("Enter 0 (heater 1) or 1 (heater 2): ")
             arg2 = float(input("Enter setpoint (in C): "))
@@ -422,15 +425,14 @@ if __name__ == "__main__":
             send_message(14, arg1)
 
         elif cmd == ("10"): #Reset
-            arg1 = input_int("Enter subsystem: " + subsys_consts)
+            arg1 = input_int("Enter subsystem %s: " % subsys_consts())
             send_message(15, arg1)
             # TODO
 
         elif cmd == ("11"): #CAN Messages
-            print("Enter a number corresponding to the command")
             print("1. Send CAN to EPS")
             print("2. Send CAN to PAY")
-            next_cmd = input()
+            next_cmd = input("Enter command number: ")
 
             msg = string_to_bytes(input("Enter 8 bytes: "))
             arg1 = bytes_to_uint32(msg[0:4])
@@ -446,7 +448,9 @@ if __name__ == "__main__":
         else:
             print("Invalid option")
 
-        time.sleep(1) #Wait for reply
+        # Response should be handled in the RX process
+        print("Waiting for response...")
+        time.sleep(2) #Wait for reply
 
     ser.close() # Close serial port when program done
 

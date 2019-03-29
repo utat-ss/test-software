@@ -88,24 +88,24 @@ THERM_TEMP = [
 
 
 def adc_raw_data_to_raw_vol(raw_data):
-    ratio = raw_data / 0x0FFF;
-    voltage = ratio * ADC_V_REF;
-    return voltage;
+    ratio = raw_data / 0x0FFF
+    voltage = ratio * ADC_V_REF
+    return voltage
 
 
 
 def adc_raw_vol_to_eps_vol(raw_voltage):
     # Use voltage divider circuit ratio to recover original voltage before division
-    return raw_voltage / ADC_EPS_VOUT_DIV_RATIO;
+    return raw_voltage / ADC_EPS_VOUT_DIV_RATIO
 
 
 def adc_raw_vol_to_eps_cur(raw_voltage):
     # Get the voltage across the resistor before amplifier gain
-    before_gain_voltage = raw_voltage / ADC_EPS_IOUT_AMP_GAIN;
+    before_gain_voltage = raw_voltage / ADC_EPS_IOUT_AMP_GAIN
     # Ohm's law (I = V / R)
-    current = before_gain_voltage / ADC_EPS_IOUT_RES;
+    current = before_gain_voltage / ADC_EPS_IOUT_RES
 
-    return current;
+    return current
 
 
 '''
@@ -114,7 +114,7 @@ raw_data - 12 bits
 returns - in V
 '''
 def adc_raw_data_to_eps_vol(raw_data):
-    return adc_raw_vol_to_eps_vol(adc_raw_data_to_raw_vol(raw_data));
+    return adc_raw_vol_to_eps_vol(adc_raw_data_to_raw_vol(raw_data))
 
 
 '''
@@ -123,7 +123,7 @@ raw_data - 12 bits
 returns - in A
 '''
 def adc_raw_data_to_eps_cur(raw_data):
-    return adc_raw_vol_to_eps_cur(adc_raw_data_to_raw_vol(raw_data));
+    return adc_raw_vol_to_eps_cur(adc_raw_data_to_raw_vol(raw_data))
 
 
 '''
@@ -133,7 +133,7 @@ raw_data - 12 bits
 returns - in C
 '''
 def adc_raw_data_to_therm_temp(raw_data):
-    return therm_res_to_temp(therm_vol_to_res(adc_raw_data_to_raw_vol(raw_data)));
+    return therm_res_to_temp(therm_vol_to_res(adc_raw_data_to_raw_vol(raw_data)))
 
 
 
@@ -145,10 +145,10 @@ returns - output voltage (in V)
 def dac_raw_data_to_vol(raw_data):
     # p.28 - 8.3.1
     # Vout = (Din / 2^n) x Vref x Gain
-    ratio = raw_data / (1 << DAC_NUM_BITS);
-    result = ratio * DAC_VREF * DAC_VREF_GAIN;
+    ratio = raw_data / (1 << DAC_NUM_BITS)
+    result = ratio * DAC_VREF * DAC_VREF_GAIN
 
-    return result;
+    return result
 
 
 '''
@@ -160,11 +160,11 @@ def dac_vol_to_raw_data(voltage):
     # p.28 - 8.3.1
     # Vout = (Din / 2^n) x Vref x Gain
     # Din = (Vout x 2^n) / (Vref x Gain)
-    num = voltage * (1 << DAC_NUM_BITS);
-    denom = DAC_VREF * DAC_VREF_GAIN;
-    result = (num / denom);
+    num = voltage * (1 << DAC_NUM_BITS)
+    denom = DAC_VREF * DAC_VREF_GAIN
+    result = (num / denom)
 
-    return result;
+    return result
 
 
 
@@ -174,9 +174,9 @@ raw_data - 16 bits (INCLUDING the 0b11 on the right that is always there)
 returns - temperature in degrees C (p. 9).
 '''
 def temp_raw_data_to_temperature(raw_data):
-    signed_temp_data = raw_data / 4;
+    signed_temp_data = raw_data / 4
     # LSB is 0.03125 C
-    return signed_temp_data * 0.03125;
+    return signed_temp_data * 0.03125
 
 
 '''
@@ -185,7 +185,7 @@ raw_data - 14 bits
 returns - humidity (in %RH, relative humidity)
 '''
 def hum_raw_data_to_humidity(raw_data):
-    return raw_data / ((1 << 14) - 2.0) * 100.0;
+    return raw_data / ((1 << 14) - 2.0) * 100.0
 
 
 '''
@@ -199,9 +199,9 @@ returns - pressure (in kPa)
 1 kPa = 10 mbar
 '''
 def pres_raw_data_to_pressure(raw_data):
-    mbar = raw_data * 0.01;
-    kpa = mbar / 10.0;
-    return kpa;
+    mbar = raw_data * 0.01
+    kpa = mbar / 10.0
+    return kpa
 
 
 
@@ -216,20 +216,20 @@ def opt_adc_raw_data_to_vol(raw_data, gain):
     # p.31
     # Code = (2^N * AIN * Gain) / (V_REF)
     # => AIN = (Code * V_REF) / (2^N * Gain)
-    num = raw_data *  OPT_ADC_V_REF;
-    denom = (1UL << OPT_ADC_NUM_BITS) * gain;
-    return num / denom;
+    num = raw_data *  OPT_ADC_V_REF
+    denom = (1 << OPT_ADC_NUM_BITS) * gain
+    return num / denom
 
 
 def opt_adc_raw_data_to_diff_vol(raw_data, gain):
   # p.31
   # Code = 2^(n-1) x [(AIN * Gain / V_REF) + 1]
   # => AIN = (Code/2^(n-1) - 1) * V_REF/Gain
-  volt = raw_data / (1UL << (OPT_ADC_NUM_BITS - 1));
-  volt -= 1;
-  volt *= OPT_ADC_V_REF /  gain;
+  volt = raw_data / (1 << (OPT_ADC_NUM_BITS - 1))
+  volt -= 1
+  volt *= OPT_ADC_V_REF /  gain
 
-  return volt;
+  return volt
 
 
 
@@ -243,22 +243,22 @@ Returns - temperature (in C)
 def therm_res_to_temp(resistance):
     for i in range(THERM_LUT_COUNT - 1):
         # Next value should be smaller than previous value
-        resistance_next = THERM_RES[i + 1];
+        resistance_next = THERM_RES[i + 1]
 
         if (resistance >= resistance_next):
-            resistance_prev = THERM_RES[i];
-            temp_next = THERM_TEMP[i + 1];
-            temp_prev = THERM_TEMP[i];
+            resistance_prev = THERM_RES[i]
+            temp_next = THERM_TEMP[i + 1]
+            temp_prev = THERM_TEMP[i]
 
-            temp_diff = (temp_next - temp_prev);
-            resistance_diff = (resistance_next - resistance_prev);
-            slope = temp_diff / resistance_diff;
+            temp_diff = (temp_next - temp_prev)
+            resistance_diff = (resistance_next - resistance_prev)
+            slope = temp_diff / resistance_diff
 
-            diff = resistance - resistance_prev;  #should be negative
-            return temp_prev + (diff * slope);
+            diff = resistance - resistance_prev  #should be negative
+            return temp_prev + (diff * slope)
 
     # This shouldn't happen
-    return 0.0;
+    return 0.0
 
 
 '''
@@ -269,22 +269,22 @@ Returns - thermistor resistance (in kilo-ohms)
 def therm_temp_to_res(temp):
     for i in range(THERM_LUT_COUNT - 1):
         # Next value should be bigger than previous value
-        temp_next = THERM_TEMP[i + 1];
+        temp_next = THERM_TEMP[i + 1]
 
         if (temp <= temp_next):
-            temp_prev = THERM_TEMP[i];
-            resistance_next = THERM_RES[i + 1];
-            resistance_prev = THERM_RES[i];
+            temp_prev = THERM_TEMP[i]
+            resistance_next = THERM_RES[i + 1]
+            resistance_prev = THERM_RES[i]
 
-            resistance_diff = (resistance_next - resistance_prev);
-            temp_diff = (temp_next - temp_prev);
-            slope = resistance_diff / temp_diff;
+            resistance_diff = (resistance_next - resistance_prev)
+            temp_diff = (temp_next - temp_prev)
+            slope = resistance_diff / temp_diff
 
-            diff = temp - temp_prev;  #should be positive
-            return resistance_prev + (diff * slope);
+            diff = temp - temp_prev  #should be positive
+            return resistance_prev + (diff * slope)
 
     # This shouldn't happen
-    return 0.0;
+    return 0.0
 
 
 '''
@@ -295,7 +295,7 @@ resistance - in kilo-ohms
 returns - voltage (in V)
 '''
 def therm_res_to_vol(resistance):
-    return THERM_V_REF * THERM_R_REF / (resistance + THERM_R_REF);
+    return THERM_V_REF * THERM_R_REF / (resistance + THERM_R_REF)
 
 
 '''
@@ -305,4 +305,4 @@ voltage - in V
 returns - resistance (in kilo-ohms)
 '''
 def therm_vol_to_res(voltage):
-    return THERM_R_REF * (THERM_V_REF / voltage - 1);
+    return THERM_R_REF * (THERM_V_REF / voltage - 1)
