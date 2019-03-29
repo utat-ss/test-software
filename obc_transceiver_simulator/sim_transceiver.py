@@ -108,19 +108,24 @@ def print_block(arg1, data):
 # Process to poll for information from the board. It prints out values
 # in the string buffer every 5 seconds. Otherwise, it does not print out data
 # Values read from the board are assumed to be bytes
-def read_board(ser):
-    while True:
-        # print("waiting for serial")
-        # Read from serial
-        # This is a string
-        str_read = ser.readline().decode("utf-8", errors='ignore')
-        bytes_read = bytes(str_read, 'utf-8')
-
-        if str_read != '': # If not a blank line
-            print("Received UART (string):", str_read)
-            print("Received UART (hex):", bytes_to_string(bytes_read))
-
-            decode_rx_msg(bytes_read)
+# def read_board(ser):
+#     while True:
+#         # print("waiting for serial")
+#         # Read from serial
+#         # This is a string
+#         raw_str = ser.readline().decode("utf-8", errors='ignore')
+#         raw_str = ""
+#
+#         if raw_str != '': # If not a blank line
+#             raw = bytes(raw_str, 'utf-8')
+#             print("Received UART (raw):", bytes_to_string(raw))
+#
+#             if raw.find(0x00) == -1:
+#                 print("No message found")
+#             else:
+#                 msg = raw[raw.find(0x00) : ]
+#                 print("Received UART (msg):", bytes_to_string(msg))
+#                 decode_rx_msg(msg)
 
 def decode_rx_msg(msg):
     if len(msg) < 11:
@@ -314,15 +319,17 @@ if __name__ == "__main__":
 
 
     try:
-        ser = serial.Serial(port, baud_rate, timeout = 1)
+        # TODO - figure out inter_byte_timeout
+        ser = serial.Serial(port, baud_rate, timeout=5)
         print("Using port " + port + " for simulation")
     except serial.SerialException as e:
         print("Port " + port + " is in use")
 
 
     print("Reading and writing board info from", ser.port)
-    proc = Process(target = read_board, args=(ser,))
-    proc.start() #Start process/reading from board
+
+    # proc = Process(target = read_board, args=(ser,))
+    # proc.start() #Start process/reading from board
 
 
     cmd = None # Command to board
@@ -475,9 +482,26 @@ if __name__ == "__main__":
         else:
             print("Invalid option")
 
-        # Response should be handled in the RX process
         print("Waiting for response...")
-        time.sleep(2) #Wait for reply
+        # time.sleep(5) #Wait for reply
+
+        # Read from serial
+        # This is a string
+        # DO NOT DECODE IT WITH UTF-8, IT DISCARDS ANY CHARACTERS > 127
+        # See https://www.avrfreaks.net/forum/serial-port-data-corrupted-when-sending-specific-pattern-bytes
+        # See https://stackoverflow.com/questions/14454957/pyserial-formatting-bytes-over-127-return-as-2-bytes-rather-then-one
+        raw = ser.read(4096)
+
+        if len(raw) > 0: # If not a blank line
+            print("Received UART (raw):", bytes_to_string(raw))
+
+            if raw.find(0x00) == -1:
+                print("No message found")
+            else:
+                msg = raw[raw.find(0x00) : ]
+                print("Received UART (msg):", bytes_to_string(msg))
+                decode_rx_msg(msg)
+
 
     ser.close() # Close serial port when program done
 
