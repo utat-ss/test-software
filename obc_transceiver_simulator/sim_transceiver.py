@@ -19,6 +19,7 @@ import time
 import sys
 import os
 import codecs
+import argparse
 
 try:
     import serial
@@ -259,38 +260,64 @@ if __name__ == "__main__":
         print("Unknown error. Exiting....")
         sys.exit(1)
 
-    #Get port names
-    ports = list(serial.tools.list_ports.comports())
-
-
     baud_rate = 9600
 
     print("Transceiver simulation starting...")
 
-    ser = None # One port is used
-    for p in ports:
-        # TODO - kind of hacky
-        p = p[0].replace("cu", "tty")
-        print("Port: " + p)
 
-        #Mac, linux system, UART port
-        if os.name == 'posix' and p.startswith ('/dev/tty') and p.endswith('4'):
-            print("Testing port " + p)
-            try :
-                ser = serial.Serial(p, baud_rate, timeout = 1)
-                print("Using port " + p + " for simulation")
-                break
-            except serial.SerialException as e:
-                print("Port " + p + " is in use")
-        #Windows
-        elif os.name == 'nt' and p[0].startswith('COM'):
-            print("Testing port " + p[0])
-            try :
-                ser = serial.Serial(p[0], baud_rate, timeout = 1)
-                print("Using port " + p[0] + " for simulation")
-                break
-            except serial.SerialException as e:
-                print("Port " + p[0] + " is in use")
+    # It is necessary for the user to specify the programming port and appropriate directory
+    # In most cases, this should be the tests directory
+    # The uart port only needs to be specified when it is not able to be inferred from the
+    # uart_offset() method
+    parser = argparse.ArgumentParser(description=("Transceiver simulator"))
+    # Method arguments include (in order), expected shell text, name of that argument (used below),
+    # nargs specifies the number of arguments, with '+' inserting arguments of that type into a list
+    # required is self-explanatory, metavar assigns a displayed name to each argument when using the help argument
+    parser.add_argument('-p', '--port', required=True,
+            metavar=('port1'),
+            help='UART port')
+
+    # Converts strings to objects, which are then assigned to variables below
+    args = parser.parse_args()
+    port = args.port
+
+    print("port =", port)
+
+
+    ser = None # One port is used
+
+    #Get port names
+    # ports = list(serial.tools.list_ports.comports())
+    # for p in ports:
+    #     # TODO - kind of hacky
+    #     p = p[0].replace("cu", "tty")
+    #     print("Port: " + p)
+    #
+    #     #Mac, linux system, UART port
+    #     if os.name == 'posix' and p.startswith ('/dev/tty') and p.endswith('4'):
+    #         print("Testing port " + p)
+    #         try :
+    #             ser = serial.Serial(p, baud_rate, timeout = 1)
+    #             print("Using port " + p + " for simulation")
+    #             break
+    #         except serial.SerialException as e:
+    #             print("Port " + p + " is in use")
+    #     #Windows
+    #     elif os.name == 'nt' and p[0].startswith('COM'):
+    #         print("Testing port " + p[0])
+    #         try :
+    #             ser = serial.Serial(p[0], baud_rate, timeout = 1)
+    #             print("Using port " + p[0] + " for simulation")
+    #             break
+    #         except serial.SerialException as e:
+    #             print("Port " + p[0] + " is in use")
+
+
+    try:
+        ser = serial.Serial(port, baud_rate, timeout = 1)
+        print("Using port " + port + " for simulation")
+    except serial.SerialException as e:
+        print("Port " + port + " is in use")
 
 
     print("Reading and writing board info from", ser.port)
