@@ -66,7 +66,7 @@ def print_block(arg1, data):
         print_field(fields, 6, "Bat Temp 1", "%f C" % adc_raw_data_to_therm_temp(fields[6]))
         print_field(fields, 7, "Bat Temp 2", "%f C" % adc_raw_data_to_therm_temp(fields[7]))
         print_field(fields, 8, "Bat Vol", "%f V" % adc_raw_data_to_eps_vol(fields[8]))
-        print_field(fields, 9, "Bat Cur", "%f A" % adc_raw_data_to_eps_cur(fields[9]))
+        print_field(fields, 9, "Bat Cur", "%f A" % (adc_raw_data_to_eps_cur(fields[9]) - 2.5))
         print_field(fields, 10, "BT Cur", "%f A" % adc_raw_data_to_eps_cur(fields[10]))
         print_field(fields, 11, "BT Vol", "%f V" % adc_raw_data_to_eps_vol(fields[11]))
         print_field(fields, 12, "Bat Heater Setpoint 1", "%f C" % therm_res_to_temp(therm_vol_to_res( dac_raw_data_to_vol(fields[12]))))
