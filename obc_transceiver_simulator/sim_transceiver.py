@@ -344,7 +344,7 @@ if __name__ == "__main__":
 
     try:
         # TODO - figure out inter_byte_timeout
-        ser = serial.Serial(port, baud_rate, timeout=5)
+        ser = serial.Serial(port, baud_rate, timeout=0.1)
         print("Using port " + port + " for simulation")
     except serial.SerialException as e:
         print("Port " + port + " is in use")
@@ -507,24 +507,33 @@ if __name__ == "__main__":
             print("Invalid option")
 
         print("Waiting for response...")
-        # time.sleep(5) #Wait for reply
 
-        # Read from serial
-        # This is a string
+        # Read from serial to bytes
         # DO NOT DECODE IT WITH UTF-8, IT DISCARDS ANY CHARACTERS > 127
         # See https://www.avrfreaks.net/forum/serial-port-data-corrupted-when-sending-specific-pattern-bytes
         # See https://stackoverflow.com/questions/14454957/pyserial-formatting-bytes-over-127-return-as-2-bytes-rather-then-one
-        raw = ser.read(2 ** 16)
+        
+        raw = bytes(0)
+        msg = bytes(0)
 
-        if len(raw) > 0: # If not a blank line
-            print("Received UART (raw):", bytes_to_string(raw))
+        for i in range(20):
+            new = ser.read(2 ** 16)
+            print("%d new bytes" % len(new))
+            raw += new
 
-            if raw.find(0x00) == -1:
-                print("No message found")
-            else:
-                msg = raw[raw.find(0x00) : ]
+            start_index = raw.find(0x00)
+            print("start_index =", start_index)
+
+            if start_index != -1 and start_index < len(raw) - 1 and raw[start_index + 1] == len(raw) - start_index - 2:
+                msg = raw[start_index:]
+                print("Received UART (raw):", bytes_to_string(raw))
                 print("Received UART (msg):", bytes_to_string(msg))
                 decode_rx_msg(msg)
+                break
+
+        else:
+            print("Received UART (raw):", bytes_to_string(raw))
+            print("No message found")
 
 
     ser.close() # Close serial port when program done
