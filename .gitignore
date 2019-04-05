@@ -25,3 +25,6 @@ xcuserdata
 
 # PyCharm files
 .idea
+
+# Compiled Python files
+*.pyc
