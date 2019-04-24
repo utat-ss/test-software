@@ -20,19 +20,28 @@ void setup() {
     Wire.begin(8);                // join i2c bus with address #8
     Wire.onRequest(requestEvent); // register event (master read request)
     Wire.onReceive(receiveEvent); // register event (master write request)
-
 }
 
 void loop() {
     delay(1);
 }
 
+bool req1 = true;
+
 // function that executes whenever data is requested by master
 // this function is registered as an event, see setup()
 void requestEvent() {
-    Serial.println("sent hello");
-    Wire.write("hello"); // respond with message of 5 bytes
-    // as expected by master
+    // Alternate requests
+    if (req1) {
+        Serial.println("sent hello");
+        Wire.write("hello"); // respond with message of 5 bytes
+        // as expected by master
+    } else {
+        Serial.println("sent hi123");
+        Wire.write("hi123");
+    }
+
+    req1 = !req1;
 }
 
 // function that executes whenever data is received from master
