@@ -71,15 +71,12 @@ def print_block(arg1, data):
         print_field(fields, 11, "BT Vol", "%f V" % adc_raw_data_to_eps_vol(fields[11]))
         print_field(fields, 12, "Bat Heater Setpoint 1", "%f C" % therm_res_to_temp(therm_vol_to_res( dac_raw_data_to_vol(fields[12]))))
         print_field(fields, 13, "Bat Heater Setpoint 2", "%f C" % therm_res_to_temp(therm_vol_to_res( dac_raw_data_to_vol(fields[13]))))
-        print_field(fields, 14, "IMU Acceleration X", "")
-        print_field(fields, 15, "IMU Acceleration Y", "")
-        print_field(fields, 16, "IMU Acceleration Z", "")
-        print_field(fields, 17, "IMU Gyroscope X", "")
-        print_field(fields, 18, "IMU Gyroscope Y", "")
-        print_field(fields, 19, "IMU Gyroscope Z", "")
-        print_field(fields, 20, "IMU Magnetometer X", "")
-        print_field(fields, 21, "IMU Magnetometer Y", "")
-        print_field(fields, 22, "IMU Magnetometer Z", "")
+        print_field(fields, 14, "IMU Gyroscope (Uncal) X", "")
+        print_field(fields, 15, "IMU Gyroscope (Uncal) Y", "")
+        print_field(fields, 16, "IMU Gyroscope (Uncal) Z", "")
+        print_field(fields, 17, "IMU Gyroscope (Cal) X", "")
+        print_field(fields, 18, "IMU Gyroscope (Cal) Y", "")
+        print_field(fields, 19, "IMU Gyroscope (Cal) Z", "")
 
     if arg1 == 1:
         print("PAY_HK")
@@ -103,7 +100,7 @@ def print_block(arg1, data):
 
     if arg1 == 2:
         print("PAY_OPT")
-        for i in range(36):
+        for i in range(32):
             print_field(fields, i, "Well %d" % i, "%f V" % opt_adc_raw_data_to_vol(fields[i], 1))
 
 
