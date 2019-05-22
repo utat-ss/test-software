@@ -146,11 +146,14 @@ def decode_rx_msg(enc_msg):
     if enc_msg[1] != len(enc_msg) - 2:
         print("Bad length")
         return
+    
+    dec_msg = bytes(0)
+    for i in range(2, len(enc_msg), 2):
+        dec_msg += bytes([int(enc_msg[i : i + 2], 16)])
 
     print_div()
-    print("enc_msg:", bytes_to_string(enc_msg))
-    dec_msg = enc_msg[2:]
-    print("dec_msg:", bytes_to_string(dec_msg))
+    print("enc_msg (%d bytes):" % len(enc_msg), bytes_to_string(enc_msg))
+    print("dec_msg (%d bytes):" % len(dec_msg), bytes_to_string(dec_msg))
 
     type = dec_msg[0]
     arg1 = bytes_to_uint32(dec_msg[1:5])
@@ -228,7 +231,7 @@ def bytes_to_string(b):
 # string should look something like "00:ff:a3:49:de"
 # Use `bytearray` instead of `bytes`
 def send_raw_uart(uart_bytes):
-    print("Sending UART:", bytes_to_string(uart_bytes))
+    print("Sending UART (%d bytes):" % len(uart_bytes), bytes_to_string(uart_bytes))
     ser.write(uart_bytes)
 
 def uint32_to_bytes(num):
@@ -242,23 +245,31 @@ def bytes_to_uint32(bytes):
 def bytes_to_uint24(bytes):
     return (bytes[0] << 16) | (bytes[1] << 8) | bytes[2]
 
+def encode_message(dec_msg):
+    enc_msg = b''
+    enc_msg += b'\x00'
+    enc_msg += bytes([len(dec_msg) * 2])
+    for byte in dec_msg:
+        s = "%.2x" % byte
+        enc_msg += bytes(s, 'utf-8')
+    #Special character to indicate start of send_message
+    return enc_msg
+
 #Type and num_chars must be an integer
 #if string is true, s are string hexadecimal values
 def send_message(type, arg1=0, arg2=0, data=bytes(0)):
-    #Special character to indicate start of send_message
-    message = b'\x00'
-    message += bytes([1 + 4 + 4 + len(data)])
-    #checksum = b'\xFF'
-
     #change length and type to binary
-    message += bytes([type])
-    message += uint32_to_bytes(arg1)
-    message += uint32_to_bytes(arg2)
-    message += bytes(data)
+    dec_msg = b''
+    dec_msg += bytes([type])
+    dec_msg += uint32_to_bytes(arg1)
+    dec_msg += uint32_to_bytes(arg2)
+    dec_msg += bytes(data)
 
-    #bytes_message +=  checksum
+    enc_msg = encode_message(dec_msg)
 
-    send_raw_uart(message)
+    print("Sending decoded message (%d bytes):" % len(dec_msg), bytes_to_string(dec_msg))
+    print("Sending encoded message (%d bytes):" % len(enc_msg), bytes_to_string(enc_msg))
+    send_raw_uart(enc_msg)
 
 
 # prompt is the send_message information
