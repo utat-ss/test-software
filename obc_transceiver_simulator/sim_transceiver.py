@@ -2,9 +2,6 @@
 # Input: String from serial.read()
 # Output to microcontroller: hex/bytes using serial.write()
 #
-# Uses processes (versus threads) to execute two functions, read_board and main
-# at once
-#
 # By: Brytni Richards
 
 # TODO: Check if this program works for windows computers
@@ -32,6 +29,11 @@ except ImportError:
         "    $ pip install pyserial\n" +
         "in the command line.")
     sys.exit(1)
+
+
+# Global Variables
+ser = None # One port is used
+
 
 def subsys_consts():
     return "(OBC = 0, EPS = 1, PAY = 2)"
@@ -103,28 +105,6 @@ def print_block(arg1, data):
         for i in range(32):
             print_field(fields, i, "Well %d" % i, "%f V" % opt_adc_raw_data_to_vol(fields[i], 1))
 
-
-# Process to poll for information from the board. It prints out values
-# in the string buffer every 5 seconds. Otherwise, it does not print out data
-# Values read from the board are assumed to be bytes
-# def read_board(ser):
-#     while True:
-#         # print("waiting for serial")
-#         # Read from serial
-#         # This is a string
-#         raw_str = ser.readline().decode("utf-8", errors='ignore')
-#         raw_str = ""
-#
-#         if raw_str != '': # If not a blank line
-#             raw = bytes(raw_str, 'utf-8')
-#             print("Received UART (raw):", bytes_to_string(raw))
-#
-#             if raw.find(0x00) == -1:
-#                 print("No message found")
-#             else:
-#                 msg = raw[raw.find(0x00) : ]
-#                 print("Received UART (msg):", bytes_to_string(msg))
-#                 decode_rx_msg(msg)
 
 def print_div():
     print("-" * 80)
@@ -286,84 +266,37 @@ def input_int(prompt):
             print("Error! Input must be an integer or in hex")
 
 
-if __name__ == "__main__":
-    # Detects if correct python version is being run
-    if sys.version_info[0] == 2:
-        print("You are using Python 2. Please update to Python 3 and try again.")
-        sys.exit(1)
-    elif sys.version_info[0] == 3:
-        print("You are running Python 3.")
+def receive_msg():
+    # Read from serial to bytes
+    # DO NOT DECODE IT WITH UTF-8, IT DISCARDS ANY CHARACTERS > 127
+    # See https://www.avrfreaks.net/forum/serial-port-data-corrupted-when-sending-specific-pattern-bytes
+    # See https://stackoverflow.com/questions/14454957/pyserial-formatting-bytes-over-127-return-as-2-bytes-rather-then-one
+    
+    raw = bytes(0)
+    enc_msg = bytes(0)
+
+    for i in range(20):
+        new = ser.read(2 ** 16)
+        print("%d new bytes" % len(new))
+        raw += new
+
+        start_index = raw.find(0x00)
+        print("start_index =", start_index)
+
+        if start_index != -1 and start_index < len(raw) - 1 and raw[start_index + 1] == len(raw) - start_index - 2:
+            enc_msg = raw[start_index:]
+            print("Received UART (raw):", bytes_to_string(raw))
+            print("Received UART (enc_msg):", bytes_to_string(enc_msg))
+            decode_rx_msg(enc_msg)
+            break
+
     else:
-        print("Unknown error. Exiting....")
-        sys.exit(1)
-
-    baud_rate = 9600
-
-    print("Transceiver simulation starting...")
+        print("Received UART (raw):", bytes_to_string(raw))
+        print("No message found")
 
 
-    # It is necessary for the user to specify the programming port and appropriate directory
-    # In most cases, this should be the tests directory
-    # The uart port only needs to be specified when it is not able to be inferred from the
-    # uart_offset() method
-    parser = argparse.ArgumentParser(description=("Transceiver simulator"))
-    # Method arguments include (in order), expected shell text, name of that argument (used below),
-    # nargs specifies the number of arguments, with '+' inserting arguments of that type into a list
-    # required is self-explanatory, metavar assigns a displayed name to each argument when using the help argument
-    parser.add_argument('-p', '--port', required=True,
-            metavar=('port1'),
-            help='UART port')
 
-    # Converts strings to objects, which are then assigned to variables below
-    args = parser.parse_args()
-    port = args.port
-
-    print("port =", port)
-
-
-    ser = None # One port is used
-
-    #Get port names
-    # ports = list(serial.tools.list_ports.comports())
-    # for p in ports:
-    #     # TODO - kind of hacky
-    #     p = p[0].replace("cu", "tty")
-    #     print("Port: " + p)
-    #
-    #     #Mac, linux system, UART port
-    #     if os.name == 'posix' and p.startswith ('/dev/tty') and p.endswith('4'):
-    #         print("Testing port " + p)
-    #         try :
-    #             ser = serial.Serial(p, baud_rate, timeout = 1)
-    #             print("Using port " + p + " for simulation")
-    #             break
-    #         except serial.SerialException as e:
-    #             print("Port " + p + " is in use")
-    #     #Windows
-    #     elif os.name == 'nt' and p[0].startswith('COM'):
-    #         print("Testing port " + p[0])
-    #         try :
-    #             ser = serial.Serial(p[0], baud_rate, timeout = 1)
-    #             print("Using port " + p[0] + " for simulation")
-    #             break
-    #         except serial.SerialException as e:
-    #             print("Port " + p[0] + " is in use")
-
-
-    try:
-        # TODO - figure out inter_byte_timeout
-        ser = serial.Serial(port, baud_rate, timeout=0.1)
-        print("Using port " + port + " for simulation")
-    except serial.SerialException as e:
-        print("Port " + port + " is in use")
-
-
-    print("Reading and writing board info from", ser.port)
-
-    # proc = Process(target = read_board, args=(ser,))
-    # proc.start() #Start process/reading from board
-
-
+def main_loop():
     cmd = None # Command to board
     while cmd != ("quit"): # Enter quit to stop program
         print("0. Send Raw UART")
@@ -381,7 +314,7 @@ if __name__ == "__main__":
         cmd = input("Enter command number: ") # User input typed through terminal consol
 
         if cmd == ("quit"):
-            proc.terminate()
+            print("Quitting program")
 
         elif cmd == ("0"):  # Raw UART
             send_raw_uart(string_to_bytes(input("Enter raw hex for UART: ")))
@@ -512,38 +445,51 @@ if __name__ == "__main__":
                 print("Invalid command")
 
         else:
-            print("Invalid option")
+            print("Invalid command")
 
         print("Waiting for response...")
-
-        # Read from serial to bytes
-        # DO NOT DECODE IT WITH UTF-8, IT DISCARDS ANY CHARACTERS > 127
-        # See https://www.avrfreaks.net/forum/serial-port-data-corrupted-when-sending-specific-pattern-bytes
-        # See https://stackoverflow.com/questions/14454957/pyserial-formatting-bytes-over-127-return-as-2-bytes-rather-then-one
-        
-        raw = bytes(0)
-        msg = bytes(0)
-
-        for i in range(20):
-            new = ser.read(2 ** 16)
-            print("%d new bytes" % len(new))
-            raw += new
-
-            start_index = raw.find(0x00)
-            print("start_index =", start_index)
-
-            if start_index != -1 and start_index < len(raw) - 1 and raw[start_index + 1] == len(raw) - start_index - 2:
-                msg = raw[start_index:]
-                print("Received UART (raw):", bytes_to_string(raw))
-                print("Received UART (msg):", bytes_to_string(msg))
-                decode_rx_msg(msg)
-                break
-
-        else:
-            print("Received UART (raw):", bytes_to_string(raw))
-            print("No message found")
+        receive_msg()
 
 
+
+
+if __name__ == "__main__":
+    # Detects if correct python version is being run
+    if sys.version_info[0] == 2:
+        print("You are using Python 2. Please update to Python 3 and try again.")
+        sys.exit(1)
+    elif sys.version_info[0] == 3:
+        print("You are running Python 3.")
+    else:
+        print("Unknown error. Exiting....")
+        sys.exit(1)
+
+    print("Transceiver simulation starting...")
+
+
+    # It is necessary for the user to specify the UART port
+    parser = argparse.ArgumentParser(description=("Transceiver simulator"))
+    # Method arguments include (in order), expected shell text, name of that argument (used below),
+    # nargs specifies the number of arguments, with '+' inserting arguments of that type into a list
+    # required is self-explanatory, metavar assigns a displayed name to each argument when using the help argument
+    parser.add_argument('-u', '--uart', required=True,
+            metavar=('uart'), help='UART port on programmer')
+    parser.add_argument('-b', '--baud', required=False, default=9600,
+            metavar=('baud'), help='Baud rate')
+
+    # Converts strings to objects, which are then assigned to variables below
+    args = parser.parse_args()
+    uart = args.uart
+    baud = args.baud
+    
+    try:
+        # TODO - figure out inter_byte_timeout
+        ser = serial.Serial(uart, baud, timeout=0.1)
+        print("Using port " + uart + " for UART")
+    except serial.SerialException as e:
+        print("ERROR: Port " + uart + " is in use")
+
+    main_loop()
+    
     ser.close() # Close serial port when program done
-
     print("Quit Transceiver Simulator")
