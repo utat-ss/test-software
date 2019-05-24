@@ -36,7 +36,15 @@ Digikey link: https:#www.digikey.ca/product-detail/en/murata-electronics-north-a
 Datasheet (page 13. Part # NCU__XH103):
 https:#www.murata.com/~/media/webrenewal/support/library/catalog/products/thermistor/r03e.ashx?la=en-us
 Datasheet (NCU18XH103F60RB): https:#www.murata.com/en-us/api/pdfdownloadapi?cate=luNTCforTempeSenso&partno=NCU18XH103F60RB
+
+IMU - BNO080
+https://cdn.sparkfun.com/assets/1/3/4/5/9/BNO080_Datasheet_v1.3.pdf
+https://cdn.sparkfun.com/assets/4/d/9/3/8/SH-2-Reference-Manual-v1.2.pdf
+https://cdn.sparkfun.com/assets/7/6/9/3/c/Sensor-Hub-Transport-Protocol-v1.7.pdf
 '''
+
+
+from ctypes import *
 
 
 ADC_V_REF = 5.0
@@ -84,6 +92,12 @@ THERM_TEMP = [
     85,         90,         95,         100,        105,
     110,        115,        120,        125
 ]
+
+
+# IMU Q points
+IMU_ACCEL_Q = 8
+IMU_GYRO_Q  = 9
+
 
 
 
@@ -309,3 +323,25 @@ def therm_vol_to_res(voltage):
         return THERM_R_REF * (THERM_V_REF / voltage - 1)
     except ZeroDivisionError:
         return 0
+
+
+'''
+IMU Q-point
+Converts the raw 16-bit signed fixed-point value from the input report to the actual floating-point measurement using the Q point.
+Q point - number of fractional digits after (to the right of) the decimal point, i.e. higher Q point means smaller/more precise number (#1 p.22)
+https://en.wikipedia.org/wiki/Q_(number_format)
+Similar to reference library qToFloat()
+raw_data - 16 bit raw value
+q_point - number of binary digits to shift
+'''
+def imu_raw_data_to_double(raw_data, q_point):
+    # Need to use c_int16 to force signed 16-bit number
+    # Implement power of 2 with a bitshift
+    return float(c_int16(raw_data).value) / float(1 << q_point)
+
+
+'''
+Converts the raw 16-bit value to a gyroscope measurement (in rad/s).
+'''
+def imu_raw_data_to_gyro(raw_data):
+    return imu_raw_data_to_double(raw_data, IMU_GYRO_Q)

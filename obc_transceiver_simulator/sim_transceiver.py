@@ -71,14 +71,14 @@ def print_block(arg1, data):
         print_field(fields, 9, "Bat Cur", "%f A" % (adc_raw_data_to_eps_cur(fields[9]) - 2.5))
         print_field(fields, 10, "BT Cur", "%f A" % adc_raw_data_to_eps_cur(fields[10]))
         print_field(fields, 11, "BT Vol", "%f V" % adc_raw_data_to_eps_vol(fields[11]))
-        print_field(fields, 12, "Bat Heater Setpoint 1", "%f C" % therm_res_to_temp(therm_vol_to_res( dac_raw_data_to_vol(fields[12]))))
-        print_field(fields, 13, "Bat Heater Setpoint 2", "%f C" % therm_res_to_temp(therm_vol_to_res( dac_raw_data_to_vol(fields[13]))))
-        print_field(fields, 14, "IMU Gyroscope (Uncal) X", "")
-        print_field(fields, 15, "IMU Gyroscope (Uncal) Y", "")
-        print_field(fields, 16, "IMU Gyroscope (Uncal) Z", "")
-        print_field(fields, 17, "IMU Gyroscope (Cal) X", "")
-        print_field(fields, 18, "IMU Gyroscope (Cal) Y", "")
-        print_field(fields, 19, "IMU Gyroscope (Cal) Z", "")
+        print_field(fields, 12, "Heater Setpoint 1", "%f C" % therm_res_to_temp(therm_vol_to_res( dac_raw_data_to_vol(fields[12]))))
+        print_field(fields, 13, "Heater Setpoint 2", "%f C" % therm_res_to_temp(therm_vol_to_res( dac_raw_data_to_vol(fields[13]))))
+        print_field(fields, 14, "IMU Gyroscope (Uncal) X", "%f rad/s" % imu_raw_data_to_gyro(fields[14]))
+        print_field(fields, 15, "IMU Gyroscope (Uncal) Y", "%f rad/s" % imu_raw_data_to_gyro(fields[15]))
+        print_field(fields, 16, "IMU Gyroscope (Uncal) Z", "%f rad/s" % imu_raw_data_to_gyro(fields[16]))
+        print_field(fields, 17, "IMU Gyroscope (Cal) X", "%f rad/s" % imu_raw_data_to_gyro(fields[17]))
+        print_field(fields, 18, "IMU Gyroscope (Cal) Y", "%f rad/s" % imu_raw_data_to_gyro(fields[18]))
+        print_field(fields, 19, "IMU Gyroscope (Cal) Z", "%f rad/s" % imu_raw_data_to_gyro(fields[19]))
 
     if arg1 == 1:
         print("PAY_HK")
@@ -113,7 +113,7 @@ def date_time_to_str(data):
     return "%02d %02d %02d" % (data[0], data[1], data[2])
 
 def decode_rx_msg(enc_msg):
-    if len(enc_msg) < 11:
+    if len(enc_msg) < 20:
         print("Message too short")
         return
 
