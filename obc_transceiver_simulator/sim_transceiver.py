@@ -33,7 +33,60 @@ except ImportError:
 
 # Global Variables
 ser = None # One port is used
+# Output files for data
+eps_hk_file = None
+pay_hk_file = None
+pay_opt_file = None
 
+
+# Name, unit, mapping for reordering measurements
+EPS_HK_MAPPING = [
+    ("BB Vol",                  "V",        6   ),
+    ("BB Cur",                  "A",        7   ),
+    ("-Y Cur",                  "A",        5   ),
+    ("+X Cur",                  "A",        2   ),
+    ("+Y Cur",                  "A",        3   ),
+    ("-X Cur",                  "A",        4   ),
+    ("Bat Temp 1",              "C",        10  ),
+    ("Bat Temp 2",              "C",        11  ),
+    ("Bat Vol",                 "V",        0   ),
+    ("Bat Cur",                 "A",        1   ),
+    ("BT Cur",                  "A",        8   ),
+    ("BT Vol",                  "V",        9   ),
+    ("Heater Setpoint 1",       "C",        12  ),
+    ("Heater Setpoint 2",       "C",        13  ),
+    ("IMU Gyroscope (Uncal) X", "rad/s",    14  ),
+    ("IMU Gyroscope (Uncal) Y", "rad/s",    15  ),
+    ("IMU Gyroscope (Uncal) Z", "rad/s",    16  ),
+    ("IMU Gyroscope (Cal) X",   "rad/s",    17  ),
+    ("IMU Gyroscope (Cal) Y",   "rad/s",    18  ),
+    ("IMU Gyroscope (Cal) Z",   "rad/s",    19  )
+]
+
+
+# Create or append to file
+# Adapted from https://stackoverflow.com/questions/20432912/writing-to-a-new-file-if-it-doesnt-exist-and-appending-to-a-file-if-it-does
+def load_file(name, mapping):
+    if os.path.exists(name):
+        mode = 'a' # append if already exists
+        print("Found existing file", name)
+        print("Appending to file")
+
+        f = open(name, mode)
+        return f
+
+    else:
+        mode = 'w' # make a new file if not
+        print("Did not find existing file", name)
+        print("Creating new file")
+
+        f = open(name, mode)
+        # Write header
+        titles = map(lambda x : x[0] + " (" + x[1] + ")", mapping)
+        f.write(", ".join(titles) + "\n")
+        return f
+
+    
 
 def subsys_consts():
     return "(OBC = 0, EPS = 1, PAY = 2)"
@@ -50,8 +103,13 @@ def data_to_fields(data):
         fields.append(bytes_to_uint24(data[i:i+3]))
     return fields
 
-def print_field(fields, index, name, conv):
-    print("Field %d (%s): 0x%.6x = %s" % (index, name, fields[index], conv))
+def print_field(mapping, fields, converted, index):
+    print("Field %d (%s): 0x%.6x = %f %s" % (index, mapping[index], fields[index], converted[index], mapping[index][1]))
+
+def save_fields(file, converted):
+    # Write row
+    file.write(", ".join(map(str, converted)) + "\n")
+
 
 def print_block(arg1, data):
     print_header(data[0:10])
@@ -59,26 +117,37 @@ def print_block(arg1, data):
 
     if arg1 == 0:
         print("EPS_HK")
-        print_field(fields, 0, "BB Vol", "%f V" % adc_raw_data_to_eps_vol(fields[0]))
-        print_field(fields, 1, "BB Cur", "%f A" % adc_raw_data_to_eps_cur(fields[1]))
-        print_field(fields, 2, "-Y Cur", "%f A" % adc_raw_data_to_eps_cur(fields[2]))
-        print_field(fields, 3, "+X Cur", "%f A" % adc_raw_data_to_eps_cur(fields[3]))
-        print_field(fields, 4, "+Y Cur", "%f A" % adc_raw_data_to_eps_cur(fields[4]))
-        print_field(fields, 5, "-X Cur", "%f A" % adc_raw_data_to_eps_cur(fields[5]))
-        print_field(fields, 6, "Bat Temp 1", "%f C" % adc_raw_data_to_therm_temp(fields[6]))
-        print_field(fields, 7, "Bat Temp 2", "%f C" % adc_raw_data_to_therm_temp(fields[7]))
-        print_field(fields, 8, "Bat Vol", "%f V" % adc_raw_data_to_eps_vol(fields[8]))
-        print_field(fields, 9, "Bat Cur", "%f A" % (adc_raw_data_to_eps_cur(fields[9]) - 2.5))
-        print_field(fields, 10, "BT Cur", "%f A" % adc_raw_data_to_eps_cur(fields[10]))
-        print_field(fields, 11, "BT Vol", "%f V" % adc_raw_data_to_eps_vol(fields[11]))
-        print_field(fields, 12, "Heater Setpoint 1", "%f C" % therm_res_to_temp(therm_vol_to_res( dac_raw_data_to_vol(fields[12]))))
-        print_field(fields, 13, "Heater Setpoint 2", "%f C" % therm_res_to_temp(therm_vol_to_res( dac_raw_data_to_vol(fields[13]))))
-        print_field(fields, 14, "IMU Gyroscope (Uncal) X", "%f rad/s" % imu_raw_data_to_gyro(fields[14]))
-        print_field(fields, 15, "IMU Gyroscope (Uncal) Y", "%f rad/s" % imu_raw_data_to_gyro(fields[15]))
-        print_field(fields, 16, "IMU Gyroscope (Uncal) Z", "%f rad/s" % imu_raw_data_to_gyro(fields[16]))
-        print_field(fields, 17, "IMU Gyroscope (Cal) X", "%f rad/s" % imu_raw_data_to_gyro(fields[17]))
-        print_field(fields, 18, "IMU Gyroscope (Cal) Y", "%f rad/s" % imu_raw_data_to_gyro(fields[18]))
-        print_field(fields, 19, "IMU Gyroscope (Cal) Z", "%f rad/s" % imu_raw_data_to_gyro(fields[19]))
+        num_fields = len(EPS_HK_MAPPING)
+        converted = [0 for i in range(num_fields)]
+        converted[0] = adc_raw_data_to_eps_vol(fields[0])
+        converted[1] = adc_raw_data_to_eps_cur(fields[1])
+        converted[2] = adc_raw_data_to_eps_cur(fields[2])
+        converted[3] = adc_raw_data_to_eps_cur(fields[3])
+        converted[4] = adc_raw_data_to_eps_cur(fields[4])
+        converted[5] = adc_raw_data_to_eps_cur(fields[5])
+        converted[6] = adc_raw_data_to_therm_temp(fields[6])
+        converted[7] = adc_raw_data_to_therm_temp(fields[7])
+        converted[8] = adc_raw_data_to_eps_vol(fields[8])
+        converted[9] = adc_raw_data_to_eps_cur(fields[9]) - 2.5
+        converted[10] = adc_raw_data_to_eps_cur(fields[8])
+        converted[11] = adc_raw_data_to_eps_vol(fields[8])
+        converted[12] = therm_res_to_temp(therm_vol_to_res(dac_raw_data_to_vol(fields[12])))
+        converted[13] = therm_res_to_temp(therm_vol_to_res(dac_raw_data_to_vol(fields[13])))
+        converted[14] = imu_raw_data_to_gyro(fields[14])
+        converted[15] = imu_raw_data_to_gyro(fields[15])
+        converted[16] = imu_raw_data_to_gyro(fields[16])
+        converted[17] = imu_raw_data_to_gyro(fields[17])
+        converted[18] = imu_raw_data_to_gyro(fields[18])
+        converted[19] = imu_raw_data_to_gyro(fields[19])
+
+        # Print to screen
+        for i in range(num_fields):
+            print_field(EPS_HK_MAPPING, fields, converted, i)
+
+        # Write to file
+        save_fields(eps_hk_file, converted)
+        print("Added to file")
+
 
     if arg1 == 1:
         print("PAY_HK")
@@ -315,6 +384,7 @@ def main_loop():
 
         if cmd == ("quit"):
             print("Quitting program")
+            continue
 
         elif cmd == ("0"):  # Raw UART
             send_raw_uart(string_to_bytes(input("Enter raw hex for UART: ")))
@@ -489,7 +559,19 @@ if __name__ == "__main__":
     except serial.SerialException as e:
         print("ERROR: Port " + uart + " is in use")
 
+
+    eps_hk_file = load_file("eps_hk.csv", EPS_HK_MAPPING)
+    # TODO
+    #pay_hk_file = load_file("eps_hk.csv")
+    #pay_opt_file = load_file("eps_hk.csv")
+    
+    
     main_loop()
     
+    eps_hk_file.close()
+    # TODO
+    #pay_hk_file.close()
+    #pay_opt_file.close()
+
     ser.close() # Close serial port when program done
     print("Quit Transceiver Simulator")
