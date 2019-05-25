@@ -38,6 +38,12 @@ eps_hk_file = None
 pay_hk_file = None
 pay_opt_file = None
 
+COMMON_HEADER = [
+    "Block Number",
+    "Date",
+    "Time"
+]
+
 # Name, unit, mapping for reordering measurements
 EPS_HK_MAPPING = [
     ("BB Vol",                  "V",        6   ),
@@ -61,6 +67,30 @@ EPS_HK_MAPPING = [
     ("IMU Gyroscope (Cal) Y",   "rad/s",    18  ),
     ("IMU Gyroscope (Cal) Z",   "rad/s",    19  )
 ]
+
+PAY_HK_MAPPING = [
+    ("Temperature",          "C",   0   ),
+    ("Humidity",             "%RH", 1   ),
+    ("Pressure",             "kPa", 2   ),
+    ("MF Temp 0",            "C",   3   ),
+    ("MF Temp 1",            "C",   4   ),
+    ("MF Temp 2",            "C",   5   ),
+    ("MF Temp 3",            "C",   6   ),
+    ("MF Temp 4",            "C",   7   ),
+    ("MF Temp 5",            "C",   8   ),
+    ("MF Temp 6",            "C",   9   ),
+    ("MF Temp 7",            "C",   10  ),
+    ("MF Temp 8",            "C",   11  ),
+    ("MF Temp 9",            "C",   12  ),
+    ("Heater Setpoint 1",    "C",   13  ),
+    ("Heater Setpoint 2",    "C",   14  ),
+    ("Left Proximity",       "",    15  ),
+    ("Right Proximity",      "",    16  )
+]
+
+PAY_OPT_MAPPING = [("Well #%d" % (i + 1), "V", i) for i in range(32)]
+
+
 
 eps_hk_block_num = 0
 pay_hk_block_num = 0
@@ -86,8 +116,11 @@ def load_file(name, mapping):
 
         f = open(name, mode)
         # Write header
-        titles = map(lambda x : x[0] + " (" + x[1] + ")", mapping)
-        f.write(", ".join(titles) + "\n")
+        values = []
+        values.extend(COMMON_HEADER)
+        values.extend(map(lambda x : x[0] + " (" + x[1] + ")", mapping))
+        f.write(", ".join(values) + "\n")
+        f.flush()
         return f
 
     
@@ -110,9 +143,13 @@ def data_to_fields(data):
 def print_field(mapping, fields, converted, index):
     print("Field %d (%s): 0x%.6x = %f %s" % (index, mapping[index], fields[index], converted[index], mapping[index][1]))
 
-def save_fields(file, converted):
+def save_row(file, header, converted):
     # Write row
-    file.write(", ".join(map(str, converted)) + "\n")
+    values = []
+    values.extend([bytes_to_uint24(header[0:3]), header[3], date_time_to_str(header[4:7]), date_time_to_str(header[7:10])])
+    values.extend(map(str, converted))
+    file.write(", ".join(map(str, values)) + "\n")
+    file.flush()
 
 
 def print_block(arg1, data):
@@ -149,34 +186,54 @@ def print_block(arg1, data):
             print_field(EPS_HK_MAPPING, fields, converted, i)
 
         # Write to file
-        save_fields(eps_hk_file, converted)
+        save_row(eps_hk_file, data[0:10], converted)
         print("Added to file")
 
 
     if arg1 == 1:
         print("PAY_HK")
-        print_field(fields, 0, "Temperature", "%f C" % temp_raw_data_to_temperature(fields[0]))
-        print_field(fields, 1, "Humidity", "%f %%RH" % hum_raw_data_to_humidity(fields[1]))
-        print_field(fields, 2, "Pressure", "%f kPa" % pres_raw_data_to_pressure(fields[2]))
-        print_field(fields, 3, "MF Temp 0", "%f C" % adc_raw_data_to_therm_temp(fields[3]))
-        print_field(fields, 4, "MF Temp 1", "%f C" % adc_raw_data_to_therm_temp(fields[4]))
-        print_field(fields, 5, "MF Temp 2", "%f C" % adc_raw_data_to_therm_temp(fields[5]))
-        print_field(fields, 6, "MF Temp 3", "%f C" % adc_raw_data_to_therm_temp(fields[6]))
-        print_field(fields, 7, "MF Temp 4", "%f C" % adc_raw_data_to_therm_temp(fields[7]))
-        print_field(fields, 8, "MF Temp 5", "%f C" % adc_raw_data_to_therm_temp(fields[8]))
-        print_field(fields, 9, "MF Temp 6", "%f C" % adc_raw_data_to_therm_temp(fields[9]))
-        print_field(fields, 10, "MF Temp 7", "%f C" % adc_raw_data_to_therm_temp(fields[10]))
-        print_field(fields, 11, "MF Temp 8", "%f C" % adc_raw_data_to_therm_temp(fields[11]))
-        print_field(fields, 12, "MF Temp 9", "%f C" % adc_raw_data_to_therm_temp(fields[12]))
-        print_field(fields, 13, "MF Heater Setpoint 1", "%f C" % therm_res_to_temp(therm_vol_to_res( dac_raw_data_to_vol(fields[13]))))
-        print_field(fields, 14, "MF Heater Setpoint 2", "%f C" % therm_res_to_temp(therm_vol_to_res( dac_raw_data_to_vol(fields[14]))))
-        print_field(fields, 15, "Left Proximity", "")
-        print_field(fields, 16, "Right Proximity", "")
+        num_fields = len(PAY_HK_MAPPING)
+        converted = [0 for i in range(num_fields)]
+        converted[0]    = temp_raw_data_to_temperature(fields[0])
+        converted[1]    = hum_raw_data_to_humidity(fields[1])
+        converted[2]    = pres_raw_data_to_pressure(fields[2])
+        converted[3]    = adc_raw_data_to_therm_temp(fields[3])
+        converted[4]    = adc_raw_data_to_therm_temp(fields[4])
+        converted[5]    = adc_raw_data_to_therm_temp(fields[5])
+        converted[6]    = adc_raw_data_to_therm_temp(fields[6])
+        converted[7]    = adc_raw_data_to_therm_temp(fields[7])
+        converted[8]    = adc_raw_data_to_therm_temp(fields[8])
+        converted[9]    = adc_raw_data_to_therm_temp(fields[9])
+        converted[10]   = adc_raw_data_to_therm_temp(fields[10])
+        converted[11]   = adc_raw_data_to_therm_temp(fields[11])
+        converted[12]   = adc_raw_data_to_therm_temp(fields[12])
+        converted[13]   = therm_res_to_temp(therm_vol_to_res(dac_raw_data_to_vol(fields[13])))
+        converted[14]   = therm_res_to_temp(therm_vol_to_res(dac_raw_data_to_vol(fields[14])))
+        converted[15]   = 0
+        converted[16]   = 0
+
+        # Print to screen
+        for i in range(num_fields):
+            print_field(PAY_HK_MAPPING, fields, converted, i)
+
+        # Write to file
+        save_row(pay_hk_file, data[0:10], converted)
+        print("Added to file")
 
     if arg1 == 2:
         print("PAY_OPT")
-        for i in range(32):
-            print_field(fields, i, "Well %d" % i, "%f V" % opt_adc_raw_data_to_vol(fields[i], 1))
+        num_fields = len(PAY_OPT_MAPPING)
+        converted = [0 for i in range(num_fields)]
+        for i in range(num_fields):
+            converted[i] = opt_adc_raw_data_to_vol(fields[i], 1)
+        
+        # Print to screen
+        for i in range(num_fields):
+            print_field(PAY_OPT_MAPPING, fields, converted, i)
+
+        # Write to file
+        save_row(pay_opt_file, data[0:10], converted)
+        print("Added to file")
 
 
 def print_div():
@@ -282,10 +339,13 @@ def decode_rx_msg(enc_msg):
         print("block number = %d" % block_num)
 
         if arg1 == 0:
+            global eps_hk_block_num
             eps_hk_block_num = block_num
         if arg1 == 1:
+            global pay_hk_block_num
             pay_hk_block_num = block_num
         if arg1 == 2:
+            global pay_opt_block_num
             pay_opt_block_num = block_num
 
     print_div()
@@ -617,17 +677,14 @@ if __name__ == "__main__":
 
 
     eps_hk_file = load_file("eps_hk.csv", EPS_HK_MAPPING)
-    # TODO
-    #pay_hk_file = load_file("eps_hk.csv")
-    #pay_opt_file = load_file("eps_hk.csv")
-    
+    pay_hk_file = load_file("eps_hk.csv", PAY_HK_MAPPING)
+    pay_opt_file = load_file("eps_hk.csv", PAY_OPT_MAPPING)
     
     main_loop()
     
     eps_hk_file.close()
-    # TODO
-    #pay_hk_file.close()
-    #pay_opt_file.close()
+    pay_hk_file.close()
+    pay_opt_file.close()
 
     ser.close() # Close serial port when program done
     print("Quit Transceiver Simulator")
