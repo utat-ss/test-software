@@ -40,6 +40,7 @@ pay_opt_file = None
 
 COMMON_HEADER = [
     "Block Number",
+    "Error",
     "Date",
     "Time"
 ]
@@ -92,9 +93,13 @@ PAY_OPT_MAPPING = [("Well #%d" % (i + 1), "V", i) for i in range(32)]
 
 
 
-eps_hk_block_num = 0
-pay_hk_block_num = 0
-pay_opt_block_num = 0
+eps_hk_sat_block_num = 0
+pay_hk_sat_block_num = 0
+pay_opt_sat_block_num = 0
+
+eps_hk_file_block_num = 0
+pay_hk_file_block_num = 0
+pay_opt_file_block_num = 0
 
 
 
@@ -102,19 +107,18 @@ pay_opt_block_num = 0
 # Adapted from https://stackoverflow.com/questions/20432912/writing-to-a-new-file-if-it-doesnt-exist-and-appending-to-a-file-if-it-does
 def load_file(name, mapping):
     if os.path.exists(name):
-        mode = 'a' # append if already exists
         print("Found existing file", name)
         print("Appending to file")
 
-        f = open(name, mode)
+        # https://stackoverflow.com/questions/2757887/file-mode-for-creatingreadingappendingbinary
+        f = open(name, 'a+')   
         return f
 
     else:
-        mode = 'w' # make a new file if not
         print("Did not find existing file", name)
         print("Creating new file")
 
-        f = open(name, mode)
+        f = open(name, 'a+')
         # Write header
         values = []
         values.extend(COMMON_HEADER)
@@ -339,14 +343,14 @@ def decode_rx_msg(enc_msg):
         print("block number = %d" % block_num)
 
         if arg1 == 0:
-            global eps_hk_block_num
-            eps_hk_block_num = block_num
+            global eps_hk_sat_block_num
+            eps_hk_sat_block_num = block_num
         if arg1 == 1:
-            global pay_hk_block_num
-            pay_hk_block_num = block_num
+            global pay_hk_sat_block_num
+            pay_hk_sat_block_num = block_num
         if arg1 == 2:
-            global pay_opt_block_num
-            pay_opt_block_num = block_num
+            global pay_opt_sat_block_num
+            pay_opt_sat_block_num = block_num
 
     print_div()
 
@@ -448,36 +452,59 @@ def receive_enc_msg():
     return None
 
 def print_block_nums():
-    print("eps_hk_block_num = %d", eps_hk_block_num)
-    print("pay_hk_block_num = %d", pay_hk_block_num)
-    print("pay_opt_block_num = %d", pay_opt_block_num)
+    print("eps_hk_sat_block_num = %d" % eps_hk_sat_block_num)
+    print("pay_hk_sat_block_num = %d" % pay_hk_sat_block_num)
+    print("pay_opt_sat_block_num = %d" % pay_opt_sat_block_num)
+
+    print("eps_hk_file_block_num = %d" % eps_hk_file_block_num)
+    print("pay_hk_file_block_num = %d" % pay_hk_file_block_num)
+    print("pay_opt_file_block_num = %d" % pay_opt_file_block_num)
 
 def get_last_read_block_nums():
     print("reading block numbers from files")
-    nums = [-1, -1, -1]
+    nums = [0, 0, 0]
 
     for i, f in enumerate((eps_hk_file, pay_hk_file, pay_opt_file)):
-        last_line = f.readlines()[-1]
-        nums[i] = int(last_line.split(",")[0].strip())
+        f.seek(0, 0)
+        all_lines = f.readlines()
+        print("all_lines =", all_lines)
+        if len(all_lines) > 1:
+            last_line = all_lines[-1]
+            nums[i] = int(last_line.split(",")[0].strip()) + 1
+        f.seek(0, 2)
 
+    global eps_hk_file_block_num, pay_hk_file_block_num, pay_opt_file_block_num
+    (eps_hk_file_block_num, pay_hk_file_block_num, pay_opt_file_block_num) = nums
     print_block_nums()
-    print("last read block nums:", nums)
-    return nums
 
+def get_sat_block_nums():
+    for section in range(3):
+        send_message(19, section)
+        print("Waiting for response...")
+        enc_msg = receive_enc_msg()
+        if enc_msg is not None:
+            decode_rx_msg(enc_msg)
+    print_block_nums()
 
 
 def read_all_missing_blocks():
     print("Reading all missing blocks...")
-    last_nums = get_last_read_block_nums()
-    cur_nums = (eps_hk_block_num, pay_hk_block_num, pay_opt_block_num)
+
+    get_sat_block_nums()
+    get_last_read_block_nums()
+    last_nums = (eps_hk_file_block_num, pay_hk_file_block_num, pay_opt_file_block_num)
+    cur_nums = (eps_hk_sat_block_num, pay_hk_sat_block_num, pay_opt_sat_block_num)
 
     for i in range(3):
-        for block_num in range(last_nums[i] + 1, cur_nums[i]):
+        print("Need to fetch", last_nums[i], "to", cur_nums[i] - 1)
+        for block_num in range(last_nums[i], cur_nums[i]):
+            print("block_num =", block_num)
             print("Reading block #", block_num)
-            send_message(8, block_num)
+            send_message(8, i, block_num)
             print("Waiting for response...")
             enc_msg = receive_enc_msg()
-            decode_rx_msg(enc_msg)
+            if enc_msg is not None:
+                decode_rx_msg(enc_msg)
 
 
 def main_loop():
@@ -553,6 +580,7 @@ def main_loop():
             print("2. Read Local Block")
             print("3. Read Memory Block")
             print("4. Get Current Block number")
+            print("5. Get All Missing Blocks")
             next_cmd = input("Enter command number: ")
 
             arg1 = input_int("Enter block type %s: " % block_type_consts())
@@ -566,6 +594,8 @@ def main_loop():
                 send_message(8, arg1, arg2)
             elif next_cmd == ("4"):
                 send_message(19, arg1)
+            elif next_cmd == ("5"):
+                read_all_missing_blocks()
             else:
                 print("Invalid command")
 
@@ -634,7 +664,8 @@ def main_loop():
 
         print("Waiting for response...")
         enc_msg = receive_enc_msg()
-        decode_rx_msg(enc_msg)
+        if enc_msg is not None:
+            decode_rx_msg(enc_msg)
 
 
 
@@ -677,9 +708,12 @@ if __name__ == "__main__":
 
 
     eps_hk_file = load_file("eps_hk.csv", EPS_HK_MAPPING)
-    pay_hk_file = load_file("eps_hk.csv", PAY_HK_MAPPING)
-    pay_opt_file = load_file("eps_hk.csv", PAY_OPT_MAPPING)
+    pay_hk_file = load_file("pay_hk.csv", PAY_HK_MAPPING)
+    pay_opt_file = load_file("pay_opt.csv", PAY_OPT_MAPPING)
     
+    get_last_read_block_nums()
+    print_block_nums()
+
     main_loop()
     
     eps_hk_file.close()
