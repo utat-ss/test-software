@@ -38,7 +38,6 @@ eps_hk_file = None
 pay_hk_file = None
 pay_opt_file = None
 
-
 # Name, unit, mapping for reordering measurements
 EPS_HK_MAPPING = [
     ("BB Vol",                  "V",        6   ),
@@ -62,6 +61,11 @@ EPS_HK_MAPPING = [
     ("IMU Gyroscope (Cal) Y",   "rad/s",    18  ),
     ("IMU Gyroscope (Cal) Z",   "rad/s",    19  )
 ]
+
+eps_hk_block_num = 0
+pay_hk_block_num = 0
+pay_opt_block_num = 0
+
 
 
 # Create or append to file
@@ -181,6 +185,16 @@ def print_div():
 def date_time_to_str(data):
     return "%02d %02d %02d" % (data[0], data[1], data[2])
 
+def subsys_num_to_str(num):
+    if num == 0:
+        return "OBC"
+    elif num == 1:
+        return "EPS"
+    elif num == 2:
+        return "PAY"
+    else:
+        return "UNKNOWN"
+
 def decode_rx_msg(enc_msg):
     if len(enc_msg) < 20:
         print("Message too short")
@@ -263,7 +277,16 @@ def decode_rx_msg(enc_msg):
         print("Read EEPROM")
     if type == 0x13:
         print("Get current block number")
-        print("block number = %d" % bytes_to_uint32(data[0:4]))
+        print(subsys_num_to_str(arg1))
+        block_num = bytes_to_uint32(data[0:4])
+        print("block number = %d" % block_num)
+
+        if arg1 == 0:
+            eps_hk_block_num = block_num
+        if arg1 == 1:
+            pay_hk_block_num = block_num
+        if arg1 == 2:
+            pay_opt_block_num = block_num
 
     print_div()
 
@@ -335,7 +358,7 @@ def input_int(prompt):
             print("Error! Input must be an integer or in hex")
 
 
-def receive_msg():
+def receive_enc_msg():
     # Read from serial to bytes
     # DO NOT DECODE IT WITH UTF-8, IT DISCARDS ANY CHARACTERS > 127
     # See https://www.avrfreaks.net/forum/serial-port-data-corrupted-when-sending-specific-pattern-bytes
@@ -356,13 +379,45 @@ def receive_msg():
             enc_msg = raw[start_index:]
             print("Received UART (raw):", bytes_to_string(raw))
             print("Received UART (enc_msg):", bytes_to_string(enc_msg))
-            decode_rx_msg(enc_msg)
-            break
+            return enc_msg
 
     else:
         print("Received UART (raw):", bytes_to_string(raw))
         print("No message found")
+    
+    return None
 
+def print_block_nums():
+    print("eps_hk_block_num = %d", eps_hk_block_num)
+    print("pay_hk_block_num = %d", pay_hk_block_num)
+    print("pay_opt_block_num = %d", pay_opt_block_num)
+
+def get_last_read_block_nums():
+    print("reading block numbers from files")
+    nums = [-1, -1, -1]
+
+    for i, f in enumerate((eps_hk_file, pay_hk_file, pay_opt_file)):
+        last_line = f.readlines()[-1]
+        nums[i] = int(last_line.split(",")[0].strip())
+
+    print_block_nums()
+    print("last read block nums:", nums)
+    return nums
+
+
+
+def read_all_missing_blocks():
+    print("Reading all missing blocks...")
+    last_nums = get_last_read_block_nums()
+    cur_nums = (eps_hk_block_num, pay_hk_block_num, pay_opt_block_num)
+
+    for i in range(3):
+        for block_num in range(last_nums[i] + 1, cur_nums[i]):
+            print("Reading block #", block_num)
+            send_message(8, block_num)
+            print("Waiting for response...")
+            enc_msg = receive_enc_msg()
+            decode_rx_msg(enc_msg)
 
 
 def main_loop():
@@ -518,7 +573,8 @@ def main_loop():
             print("Invalid command")
 
         print("Waiting for response...")
-        receive_msg()
+        enc_msg = receive_enc_msg()
+        decode_rx_msg(enc_msg)
 
 
 
