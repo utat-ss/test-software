@@ -19,6 +19,7 @@ import codecs
 import argparse
 
 from conversions import *
+from sections import *
 
 try:
     import serial
@@ -32,99 +33,11 @@ except ImportError:
 
 
 # Global Variables
+# UART serial port
 ser = None # One port is used
-# Output files for data
-eps_hk_file = None
-pay_hk_file = None
-pay_opt_file = None
-
-COMMON_HEADER = [
-    "Expected Block Number"
-    "Block Number",
-    "Error",
-    "Date",
-    "Time"
-]
-
-# Name, unit, mapping for reordering measurements
-EPS_HK_MAPPING = [
-    ("BB Vol",                  "V",        6   ),
-    ("BB Cur",                  "A",        7   ),
-    ("-Y Cur",                  "A",        5   ),
-    ("+X Cur",                  "A",        2   ),
-    ("+Y Cur",                  "A",        3   ),
-    ("-X Cur",                  "A",        4   ),
-    ("Bat Temp 1",              "C",        10  ),
-    ("Bat Temp 2",              "C",        11  ),
-    ("Bat Vol",                 "V",        0   ),
-    ("Bat Cur",                 "A",        1   ),
-    ("BT Cur",                  "A",        8   ),
-    ("BT Vol",                  "V",        9   ),
-    ("Heater Setpoint 1",       "C",        12  ),
-    ("Heater Setpoint 2",       "C",        13  ),
-    ("IMU Gyroscope (Uncal) X", "rad/s",    14  ),
-    ("IMU Gyroscope (Uncal) Y", "rad/s",    15  ),
-    ("IMU Gyroscope (Uncal) Z", "rad/s",    16  ),
-    ("IMU Gyroscope (Cal) X",   "rad/s",    17  ),
-    ("IMU Gyroscope (Cal) Y",   "rad/s",    18  ),
-    ("IMU Gyroscope (Cal) Z",   "rad/s",    19  )
-]
-
-PAY_HK_MAPPING = [
-    ("Temperature",          "C",   0   ),
-    ("Humidity",             "%RH", 1   ),
-    ("Pressure",             "kPa", 2   ),
-    ("MF Temp 0",            "C",   3   ),
-    ("MF Temp 1",            "C",   4   ),
-    ("MF Temp 2",            "C",   5   ),
-    ("MF Temp 3",            "C",   6   ),
-    ("MF Temp 4",            "C",   7   ),
-    ("MF Temp 5",            "C",   8   ),
-    ("MF Temp 6",            "C",   9   ),
-    ("MF Temp 7",            "C",   10  ),
-    ("MF Temp 8",            "C",   11  ),
-    ("MF Temp 9",            "C",   12  ),
-    ("Heater Setpoint 1",    "C",   13  ),
-    ("Heater Setpoint 2",    "C",   14  ),
-    ("Left Proximity",       "",    15  ),
-    ("Right Proximity",      "",    16  )
-]
-
-PAY_OPT_MAPPING = [("Well #%d" % (i + 1), "V", i) for i in range(32)]
 
 
 
-eps_hk_sat_block_num = 0
-pay_hk_sat_block_num = 0
-pay_opt_sat_block_num = 0
-
-eps_hk_file_block_num = 0
-pay_hk_file_block_num = 0
-pay_opt_file_block_num = 0
-
-
-
-
-def string_to_bytes(s):
-    return bytearray(codecs.decode(s.replace(':', ''), 'hex'))
-
-def bytes_to_string(b):
-    return ":".join(map(lambda x: "%02x" % x, list(b)))
-
-def uint32_to_bytes(num):
-    return bytes([(num >> 24) & 0xFF, (num >> 16) & 0xFF, (num >> 8) & 0xFF, num & 0xFF])
-
-# Take 4 bytes
-def bytes_to_uint32(bytes):
-    return (bytes[0] << 24) | (bytes[1] << 16) | (bytes[2] << 8) | bytes[3]
-
-# Only take 3 bytes
-def bytes_to_uint24(bytes):
-    return (bytes[0] << 16) | (bytes[1] << 8) | bytes[2]
-
-# NOTE: this is in decimal, not hex
-def date_time_to_str(data):
-    return "%02d:%02d:%02d" % (data[0], data[1], data[2])
 
 def subsys_num_to_str(num):
     if num == 0:
@@ -170,40 +83,6 @@ def input_block_type():
     return input_int("Enter block type (EPS_HK = 0, PAY_HK = 1, PAY_OPT = 2): ")
 
 
-# Create or append to file
-# Adapted from https://stackoverflow.com/questions/20432912/writing-to-a-new-file-if-it-doesnt-exist-and-appending-to-a-file-if-it-does
-def load_file(name, mapping):
-    if os.path.exists(name):
-        print("Found existing file", name)
-        print("Appending to file")
-
-        # https://stackoverflow.com/questions/2757887/file-mode-for-creatingreadingappendingbinary
-        f = open(name, 'a+')   
-        return f
-
-    else:
-        print("Did not find existing file", name)
-        print("Creating new file")
-
-        f = open(name, 'a+')
-        # Write header
-        values = []
-        values.extend(COMMON_HEADER)
-        values.extend(map(lambda x : x[0] + " (" + x[1] + ")", mapping))
-        f.write(", ".join(values) + "\n")
-        f.flush()
-
-        return f
-
-def save_row(file, expected_block_num, header, converted):
-    # Write row
-    values = []
-    values.extend([expected_block_num, bytes_to_uint24(header[0:3]), header[3], date_time_to_str(header[4:7]), date_time_to_str(header[7:10])])
-    values.extend(map(str, converted))
-    file.write(", ".join(map(str, values)) + "\n")
-    file.flush()
-
-
 def print_div():
     print("-" * 80)
 
@@ -213,17 +92,12 @@ def print_header(header):
     print("Date = %s" % date_time_to_str(header[4:7]))
     print("Time = %s" % date_time_to_str(header[7:10]))
 
-def print_fields(mapping, fields, converted):
-    for i in range(len(mapping)):
-        print("Field #%d (%s): 0x%.6x = %.6f %s" % (i, mapping[i], fields[i], converted[i], mapping[i][1]))
-
-def print_block(arg1, arg2, data):
+def process_rx_block(arg1, arg2, data):
     (header, fields) = parse_data(data)
     print("Expected block number:", arg2)
     print_header(header)
 
     if arg1 == 0:
-        print("EPS_HK")
         num_fields = len(EPS_HK_MAPPING)
         converted = [0 for i in range(num_fields)]
         converted[0]    = adc_raw_data_to_eps_vol(fields[0])
@@ -248,13 +122,12 @@ def print_block(arg1, arg2, data):
         converted[19]   = imu_raw_data_to_gyro(fields[19])
 
         # Print to screen
-        print_fields(EPS_HK_MAPPING, fields, converted)
+        eps_hk_section.print_fields(fields, converted)
         # Write to file
-        save_row(eps_hk_file, arg2, header, converted)
-        print("Added to file")
+        eps_hk_section.write_block_to_file(arg2, header, converted)
+        
 
     if arg1 == 1:
-        print("PAY_HK")
         num_fields = len(PAY_HK_MAPPING)
         converted = [0 for i in range(num_fields)]
         converted[0]    = temp_raw_data_to_temperature(fields[0])
@@ -276,23 +149,20 @@ def print_block(arg1, arg2, data):
         converted[16]   = 0
 
         # Print to screen
-        print_fields(PAY_HK_MAPPING, fields, converted)
+        pay_hk_section.print_fields(fields, converted)
         # Write to file
-        save_row(pay_hk_file, arg2, header, converted)
-        print("Added to file")
+        pay_hk_section.write_block_to_file(arg2, header, converted)
 
     if arg1 == 2:
-        print("PAY_OPT")
         num_fields = len(PAY_OPT_MAPPING)
         converted = [0 for i in range(num_fields)]
         for i in range(num_fields):
             converted[i] = opt_adc_raw_data_to_vol(fields[i], 1)
         
         # Print to screen
-        print_fields(PAY_OPT_MAPPING, fields, converted)
+        pay_opt_section.print_fields(fields, converted)
         # Write to file
-        save_row(pay_opt_file, arg2, header, converted)
-        print("Added to file")
+        pay_opt_section.write_block_to_file(arg2, header, converted)
 
 
 def encode_message(dec_msg):
@@ -397,10 +267,10 @@ def process_rx_enc_msg(enc_msg):
         print("Block number = %d" % bytes_to_uint32(data[0:4]))
     if type == 0x07:
         print("Read local block")
-        print_block(arg1, arg2, data)
+        process_rx_block(arg1, arg2, data)
     if type == 0x08:
         print("Read memory block")
-        print_block(arg1, arg2, data)
+        process_rx_block(arg1, arg2, data)
     if type == 0x09:
         print("Enable/disable auto data collection")
     if type == 0x0A:
@@ -430,14 +300,14 @@ def process_rx_enc_msg(enc_msg):
         print("Block number = %d" % block_num)
 
         if arg1 == 0:
-            global eps_hk_sat_block_num
-            eps_hk_sat_block_num = block_num
+            #global eps_hk_sat_block_num
+            eps_hk_section.sat_block_num = block_num
         if arg1 == 1:
-            global pay_hk_sat_block_num
-            pay_hk_sat_block_num = block_num
+            #global pay_hk_sat_block_num
+            pay_hk_section.sat_block_num = block_num
         if arg1 == 2:
-            global pay_opt_sat_block_num
-            pay_opt_sat_block_num = block_num
+            #global pay_opt_sat_block_num
+            pay_opt_section.sat_block_num = block_num
 
     print_div()
 
@@ -467,61 +337,28 @@ def receive_message():
         print("Failed to receive message")
 
 
-def print_block_nums():
-    print("eps_hk_sat_block_num = %d" % eps_hk_sat_block_num)
-    print("pay_hk_sat_block_num = %d" % pay_hk_sat_block_num)
-    print("pay_opt_sat_block_num = %d" % pay_opt_sat_block_num)
-
-    print("eps_hk_file_block_num = %d" % eps_hk_file_block_num)
-    print("pay_hk_file_block_num = %d" % pay_hk_file_block_num)
-    print("pay_opt_file_block_num = %d" % pay_opt_file_block_num)
-
-def get_last_read_block_nums():
-    print("reading block numbers from files")
-    nums = [0, 0, 0]
-
-    for i, f in enumerate((eps_hk_file, pay_hk_file, pay_opt_file)):
-        f.seek(0, 0)
-        all_lines = f.readlines()
-        print("all_lines =", all_lines)
-        if len(all_lines) > 1:
-            last_line = all_lines[-1]
-            nums[i] = int(last_line.split(",")[0].strip()) + 1
-        f.seek(0, 2)
-
-    global eps_hk_file_block_num, pay_hk_file_block_num, pay_opt_file_block_num
-    (eps_hk_file_block_num, pay_hk_file_block_num, pay_opt_file_block_num) = nums
-    print_block_nums()
-
+def print_sections():
+    for section in all_sections:
+        print(section)
 
 def get_sat_block_nums():
-    for section in range(3):
-        send_message(19, section)
-        print("Waiting for response...")
-        enc_msg = receive_enc_msg()
-        if enc_msg is not None:
-            process_rx_enc_msg(enc_msg)
-    print_block_nums()
+    print("Getting satellite block numbers...")
+    for i in range(len(all_sections)):
+        send_message(19, i)
+        receive_message()
+    print_sections()
 
 
 def read_all_missing_blocks():
-    print("Reading all missing blocks...")
-
     get_sat_block_nums()
-    get_last_read_block_nums()
-    last_nums = (eps_hk_file_block_num, pay_hk_file_block_num, pay_opt_file_block_num)
-    cur_nums = (eps_hk_sat_block_num, pay_hk_sat_block_num, pay_opt_sat_block_num)
+    print_sections()
 
-    for i in range(3):
-        print("Need to fetch", last_nums[i], "to", cur_nums[i] - 1)
-        for block_num in range(last_nums[i], cur_nums[i]):
-            print("block_num =", block_num)
+    print("Reading all missing blocks...")
+    for i, section in enumerate(all_sections):
+        for block_num in range(section.file_block_num, section.sat_block_num):
             print("Reading block #", block_num)
             send_message(8, i, block_num)
-            print("Waiting for response...")
-            enc_msg = receive_enc_msg()
-            if enc_msg is not None:
-                process_rx_enc_msg(enc_msg)
+            receive_message()
 
 
 def main_loop():
@@ -723,19 +560,13 @@ if __name__ == "__main__":
     except serial.SerialException as e:
         print("ERROR: Port " + uart + " is in use")
 
-
-    eps_hk_file = load_file("eps_hk.csv", EPS_HK_MAPPING)
-    pay_hk_file = load_file("pay_hk.csv", PAY_HK_MAPPING)
-    pay_opt_file = load_file("pay_opt.csv", PAY_OPT_MAPPING)
+    for section in all_sections:
+        section.load_file()
     
-    get_last_read_block_nums()
-    print_block_nums()
-
     main_loop()
     
-    eps_hk_file.close()
-    pay_hk_file.close()
-    pay_opt_file.close()
+    for section in all_sections:
+        section.data_file.close()
 
     ser.close() # Close serial port when program done
     print("Quit Transceiver Simulator")
