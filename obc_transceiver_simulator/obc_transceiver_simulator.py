@@ -39,6 +39,7 @@ pay_hk_file = None
 pay_opt_file = None
 
 COMMON_HEADER = [
+    "Expected Block Number"
     "Block Number",
     "Error",
     "Date",
@@ -103,6 +104,72 @@ pay_opt_file_block_num = 0
 
 
 
+
+def string_to_bytes(s):
+    return bytearray(codecs.decode(s.replace(':', ''), 'hex'))
+
+def bytes_to_string(b):
+    return ":".join(map(lambda x: "%02x" % x, list(b)))
+
+def uint32_to_bytes(num):
+    return bytes([(num >> 24) & 0xFF, (num >> 16) & 0xFF, (num >> 8) & 0xFF, num & 0xFF])
+
+# Take 4 bytes
+def bytes_to_uint32(bytes):
+    return (bytes[0] << 24) | (bytes[1] << 16) | (bytes[2] << 8) | bytes[3]
+
+# Only take 3 bytes
+def bytes_to_uint24(bytes):
+    return (bytes[0] << 16) | (bytes[1] << 8) | bytes[2]
+
+# NOTE: this is in decimal, not hex
+def date_time_to_str(data):
+    return "%02d:%02d:%02d" % (data[0], data[1], data[2])
+
+def subsys_num_to_str(num):
+    if num == 0:
+        return "OBC"
+    elif num == 1:
+        return "EPS"
+    elif num == 2:
+        return "PAY"
+    else:
+        return "UNKNOWN"
+
+def parse_data(data):
+    header = data[0:10]
+    
+    fields = []
+    for i in range(0, len(data), 3):
+        fields.append(bytes_to_uint24(data[i : i+3]))
+
+    return (header, fields)
+
+
+# prompt is the send_message information
+# Sends data back as an int
+def input_int(prompt):
+    while True:
+        in_str = input(prompt)
+
+        try: #Check to see if input is an integer
+            # See if the user tried to type in hex
+            if in_str.startswith("0x"):
+                ret = int(in_str.lstrip("0x"), 16)
+            else:
+                ret = int(in_str)
+            return ret
+        except serial.SerialException as e:
+            print(e)
+            print("Error! Input must be an integer or in hex")
+
+def input_subsys():
+    return input_int("Enter subsystem (OBC = 0, EPS = 1, PAY = 2): ")
+
+def input_block_type():
+    return input_int("Enter block type (EPS_HK = 0, PAY_HK = 1, PAY_OPT = 2): ")
+
+
 # Create or append to file
 # Adapted from https://stackoverflow.com/questions/20432912/writing-to-a-new-file-if-it-doesnt-exist-and-appending-to-a-file-if-it-does
 def load_file(name, mapping):
@@ -125,74 +192,66 @@ def load_file(name, mapping):
         values.extend(map(lambda x : x[0] + " (" + x[1] + ")", mapping))
         f.write(", ".join(values) + "\n")
         f.flush()
+
         return f
 
-    
-
-def subsys_consts():
-    return "(OBC = 0, EPS = 1, PAY = 2)"
-
-def block_type_consts():
-    return "(EPS_HK = 0, PAY_HK = 1, PAY_OPT = 2)"
-
-def print_header(data):
-    print("block number = %d, error = %d, date = %s, time = %s" % (bytes_to_uint24(data[0:3]), data[3], date_time_to_str(data[4:7]), date_time_to_str(data[7:10])))
-
-def data_to_fields(data):
-    fields = []
-    for i in range(0, len(data), 3):
-        fields.append(bytes_to_uint24(data[i:i+3]))
-    return fields
-
-def print_field(mapping, fields, converted, index):
-    print("Field %d (%s): 0x%.6x = %f %s" % (index, mapping[index], fields[index], converted[index], mapping[index][1]))
-
-def save_row(file, header, converted):
+def save_row(file, expected_block_num, header, converted):
     # Write row
     values = []
-    values.extend([bytes_to_uint24(header[0:3]), header[3], date_time_to_str(header[4:7]), date_time_to_str(header[7:10])])
+    values.extend([expected_block_num, bytes_to_uint24(header[0:3]), header[3], date_time_to_str(header[4:7]), date_time_to_str(header[7:10])])
     values.extend(map(str, converted))
     file.write(", ".join(map(str, values)) + "\n")
     file.flush()
 
 
-def print_block(arg1, data):
-    print_header(data[0:10])
-    fields = data_to_fields(data[10:])
+def print_div():
+    print("-" * 80)
+
+def print_header(header):
+    print("Block number = %d" % bytes_to_uint24(header[0:3]))
+    print("Error = %d" % header[3])
+    print("Date = %s" % date_time_to_str(header[4:7]))
+    print("Time = %s" % date_time_to_str(header[7:10]))
+
+def print_fields(mapping, fields, converted):
+    for i in range(len(mapping)):
+        print("Field #%d (%s): 0x%.6x = %.6f %s" % (i, mapping[i], fields[i], converted[i], mapping[i][1]))
+
+def print_block(arg1, arg2, data):
+    (header, fields) = parse_data(data)
+    print("Expected block number:", arg2)
+    print_header(header)
 
     if arg1 == 0:
         print("EPS_HK")
         num_fields = len(EPS_HK_MAPPING)
         converted = [0 for i in range(num_fields)]
-        converted[0] = adc_raw_data_to_eps_vol(fields[0])
-        converted[1] = adc_raw_data_to_eps_cur(fields[1])
-        converted[2] = adc_raw_data_to_eps_cur(fields[2])
-        converted[3] = adc_raw_data_to_eps_cur(fields[3])
-        converted[4] = adc_raw_data_to_eps_cur(fields[4])
-        converted[5] = adc_raw_data_to_eps_cur(fields[5])
-        converted[6] = adc_raw_data_to_therm_temp(fields[6])
-        converted[7] = adc_raw_data_to_therm_temp(fields[7])
-        converted[8] = adc_raw_data_to_eps_vol(fields[8])
-        converted[9] = adc_raw_data_to_eps_cur(fields[9]) - 2.5
-        converted[10] = adc_raw_data_to_eps_cur(fields[8])
-        converted[11] = adc_raw_data_to_eps_vol(fields[8])
-        converted[12] = therm_res_to_temp(therm_vol_to_res(dac_raw_data_to_vol(fields[12])))
-        converted[13] = therm_res_to_temp(therm_vol_to_res(dac_raw_data_to_vol(fields[13])))
-        converted[14] = imu_raw_data_to_gyro(fields[14])
-        converted[15] = imu_raw_data_to_gyro(fields[15])
-        converted[16] = imu_raw_data_to_gyro(fields[16])
-        converted[17] = imu_raw_data_to_gyro(fields[17])
-        converted[18] = imu_raw_data_to_gyro(fields[18])
-        converted[19] = imu_raw_data_to_gyro(fields[19])
+        converted[0]    = adc_raw_data_to_eps_vol(fields[0])
+        converted[1]    = adc_raw_data_to_eps_cur(fields[1])
+        converted[2]    = adc_raw_data_to_eps_cur(fields[2])
+        converted[3]    = adc_raw_data_to_eps_cur(fields[3])
+        converted[4]    = adc_raw_data_to_eps_cur(fields[4])
+        converted[5]    = adc_raw_data_to_eps_cur(fields[5])
+        converted[6]    = adc_raw_data_to_therm_temp(fields[6])
+        converted[7]    = adc_raw_data_to_therm_temp(fields[7])
+        converted[8]    = adc_raw_data_to_eps_vol(fields[8])
+        converted[9]    = adc_raw_data_to_eps_cur(fields[9]) - 2.5
+        converted[10]   = adc_raw_data_to_eps_cur(fields[10])
+        converted[11]   = adc_raw_data_to_eps_vol(fields[11])
+        converted[12]   = therm_res_to_temp(therm_vol_to_res(dac_raw_data_to_vol(fields[12])))
+        converted[13]   = therm_res_to_temp(therm_vol_to_res(dac_raw_data_to_vol(fields[13])))
+        converted[14]   = imu_raw_data_to_gyro(fields[14])
+        converted[15]   = imu_raw_data_to_gyro(fields[15])
+        converted[16]   = imu_raw_data_to_gyro(fields[16])
+        converted[17]   = imu_raw_data_to_gyro(fields[17])
+        converted[18]   = imu_raw_data_to_gyro(fields[18])
+        converted[19]   = imu_raw_data_to_gyro(fields[19])
 
         # Print to screen
-        for i in range(num_fields):
-            print_field(EPS_HK_MAPPING, fields, converted, i)
-
+        print_fields(EPS_HK_MAPPING, fields, converted)
         # Write to file
-        save_row(eps_hk_file, data[0:10], converted)
+        save_row(eps_hk_file, arg2, header, converted)
         print("Added to file")
-
 
     if arg1 == 1:
         print("PAY_HK")
@@ -217,11 +276,9 @@ def print_block(arg1, data):
         converted[16]   = 0
 
         # Print to screen
-        for i in range(num_fields):
-            print_field(PAY_HK_MAPPING, fields, converted, i)
-
+        print_fields(PAY_HK_MAPPING, fields, converted)
         # Write to file
-        save_row(pay_hk_file, data[0:10], converted)
+        save_row(pay_hk_file, arg2, header, converted)
         print("Added to file")
 
     if arg1 == 2:
@@ -232,36 +289,27 @@ def print_block(arg1, data):
             converted[i] = opt_adc_raw_data_to_vol(fields[i], 1)
         
         # Print to screen
-        for i in range(num_fields):
-            print_field(PAY_OPT_MAPPING, fields, converted, i)
-
+        print_fields(PAY_OPT_MAPPING, fields, converted)
         # Write to file
-        save_row(pay_opt_file, data[0:10], converted)
+        save_row(pay_opt_file, arg2, header, converted)
         print("Added to file")
 
 
-def print_div():
-    print("-" * 80)
+def encode_message(dec_msg):
+    enc_msg = b''
+    enc_msg += b'\x00'
+    enc_msg += bytes([len(dec_msg) * 2])
+    for byte in dec_msg:
+        s = "%.2x" % byte
+        enc_msg += bytes(s, 'utf-8')
+    #Special character to indicate start of send_message
+    return enc_msg
 
-def date_time_to_str(data):
-    return "%02d %02d %02d" % (data[0], data[1], data[2])
-
-def subsys_num_to_str(num):
-    if num == 0:
-        return "OBC"
-    elif num == 1:
-        return "EPS"
-    elif num == 2:
-        return "PAY"
-    else:
-        return "UNKNOWN"
-
-def decode_rx_msg(enc_msg):
+def decode_message(enc_msg):
     if len(enc_msg) < 20:
         print("Message too short")
         return
-
-    if enc_msg[0] != 0:
+    if enc_msg[0] != 0x00:
         print("Bad start character")
         return
     if enc_msg[1] != len(enc_msg) - 2:
@@ -271,10 +319,49 @@ def decode_rx_msg(enc_msg):
     dec_msg = bytes(0)
     for i in range(2, len(enc_msg), 2):
         dec_msg += bytes([int(enc_msg[i : i + 2], 16)])
+    return dec_msg
+    
 
+# string should look something like "00:ff:a3:49:de"
+# Use `bytearray` instead of `bytes`
+def send_raw_uart(uart_bytes):
+    print("Sending UART (%d bytes):" % len(uart_bytes), bytes_to_string(uart_bytes))
+    ser.write(uart_bytes)
+
+def receive_enc_msg():
+    # Read from serial to bytes
+    # DO NOT DECODE IT WITH UTF-8, IT DISCARDS ANY CHARACTERS > 127
+    # See https://www.avrfreaks.net/forum/serial-port-data-corrupted-when-sending-specific-pattern-bytes
+    # See https://stackoverflow.com/questions/14454957/pyserial-formatting-bytes-over-127-return-as-2-bytes-rather-then-one
+    
+    raw = bytes(0)
+    enc_msg = bytes(0)
+
+    for i in range(20):
+        new = ser.read(2 ** 16)
+        # print("%d new bytes" % len(new))
+        raw += new
+
+        start_index = raw.find(0x00)
+        # print("start_index =", start_index)
+
+        if start_index != -1 and start_index < len(raw) - 1 and raw[start_index + 1] == len(raw) - start_index - 2:
+            print("Received UART (raw):", bytes_to_string(raw))
+            enc_msg = raw[start_index:]
+            print("Received UART (encoded message):", bytes_to_string(enc_msg))
+            return enc_msg
+
+    else:
+        print("Received UART (raw):", bytes_to_string(raw))
+        print("No encoded message found")
+    
+    return None
+
+def process_rx_enc_msg(enc_msg):
     print_div()
-    print("enc_msg (%d bytes):" % len(enc_msg), bytes_to_string(enc_msg))
-    print("dec_msg (%d bytes):" % len(dec_msg), bytes_to_string(dec_msg))
+    print("Received encoded message (%d bytes):" % len(enc_msg), bytes_to_string(enc_msg))
+    dec_msg = decode_message(enc_msg)
+    print("Received decoded message (%d bytes):" % len(dec_msg), bytes_to_string(dec_msg))
 
     type = dec_msg[0]
     arg1 = bytes_to_uint32(dec_msg[1:5])
@@ -290,30 +377,30 @@ def decode_rx_msg(enc_msg):
         print("Status/ping")
     if type == 0x01:
         print("Restart/uptime")
-        print("restart count =", bytes_to_uint32(data[0:4]))
-        print("restart date =", date_time_to_str(data[4:7]))
-        print("restart time =", date_time_to_str(data[7:10]))
-        print("uptime =", bytes_to_uint32(data[10:14]))
+        print("Restart count =", bytes_to_uint32(data[0:4]))
+        print("Restart date =", date_time_to_str(data[4:7]))
+        print("Restart time =", date_time_to_str(data[7:10]))
+        print("Uptime =", bytes_to_uint32(data[10:14]))
     if type == 0x02:
         print("Get RTC")
-        print("date =", date_time_to_str(data[0:3]))
-        print("time =", date_time_to_str(data[3:6]))
+        print("Date =", date_time_to_str(data[0:3]))
+        print("Time =", date_time_to_str(data[3:6]))
     if type == 0x03:
         print("Set RTC")
     if type == 0x04:
         print("Read memory")
-        print("data = %s" % bytes_to_string(data))
+        print("Data = %s" % bytes_to_string(data))
     if type == 0x05:
         print("Erase memory")
     if type == 0x06:
         print("Collect block")
-        print("block number = %d" % bytes_to_uint32(data[0:4]))
+        print("Block number = %d" % bytes_to_uint32(data[0:4]))
     if type == 0x07:
         print("Read local block")
-        print_block(arg1, data)
+        print_block(arg1, arg2, data)
     if type == 0x08:
         print("Read memory block")
-        print_block(arg1, data)
+        print_block(arg1, arg2, data)
     if type == 0x09:
         print("Enable/disable auto data collection")
     if type == 0x0A:
@@ -330,17 +417,17 @@ def decode_rx_msg(enc_msg):
         print("Reset")
     if type == 0x10:
         print("Send CAN message to EPS")
-        print("message =", bytes_to_string(data))
+        print("Message =", bytes_to_string(data))
     if type == 0x11:
         print("Send CAN message to PAY")
-        print("message =", bytes_to_string(data))
+        print("Message =", bytes_to_string(data))
     if type == 0x12:
         print("Read EEPROM")
     if type == 0x13:
         print("Get current block number")
         print(subsys_num_to_str(arg1))
         block_num = bytes_to_uint32(data[0:4])
-        print("block number = %d" % block_num)
+        print("Block number = %d" % block_num)
 
         if arg1 == 0:
             global eps_hk_sat_block_num
@@ -355,39 +442,6 @@ def decode_rx_msg(enc_msg):
     print_div()
 
 
-def string_to_bytes(s):
-    return bytearray(codecs.decode(s.replace(':', ''), 'hex'))
-
-def bytes_to_string(b):
-    return ":".join(map(lambda x: "%02x" % x, list(b)))
-
-# string should look something like "00:ff:a3:49:de"
-# Use `bytearray` instead of `bytes`
-def send_raw_uart(uart_bytes):
-    print("Sending UART (%d bytes):" % len(uart_bytes), bytes_to_string(uart_bytes))
-    ser.write(uart_bytes)
-
-def uint32_to_bytes(num):
-    return bytes([(num >> 24) & 0xFF, (num >> 16) & 0xFF, (num >> 8) & 0xFF, num & 0xFF])
-
-# Take 4 bytes
-def bytes_to_uint32(bytes):
-    return (bytes[0] << 24) | (bytes[1] << 16) | (bytes[2] << 8) | bytes[3]
-
-# Only take 3 bytes
-def bytes_to_uint24(bytes):
-    return (bytes[0] << 16) | (bytes[1] << 8) | bytes[2]
-
-def encode_message(dec_msg):
-    enc_msg = b''
-    enc_msg += b'\x00'
-    enc_msg += bytes([len(dec_msg) * 2])
-    for byte in dec_msg:
-        s = "%.2x" % byte
-        enc_msg += bytes(s, 'utf-8')
-    #Special character to indicate start of send_message
-    return enc_msg
-
 #Type and num_chars must be an integer
 #if string is true, s are string hexadecimal values
 def send_message(type, arg1=0, arg2=0, data=bytes(0)):
@@ -397,59 +451,21 @@ def send_message(type, arg1=0, arg2=0, data=bytes(0)):
     dec_msg += uint32_to_bytes(arg1)
     dec_msg += uint32_to_bytes(arg2)
     dec_msg += bytes(data)
+    print("Sending decoded message (%d bytes):" % len(dec_msg), bytes_to_string(dec_msg))
 
     enc_msg = encode_message(dec_msg)
-
-    print("Sending decoded message (%d bytes):" % len(dec_msg), bytes_to_string(dec_msg))
     print("Sending encoded message (%d bytes):" % len(enc_msg), bytes_to_string(enc_msg))
     send_raw_uart(enc_msg)
 
-
-# prompt is the send_message information
-# Sends data back as an int
-def input_int(prompt):
-    while True:
-        in_str = input(prompt)
-
-        try: #Check to see if input is an integer
-            # See if the user tried to type in hex
-            if in_str.startswith("0x"):
-                ret = int(in_str.lstrip("0x"), 16)
-            else:
-                ret = int(in_str)
-            return ret
-        except serial.SerialException as e:
-            print("Error! Input must be an integer or in hex")
-
-
-def receive_enc_msg():
-    # Read from serial to bytes
-    # DO NOT DECODE IT WITH UTF-8, IT DISCARDS ANY CHARACTERS > 127
-    # See https://www.avrfreaks.net/forum/serial-port-data-corrupted-when-sending-specific-pattern-bytes
-    # See https://stackoverflow.com/questions/14454957/pyserial-formatting-bytes-over-127-return-as-2-bytes-rather-then-one
-    
-    raw = bytes(0)
-    enc_msg = bytes(0)
-
-    for i in range(20):
-        new = ser.read(2 ** 16)
-        print("%d new bytes" % len(new))
-        raw += new
-
-        start_index = raw.find(0x00)
-        print("start_index =", start_index)
-
-        if start_index != -1 and start_index < len(raw) - 1 and raw[start_index + 1] == len(raw) - start_index - 2:
-            enc_msg = raw[start_index:]
-            print("Received UART (raw):", bytes_to_string(raw))
-            print("Received UART (enc_msg):", bytes_to_string(enc_msg))
-            return enc_msg
-
+def receive_message():
+    print("Waiting for received message...")
+    enc_msg = receive_enc_msg()
+    if enc_msg is not None:
+        print("Successfully received message")
+        process_rx_enc_msg(enc_msg)
     else:
-        print("Received UART (raw):", bytes_to_string(raw))
-        print("No message found")
-    
-    return None
+        print("Failed to receive message")
+
 
 def print_block_nums():
     print("eps_hk_sat_block_num = %d" % eps_hk_sat_block_num)
@@ -477,13 +493,14 @@ def get_last_read_block_nums():
     (eps_hk_file_block_num, pay_hk_file_block_num, pay_opt_file_block_num) = nums
     print_block_nums()
 
+
 def get_sat_block_nums():
     for section in range(3):
         send_message(19, section)
         print("Waiting for response...")
         enc_msg = receive_enc_msg()
         if enc_msg is not None:
-            decode_rx_msg(enc_msg)
+            process_rx_enc_msg(enc_msg)
     print_block_nums()
 
 
@@ -504,7 +521,7 @@ def read_all_missing_blocks():
             print("Waiting for response...")
             enc_msg = receive_enc_msg()
             if enc_msg is not None:
-                decode_rx_msg(enc_msg)
+                process_rx_enc_msg(enc_msg)
 
 
 def main_loop():
@@ -569,7 +586,7 @@ def main_loop():
                 arg2 = input_int("Enter number of bytes: ")
                 send_message(5, arg1, arg2)
             elif next_cmd == ("3"):
-                arg1 = input_int("Enter subsystem %s: " % subsys_consts())
+                arg1 = input_subsys()
                 arg2  = input_int("Enter address: ")
                 send_message(18,  arg1, arg2)
             else:
@@ -583,7 +600,7 @@ def main_loop():
             print("5. Get All Missing Blocks")
             next_cmd = input("Enter command number: ")
 
-            arg1 = input_int("Enter block type %s: " % block_type_consts())
+            arg1 = input_block_type()
 
             if next_cmd == ("1"):
                 send_message(6, arg1)
@@ -606,11 +623,11 @@ def main_loop():
             next_cmd = input("Enter command number: ")
 
             if next_cmd == ("1"):
-                arg1 = input_int("Enter block type %s: " % block_type_consts())
+                arg1 = input_block_type()
                 arg2 = input_int("Disable (0) or Enable (1): ")
                 send_message(9, arg1, arg2)
             elif next_cmd == ("2"):
-                arg1 = input_int("Enter block type %s: " % block_type_consts())
+                arg1 = input_block_type()
                 arg2 = input_int("Enter period in seconds: ")
                 send_message(10, arg1, arg2)
             elif next_cmd == ("3"):
@@ -639,7 +656,7 @@ def main_loop():
             send_message(14, arg1)
 
         elif cmd == ("10"): #Reset
-            arg1 = input_int("Enter subsystem %s: " % subsys_consts())
+            arg1 = input_subsys()
             send_message(15, arg1)
             # TODO
 
@@ -665,7 +682,7 @@ def main_loop():
         print("Waiting for response...")
         enc_msg = receive_enc_msg()
         if enc_msg is not None:
-            decode_rx_msg(enc_msg)
+            process_rx_enc_msg(enc_msg)
 
 
 
@@ -692,7 +709,7 @@ if __name__ == "__main__":
     parser.add_argument('-u', '--uart', required=True,
             metavar=('uart'), help='UART port on programmer')
     parser.add_argument('-b', '--baud', required=False, default=9600,
-            metavar=('baud'), help='Baud rate')
+            metavar=('baud'), help='Baud rate (e.g. 1200, 9600, 19200, 115200')
 
     # Converts strings to objects, which are then assigned to variables below
     args = parser.parse_args()
