@@ -120,7 +120,7 @@ class Section(object):
         values = []
         values.extend([expected_block_num, bytes_to_uint24(header[0:3]), header[3], date_time_to_str(header[4:7]), date_time_to_str(header[7:10])])
         values.extend(map(str, converted))
-        self.data_file.write(", ".join(map(str, values)) + "\n")
+        self.data_file.write(", ".join(map(file_value_to_str, values)) + "\n")
         self.data_file.flush()
         print("Added block row to file", self.file_name)
 

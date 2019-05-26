@@ -369,13 +369,14 @@ def main_loop():
         print("2. Get Restart Info")
         print("3. Get RTC")
         print("4. Set RTC")
-        print("5. Memory (Flash and EEPROM)")
-        print("6. Blocks")
-        print("7. Auto-Data Collection")
-        print("8. Heater DAC Setpoints")
-        print("9. Pay Control")
-        print("10. Reset")
-        print("11. CAN")
+        print("5. Auto-Data Collection")
+        print("6. Read All Missing Blocks")
+        print("7. Blocks")
+        print("8. Memory (Flash and EEPROM)")
+        print("9. Heater DAC Setpoints")
+        print("10. Pay Control")
+        print("11. Reset")
+        print("12. CAN")
         cmd = input("Enter command number: ") # User input typed through terminal consol
 
         if cmd == ("quit"):
@@ -407,8 +408,61 @@ def main_loop():
             arg2 = bytes_to_uint24([hour, minute, second])
 
             send_message (3, arg1, arg2)
+        
+        elif cmd == ("5"): #Auto-Data Collection
+            print("1. Enable/Disable")
+            print("2. Period")
+            print("3. Resync")
+            print("4. Set Default On Settings")
+            next_cmd = input("Enter command number: ")
 
-        elif cmd == ("5"): #Memory
+            if next_cmd == ("1"):
+                arg1 = input_block_type()
+                arg2 = input_int("Disable (0) or Enable (1): ")
+                send_message(9, arg1, arg2)
+            elif next_cmd == ("2"):
+                arg1 = input_block_type()
+                arg2 = input_int("Enter period in seconds: ")
+                send_message(10, arg1, arg2)
+            elif next_cmd == ("3"):
+                send_message(11)
+            elif next_cmd == ("4"):
+                # Periods
+                send_message(10, 0, 60)
+                send_message(10, 1, 120)
+                send_message(10, 2, 300)
+                # Enables
+                send_message(9, 0, 1)
+                send_message(9, 1, 1)
+                send_message(9, 2, 1)
+            else:
+                print("Invalid command")
+        
+        elif cmd == ("6"):  # Read missing blocks
+            read_all_missing_blocks()
+
+        elif cmd == ("7"): #Blocks
+            print("1. Collect Block")
+            print("2. Read Local Block")
+            print("3. Read Memory Block")
+            print("4. Get Current Block number")
+            next_cmd = input("Enter command number: ")
+
+            arg1 = input_block_type()
+
+            if next_cmd == ("1"):
+                send_message(6, arg1)
+            elif next_cmd == ("2"):
+                send_message(7, arg1)
+            elif next_cmd == ("3"):
+                arg2 = input_int("Enter block number: ")
+                send_message(8, arg1, arg2)
+            elif next_cmd == ("4"):
+                send_message(19, arg1)
+            else:
+                print("Invalid command")
+
+        elif cmd == ("8"): #Memory
             print("1. Read Flash Memory")
             print("2. Erase Flash Memory")
             print("3. Read EEPROM")
@@ -429,50 +483,7 @@ def main_loop():
             else:
                 print("Invalid command")
 
-        elif cmd == ("6"): #Blocks
-            print("1. Collect Block")
-            print("2. Read Local Block")
-            print("3. Read Memory Block")
-            print("4. Get Current Block number")
-            print("5. Get All Missing Blocks")
-            next_cmd = input("Enter command number: ")
-
-            arg1 = input_block_type()
-
-            if next_cmd == ("1"):
-                send_message(6, arg1)
-            elif next_cmd == ("2"):
-                send_message(7, arg1)
-            elif next_cmd == ("3"):
-                arg2 = input_int("Enter block number: ")
-                send_message(8, arg1, arg2)
-            elif next_cmd == ("4"):
-                send_message(19, arg1)
-            elif next_cmd == ("5"):
-                read_all_missing_blocks()
-            else:
-                print("Invalid command")
-
-        elif cmd == ("7"): #Auto-Data Collection
-            print("1. Enable/Disable")
-            print("2. Period")
-            print("3. Resync")
-            next_cmd = input("Enter command number: ")
-
-            if next_cmd == ("1"):
-                arg1 = input_block_type()
-                arg2 = input_int("Disable (0) or Enable (1): ")
-                send_message(9, arg1, arg2)
-            elif next_cmd == ("2"):
-                arg1 = input_block_type()
-                arg2 = input_int("Enter period in seconds: ")
-                send_message(10, arg1, arg2)
-            elif next_cmd == ("3"):
-                send_message(11)
-            else:
-                print("Invalid command")
-
-        elif cmd == ("8"): #Heater DAC Setpoints
+        elif cmd == ("9"): #Heater DAC Setpoints
             print("1. Set EPS DAC Setpoint")
             print("2. Set PAY DAC Setpoint")
             next_cmd = input("Enter command number: ")
@@ -488,16 +499,16 @@ def main_loop():
             else:
                 print("Invalid command")
 
-        elif cmd == ("9"): #Pay Control
+        elif cmd == ("10"): #Pay Control
             arg1 = input_int("Move plate up (1) or down (2): ")
             send_message(14, arg1)
 
-        elif cmd == ("10"): #Reset
+        elif cmd == ("11"): #Reset
             arg1 = input_subsys()
             send_message(15, arg1)
             # TODO
 
-        elif cmd == ("11"): #CAN Messages
+        elif cmd == ("12"): #CAN Messages
             print("1. Send CAN to EPS")
             print("2. Send CAN to PAY")
             next_cmd = input("Enter command number: ")
@@ -516,10 +527,7 @@ def main_loop():
         else:
             print("Invalid command")
 
-        print("Waiting for response...")
-        enc_msg = receive_enc_msg()
-        if enc_msg is not None:
-            process_rx_enc_msg(enc_msg)
+        receive_message()
 
 
 

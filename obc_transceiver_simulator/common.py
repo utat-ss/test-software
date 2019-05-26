@@ -20,3 +20,9 @@ def bytes_to_uint24(bytes):
 # NOTE: this is in decimal, not hex
 def date_time_to_str(data):
     return "%02d:%02d:%02d" % (data[0], data[1], data[2])
+
+def file_value_to_str(value):
+    if type(value) == float:
+        return "%.6f" % value
+    else:
+        return str(value)
