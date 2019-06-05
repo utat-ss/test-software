@@ -4,7 +4,7 @@ from common import *
 
 
 COMMON_HEADER = [
-    "Expected Block Number"
+    "Expected Block Number",
     "Block Number",
     "Error",
     "Date",
@@ -70,7 +70,7 @@ class Section(object):
         self.sat_block_num = 0
     
     def __str__(self):
-        return "%d: file_name = %d, file_block_num = %d, sat_block_num = %d" \
+        return "%s: file_name = %s, file_block_num = %d, sat_block_num = %d" \
             % (self.name, self.file_name, self.file_block_num, self.sat_block_num)
 
     # Create or append to file
@@ -104,7 +104,7 @@ class Section(object):
             # Write header
             values = []
             values.extend(COMMON_HEADER)
-            values.extend(map(lambda x : x[0] + " (" + x[1] + ")", mapping))
+            values.extend(map(lambda x : x[0] + " (" + x[1] + ")", self.mapping))
             self.data_file.write(", ".join(values) + "\n")
             self.data_file.flush()
         
@@ -119,14 +119,13 @@ class Section(object):
         # Write row
         values = []
         values.extend([expected_block_num, bytes_to_uint24(header[0:3]), header[3], date_time_to_str(header[4:7]), date_time_to_str(header[7:10])])
-        values.extend(map(str, converted))
+        values.extend(map(float, converted))
         self.data_file.write(", ".join(map(file_value_to_str, values)) + "\n")
         self.data_file.flush()
         print("Added block row to file", self.file_name)
 
         # Update file_block_num
-        if bytes_to_uint24(header[0:3]) == self.file_block_num:
-            self.file_block_num += 1
+        self.file_block_num = expected_block_num + 1
         print(self)
 
 

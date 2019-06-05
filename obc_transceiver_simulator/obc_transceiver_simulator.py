@@ -53,7 +53,7 @@ def parse_data(data):
     header = data[0:10]
     
     fields = []
-    for i in range(0, len(data), 3):
+    for i in range(10, len(data), 3):
         fields.append(bytes_to_uint24(data[i : i+3]))
 
     return (header, fields)
@@ -215,15 +215,15 @@ def receive_enc_msg():
         start_index = raw.find(0x00)
         # print("start_index =", start_index)
 
-        if start_index != -1 and start_index < len(raw) - 1 and raw[start_index + 1] == len(raw) - start_index - 2:
-            print("Received UART (raw):", bytes_to_string(raw))
-            enc_msg = raw[start_index:]
+        # Check length (plus '\r')
+        if start_index != -1 and start_index < len(raw) - 1 and raw[start_index + 1] == len(raw) - start_index - 3:
+            # print("Received UART (raw):", bytes_to_string(raw))
+            enc_msg = raw[start_index : len(raw) - 1]
             print("Received UART (encoded message):", bytes_to_string(enc_msg))
             return enc_msg
 
-    else:
-        print("Received UART (raw):", bytes_to_string(raw))
-        print("No encoded message found")
+    print("Received UART (raw):", bytes_to_string(raw))
+    print("No encoded message found")
     
     return None
 
@@ -429,11 +429,16 @@ def main_loop():
             elif next_cmd == ("4"):
                 # Periods
                 send_message(10, 0, 60)
+                receive_message()
                 send_message(10, 1, 120)
+                receive_message()
                 send_message(10, 2, 300)
+                receive_message()
                 # Enables
                 send_message(9, 0, 1)
+                receive_message()
                 send_message(9, 1, 1)
+                receive_message()
                 send_message(9, 2, 1)
             else:
                 print("Invalid command")
