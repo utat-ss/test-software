@@ -109,7 +109,7 @@ def process_rx_block(arg1, arg2, data):
         converted[6]    = adc_raw_data_to_therm_temp(fields[6])
         converted[7]    = adc_raw_data_to_therm_temp(fields[7])
         converted[8]    = adc_raw_data_to_eps_vol(fields[8])
-        converted[9]    = adc_raw_data_to_eps_cur(fields[9]) - 2.5
+        converted[9]    = adc_raw_data_to_bat_cur(fields[9])
         converted[10]   = adc_raw_data_to_eps_cur(fields[10])
         converted[11]   = adc_raw_data_to_eps_vol(fields[11])
         converted[12]   = therm_res_to_temp(therm_vol_to_res(dac_raw_data_to_vol(fields[12])))

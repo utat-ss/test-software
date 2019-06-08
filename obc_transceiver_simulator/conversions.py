@@ -55,6 +55,9 @@ ADC_EPS_IOUT_RES        = 0.010
 ADC_EPS_IOUT_AMP_GAIN   = 100.0
 ADC_EPS_IOUT_VREF       = 3.3
 
+ADC_EPS_BAT_IOUT_RES    = 0.002
+ADC_EPS_BAT_IOUT_VREF   = 2.5
+
 
 DAC_VREF        = 2.5
 DAC_VREF_GAIN   = 2
@@ -121,6 +124,15 @@ def adc_raw_vol_to_eps_cur(raw_voltage):
 
     return current
 
+def adc_raw_vol_to_bat_cur(raw_voltage):
+    # Get the voltage across the resistor before amplifier gain
+    before_gain_voltage = \
+        (raw_voltage - ADC_EPS_BAT_IOUT_VREF) / ADC_EPS_IOUT_AMP_GAIN
+    # Ohm's law (I = V / R)
+    current = before_gain_voltage / ADC_EPS_BAT_IOUT_RES
+
+    return current
+
 
 '''
 Converts raw 12 bit data from an ADC channel to a voltage in the EPS circuit.
@@ -138,6 +150,15 @@ returns - in A
 '''
 def adc_raw_data_to_eps_cur(raw_data):
     return adc_raw_vol_to_eps_cur(adc_raw_data_to_raw_vol(raw_data))
+
+'''
+Converts raw 12 bit data from an ADC channel to the battery current in the EPS circuit.
+raw_data - 12 bits
+returns - in A
+'''
+def adc_raw_data_to_bat_cur(raw_data):
+    return adc_raw_vol_to_bat_cur(adc_raw_data_to_raw_vol(raw_data))
+
 
 
 '''
