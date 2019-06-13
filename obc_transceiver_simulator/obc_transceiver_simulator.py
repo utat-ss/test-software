@@ -49,6 +49,16 @@ def subsys_num_to_str(num):
     else:
         return "UNKNOWN"
 
+def section_num_to_str(num):
+    if num == 0:
+        return "EPS_HK"
+    elif num == 1:
+        return "PAY_HK"
+    elif num == 2:
+        return "PAY_OPT"
+    else:
+        return "UNKNOWN"
+
 def parse_data(data):
     header = data[0:10]
     
@@ -198,33 +208,53 @@ def send_raw_uart(uart_bytes):
     print("Sending UART (%d bytes):" % len(uart_bytes), bytes_to_string(uart_bytes))
     ser.write(uart_bytes)
 
+
+uart_rx_buf = bytes(0)
+def clear_uart_rx_buf():
+    global uart_rx_buf
+    uart_rx_buf = bytes(0)
+
 def receive_enc_msg():
+    global uart_rx_buf
+
     # Read from serial to bytes
     # DO NOT DECODE IT WITH UTF-8, IT DISCARDS ANY CHARACTERS > 127
     # See https://www.avrfreaks.net/forum/serial-port-data-corrupted-when-sending-specific-pattern-bytes
     # See https://stackoverflow.com/questions/14454957/pyserial-formatting-bytes-over-127-return-as-2-bytes-rather-then-one
     
-    raw = bytes(0)
     enc_msg = bytes(0)
 
-    for i in range(20):
+    # Make sure to delay for longer than 2 seconds
+    # (OBC needs to clear its UART RX buffer after 2 seconds)
+    for i in range(30):
         new = ser.read(2 ** 16)
         # print("%d new bytes" % len(new))
-        raw += new
+        uart_rx_buf += new
 
-        start_index = raw.find(0x00)
+        start_index = uart_rx_buf.find(ord('\r'))
+        end_index = uart_rx_buf.rfind(ord('\r'))
+
         # print("start_index =", start_index)
 
-        # Check length (plus '\r')
-        if start_index != -1 and start_index < len(raw) - 1 and raw[start_index + 1] == len(raw) - start_index - 3:
-            # print("Received UART (raw):", bytes_to_string(raw))
-            enc_msg = raw[start_index : len(raw) - 1]
+        # Check length (without '\r')
+        if start_index != -1 and end_index != -1 and start_index != end_index:
+            print("Detected two <CR> characters")
+            print("Received UART (raw):", bytes_to_string(uart_rx_buf))
+            enc_msg = uart_rx_buf[start_index + 1 : end_index]
+            clear_uart_rx_buf()
+            print("len(enc_msg)=", len(enc_msg))
             print("Received UART (encoded message):", bytes_to_string(enc_msg))
-            return enc_msg
+            if len(enc_msg) >= 2 and enc_msg[0] == 0x00 and \
+                    enc_msg[1] == len(enc_msg) - 2:
+                return enc_msg
+            else:
+                print("Invalid message")
+                return None
 
-    print("Received UART (raw):", bytes_to_string(raw))
+    # Don't clear the buffer here
+    clear_uart_rx_buf()
+    # print("Received UART (raw):", bytes_to_string(uart_rx_buf))
     print("No encoded message found")
-    
     return None
 
 def process_rx_enc_msg(enc_msg):
@@ -295,7 +325,7 @@ def process_rx_enc_msg(enc_msg):
         print("Read EEPROM")
     if type == 0x13:
         print("Get current block number")
-        print(subsys_num_to_str(arg1))
+        print(section_num_to_str(arg1))
         block_num = bytes_to_uint32(data[0:4])
         print("Block number = %d" % block_num)
 
@@ -333,9 +363,17 @@ def receive_message():
     if enc_msg is not None:
         print("Successfully received message")
         process_rx_enc_msg(enc_msg)
+        return True
     else:
         print("Failed to receive message")
+        return False
 
+def send_and_receive_mult_attempts(type, arg1=0, arg2=0, data=bytes(0)):
+    for i in range(10):
+        send_message(type, arg1, arg2, data)
+        if receive_message():
+            return True
+    return False
 
 def print_sections():
     for section in all_sections:
@@ -344,8 +382,7 @@ def print_sections():
 def get_sat_block_nums():
     print("Getting satellite block numbers...")
     for i in range(len(all_sections)):
-        send_message(19, i)
-        receive_message()
+        send_and_receive_mult_attempts(19, i)
     print_sections()
 
 
@@ -357,8 +394,8 @@ def read_all_missing_blocks():
     for i, section in enumerate(all_sections):
         for block_num in range(section.file_block_num, section.sat_block_num):
             print("Reading block #", block_num)
-            send_message(8, i, block_num)
-            receive_message()
+            if not send_and_receive_mult_attempts(8, i, block_num):
+                return
 
 
 def main_loop():
@@ -385,16 +422,17 @@ def main_loop():
 
         elif cmd == ("0"):  # Raw UART
             send_raw_uart(string_to_bytes(input("Enter raw hex for UART: ")))
+            receive_message()
 
         elif cmd == ("1"): #Ping
             #arguments = send_message type, length, make data in hex?, data, data2
-            send_message(0)
+            send_and_receive_mult_attempts(0)
 
         elif cmd == ("2"): #Get restart info
-            send_message(1)
+            send_and_receive_mult_attempts(1)
 
         elif cmd == ("3"): #Get RTC
-            send_message(2)
+            send_and_receive_mult_attempts(2)
 
         elif cmd == ("4"): #Set RTC
             year = input_int("Enter year: ")
@@ -407,7 +445,7 @@ def main_loop():
             second = input_int("Enter seconds: ")
             arg2 = bytes_to_uint24([hour, minute, second])
 
-            send_message (3, arg1, arg2)
+            send_and_receive_mult_attempts (3, arg1, arg2)
         
         elif cmd == ("5"): #Auto-Data Collection
             print("1. Enable/Disable")
@@ -419,27 +457,23 @@ def main_loop():
             if next_cmd == ("1"):
                 arg1 = input_block_type()
                 arg2 = input_int("Disable (0) or Enable (1): ")
-                send_message(9, arg1, arg2)
+                send_and_receive_mult_attempts(9, arg1, arg2)
             elif next_cmd == ("2"):
                 arg1 = input_block_type()
                 arg2 = input_int("Enter period in seconds: ")
-                send_message(10, arg1, arg2)
+                send_and_receive_mult_attempts(10, arg1, arg2)
             elif next_cmd == ("3"):
-                send_message(11)
+                send_and_receive_mult_attempts(11)
             elif next_cmd == ("4"):
                 # Periods
-                send_message(10, 0, 60)
-                receive_message()
-                send_message(10, 1, 120)
-                receive_message()
-                send_message(10, 2, 300)
-                receive_message()
+                send_and_receive_mult_attempts(10, 0, 60)
+                send_and_receive_mult_attempts(10, 1, 120)
+                send_and_receive_mult_attempts(10, 2, 300)
                 # Enables
-                send_message(9, 0, 1)
-                receive_message()
-                send_message(9, 1, 1)
-                receive_message()
-                send_message(9, 2, 1)
+                send_and_receive_mult_attempts(9, 0, 1)
+                send_and_receive_mult_attempts(9, 1, 1)
+                send_and_receive_mult_attempts(9, 2, 1)
+                continue    # Don't receive again at bottom of loop
             else:
                 print("Invalid command")
         
@@ -450,20 +484,31 @@ def main_loop():
             print("1. Collect Block")
             print("2. Read Local Block")
             print("3. Read Memory Block")
-            print("4. Get Current Block number")
+            print("4. Get Satellite Block number")
+            print("5. Set File Block Number")
             next_cmd = input("Enter command number: ")
 
             arg1 = input_block_type()
 
             if next_cmd == ("1"):
-                send_message(6, arg1)
+                send_and_receive_mult_attempts(6, arg1)
             elif next_cmd == ("2"):
-                send_message(7, arg1)
+                send_and_receive_mult_attempts(7, arg1)
             elif next_cmd == ("3"):
                 arg2 = input_int("Enter block number: ")
-                send_message(8, arg1, arg2)
+                send_and_receive_mult_attempts(8, arg1, arg2)
             elif next_cmd == ("4"):
-                send_message(19, arg1)
+                send_and_receive_mult_attempts(19, arg1)
+            elif next_cmd == ("5"):
+                num = int(input("Enter block number: "))
+                if arg1 == 0:
+                    eps_hk_section.file_block_num = num
+                elif arg1 == 1:
+                    pay_hk_section.file_block_num = num
+                elif arg1 == 2:
+                    pay_opt_section.file_block_num = num
+                print_sections()
+                continue
             else:
                 print("Invalid command")
 
@@ -476,15 +521,15 @@ def main_loop():
             if next_cmd == ("1"):
                 arg1 = input_int("Enter starting address: ")
                 arg2 = input_int("Enter number of bytes: ")
-                send_message(4, arg1, arg2)
+                send_and_receive_mult_attempts(4, arg1, arg2)
             elif next_cmd == ("2"):
                 arg1 = input_int("Enter starting address: ")
                 arg2 = input_int("Enter number of bytes: ")
-                send_message(5, arg1, arg2)
+                send_and_receive_mult_attempts(5, arg1, arg2)
             elif next_cmd == ("3"):
                 arg1 = input_subsys()
                 arg2  = input_int("Enter address: ")
-                send_message(18,  arg1, arg2)
+                send_and_receive_mult_attempts(18,  arg1, arg2)
             else:
                 print("Invalid command")
 
@@ -498,19 +543,19 @@ def main_loop():
             arg2 = dac_vol_to_raw_data(therm_res_to_vol(therm_temp_to_res(setpoint)))
 
             if next_cmd == ("1"):
-                send_message(12, heater - 1, arg2)
+                send_and_receive_mult_attempts(12, heater - 1, arg2)
             elif next_cmd == ("2"):
-                send_message(13, heater - 1, arg2)
+                send_and_receive_mult_attempts(13, heater - 1, arg2)
             else:
                 print("Invalid command")
 
         elif cmd == ("10"): #Pay Control
             arg1 = input_int("Move plate up (1) or down (2): ")
-            send_message(14, arg1)
+            send_and_receive_mult_attempts(14, arg1)
 
         elif cmd == ("11"): #Reset
             arg1 = input_subsys()
-            send_message(15, arg1)
+            send_and_receive_mult_attempts(15, arg1)
             # TODO
 
         elif cmd == ("12"): #CAN Messages
@@ -523,16 +568,14 @@ def main_loop():
             arg2 = bytes_to_uint32(msg[4:8])
 
             if next_cmd == ("1"):
-                send_message(16, arg1, arg2)
+                send_and_receive_mult_attempts(16, arg1, arg2)
             elif next_cmd == ("2"):
-                send_message(17, arg1, arg2)
+                send_and_receive_mult_attempts(17, arg1, arg2)
             else:
                 print("Invalid command")
 
         else:
             print("Invalid command")
-
-        receive_message()
 
 
 
