@@ -2,6 +2,7 @@ import os
 
 from common import *
 
+OUT_FOLDER = "out"
 
 COMMON_HEADER = [
     "Expected Block Number",
@@ -76,12 +77,20 @@ class Section(object):
     # Create or append to file
     # Adapted from https://stackoverflow.com/questions/20432912/writing-to-a-new-file-if-it-doesnt-exist-and-appending-to-a-file-if-it-does
     def load_file(self):
-        if os.path.exists(self.file_name):
-            print("Found existing file", self.file_name)
+        if os.path.isdir(OUT_FOLDER):
+            print("Found existing folder", OUT_FOLDER)
+        else:
+            os.mkdir(OUT_FOLDER)
+            print("Created new folder", OUT_FOLDER)
+
+        file_path = OUT_FOLDER + "/" + self.file_name
+
+        if os.path.exists(file_path):
+            print("Found existing file", file_path)
             print("Appending to file")
 
             # https://stackoverflow.com/questions/2757887/file-mode-for-creatingreadingappendingbinary
-            self.data_file = open(self.file_name, 'a+')
+            self.data_file = open(file_path, 'a+')
 
             # Read last block number stored in file
             # Change pointer to beginning of file
@@ -96,11 +105,11 @@ class Section(object):
             self.data_file.seek(0, 2)
 
         else:
-            print("Did not find existing file", self.file_name)
+            print("Did not find existing file", file_path)
             print("Creating new file")
 
             print("Writing header")
-            self.data_file = open(self.file_name, 'a+')
+            self.data_file = open(file_path, 'a+')
             # Write header
             values = []
             values.extend(COMMON_HEADER)
