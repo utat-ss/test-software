@@ -18,7 +18,8 @@
 # 
 #################################################################################
 
-#import RPi.GPIO as GPIO
+import RPi.GPIO as GPIO
+import time
 import serial
 import datetime
 import os
@@ -28,22 +29,27 @@ import matplotlib.animation as animation
 import traceback
 
 # check what this needs to be
-SERIAL_PORT = 'COM3'
+SERIAL_PORT = 'ttyS0'
 BAUD_RATE = 9600
 TEST_NAME = 'Pressure_Test_02'
 LOG_DIR = './logs'
 TIMESTAMP_FORMAT = '%Y%m%d-%H%M%S'
 CONNECTION_TIMEOUT = 15
 LENGTH_GRAPH = 100
+RST_GPIO = 18
 
-global incoming_data, x_axis_data
-incoming_data = np.array([0,0,0])
-x_axis_data = np.arange(0, LENGTH_GRAPH-1, 1)
+global incoming_data
 
 # Initializes the output file for the pressure test, returns file object for
 # the output csv
 #
 def init_script():
+    GPIO.setmode(GPIO.BCM)
+    GPIO.setup(RST_GPIO, GPIO.OUT)
+    GPIO.output(RST_GPIO, GPIO.LOW)
+    time.sleep(1)
+    GPIO.output(RST_GPIO, GPIO.HIGH)
+
     # Check if logging directory exists
     logPath = os.path.abspath(LOG_DIR)
     if not os.path.exists(logPath):
@@ -62,12 +68,17 @@ def handshake(s):
         try:
             data = s.readline()
             print(data)
-            if data == b'AA\n':
-                s.write(b'AA')
+            if data == b'A\n':
+                s.write(b'A')
                 handshake = True
         except:
             print()
             raise SystemExit
+
+    data = s.readline()
+    while (data == b'A\n'):
+        print(data)
+        continue;
 
     print('Completed handshake')
 
@@ -78,9 +89,9 @@ def read_serial(s, outfile):
         line = str(s.readline())
         nums = line.split(',')
         # TODO: Check these
-        nums[0] = int(nums[0].replace("b'", ""))
-        nums[1] = int(nums[1].replace("\\r\\n'", ""))
-        nums[2] = int(nums[2].replace("",""))
+        nums[0] = float(nums[0].replace("b'", ""))
+        nums[1] = float(nums[1].replace("", ""))
+        nums[2] = float(nums[2].replace("\\n'",""))
         print(nums)
         write_output(nums, outfile)
         nums = np.array(nums)
@@ -106,21 +117,23 @@ def test_animate(mu):
         yield np.array([p, t, h])
     
 
-def animate(i, read_next):
-    global incoming_data, x_axis_data
+def animate(i, x, read_next):
+    global incoming_data
 
     # pressures
     data = next(read_next)
     incoming_data = np.vstack((incoming_data, data))
-    num_readings = len(incoming_data[0])
+    num_readings = incoming_data.shape[0]
 
     if num_readings > LENGTH_GRAPH:
-        # check that this is correct
+        xvals = x
         incoming_data = incoming_data[-LENGTH_GRAPH:]
+    else:
+        xvals = x[0:num_readings]
 
-    line[0].set_data(x_axis_data[:num_readings - 1], incoming_data[:,0])
-    line[1].set_data(x_axis_data[:num_readings - 1], incoming_data[:,1])
-    line[2].set_data(x_axis_data[:num_readings - 1], incoming_data[:,2])
+    line[0].set_data(xvals, incoming_data[:,0])
+    line[1].set_data(xvals, incoming_data[:,1])
+    line[2].set_data(xvals, incoming_data[:,2])
     
     return line
 
@@ -129,35 +142,49 @@ def exit_script(file, s_port):
     s_port.close()
 
 if __name__ == "__main__":
-    # s = serial.Serial(
-    #     port = SERIAL_PORT,
-    #     baudrate = BAUD_RATE,
-    #     timeout = CONNECTION_TIMEOUT
-    #     )
+    global incoming_data
+    s = serial.Serial(
+        port = SERIAL_PORT,
+        baudrate = BAUD_RATE,
+        timeout = CONNECTION_TIMEOUT
+        )
     outfile = init_script()
+
+    GPIO18
     
-    # handshake(s)
+    handshake(s)
     print('Setting up the generator')
-    # read_next = read_serial(s, outfile)
-    read_next = test_animate(10)
+    read_next = read_serial(s, outfile)
+    # read_next = test_animate(10)
+    incoming_data = next(read_next)
+    x = np.arange(0, LENGTH_GRAPH, 1)
     print('Starting main loop')
-    fig, axes = plt.subplots(nrows=3, ncols=1, squeeze=False)
-    # pressure
-    ln1, = axes[0,0].plot([],[])
-    axes[0,0].set_xlim(0, 100)
-    axes[0,0].set_ylim(50,250)
-    axes[0,0].set_ylabel('Pressure (kPa)')
-    # temp
-    ln2, = axes[1,0].plot([],[])
-    axes[1,0].set_ylim(0, 50)
-    axes[1,0].set_ylabel('Temperature (C)')
-    # humidity
-    ln3, = axes[2,0].plot([],[])
-    axes[2,0].set_ylim(0,100)
-    axes[2,0].set_ylabel('Humidity (%RH)')
+    fig, (ax1, ax2, ax3) = plt.subplots(nrows=3, ncols=1, sharex=True)
     
-    line = [ln1, ln2, ln3]
+    # pressure
+    line1, = ax1.plot([], [], 'b')
+    line2, = ax2.plot([], [], 'r')
+    line3, = ax3.plot([], [], 'g')
+
+    # Pressure
+    ax1.set_xlim(0, LENGTH_GRAPH)
+    ax1.set_ylim(0,250)
+    ax1.set_ylabel('Pressure (kPa)')
+    # Temperature
+    ax2.set_ylim(0,100)
+    ax2.set_ylabel('Temperature (C)')
+
+    # Humidity
+    ax3.set_ylim(0,100)
+    ax3.set_ylabel('Humidity (%RH)')
+
+    for ax in [ax1, ax2, ax3]:
+        ax.minorticks_on()
+        ax.grid(b=True, which='major', linestyle='--')
+        ax.grid(b=True, which='minor', linestyle=':')
+    
+    line = [line1, line2, line3]
 
     print('Starting animation')
-    ani = animation.FuncAnimation(fig, animate, fargs=read_next, blit=True, interval=1000)
+    ani = animation.FuncAnimation(fig, animate, fargs=(x, read_next), blit=False)
     plt.show()
