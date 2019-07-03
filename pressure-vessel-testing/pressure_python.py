@@ -29,7 +29,7 @@ import matplotlib.animation as animation
 import traceback
 
 # check what this needs to be
-SERIAL_PORT = 'ttyS0'
+SERIAL_PORT = '/dev/ttyS0'
 BAUD_RATE = 9600
 TEST_NAME = 'Pressure_Test_02'
 LOG_DIR = './logs'
@@ -150,41 +150,43 @@ if __name__ == "__main__":
         )
     outfile = init_script()
 
-    GPIO18
-    
-    handshake(s)
-    print('Setting up the generator')
-    read_next = read_serial(s, outfile)
-    # read_next = test_animate(10)
-    incoming_data = next(read_next)
-    x = np.arange(0, LENGTH_GRAPH, 1)
-    print('Starting main loop')
-    fig, (ax1, ax2, ax3) = plt.subplots(nrows=3, ncols=1, sharex=True)
-    
-    # pressure
-    line1, = ax1.plot([], [], 'b')
-    line2, = ax2.plot([], [], 'r')
-    line3, = ax3.plot([], [], 'g')
+    try:
+        handshake(s)
+        print('Setting up the generator')
+        read_next = read_serial(s, outfile)
+        # read_next = test_animate(10)
+        incoming_data = next(read_next)
+        x = np.arange(0, LENGTH_GRAPH, 1)
+        print('Starting main loop')
+        fig, (ax1, ax2, ax3) = plt.subplots(nrows=3, ncols=1, sharex=True)
+        
+        # pressure
+        line1, = ax1.plot([], [], 'b')
+        line2, = ax2.plot([], [], 'r')
+        line3, = ax3.plot([], [], 'g')
 
-    # Pressure
-    ax1.set_xlim(0, LENGTH_GRAPH)
-    ax1.set_ylim(0,250)
-    ax1.set_ylabel('Pressure (kPa)')
-    # Temperature
-    ax2.set_ylim(0,100)
-    ax2.set_ylabel('Temperature (C)')
+        # Pressure
+        ax1.set_xlim(0, LENGTH_GRAPH)
+        ax1.set_ylim(0,250)
+        ax1.set_ylabel('Pressure (kPa)')
+        # Temperature
+        ax2.set_ylim(0,100)
+        ax2.set_ylabel('Temperature (C)')
 
-    # Humidity
-    ax3.set_ylim(0,100)
-    ax3.set_ylabel('Humidity (%RH)')
+        # Humidity
+        ax3.set_ylim(0,100)
+        ax3.set_ylabel('Humidity (%RH)')
 
-    for ax in [ax1, ax2, ax3]:
-        ax.minorticks_on()
-        ax.grid(b=True, which='major', linestyle='--')
-        ax.grid(b=True, which='minor', linestyle=':')
-    
-    line = [line1, line2, line3]
+        for ax in [ax1, ax2, ax3]:
+            ax.minorticks_on()
+            ax.grid(b=True, which='major', linestyle='--')
+            ax.grid(b=True, which='minor', linestyle=':')
+        
+        line = [line1, line2, line3]
 
-    print('Starting animation')
-    ani = animation.FuncAnimation(fig, animate, fargs=(x, read_next), blit=False)
-    plt.show()
+        print('Starting animation')
+        ani = animation.FuncAnimation(fig, animate, fargs=(x, read_next), blit=False)
+        plt.show()
+    except:
+        exit_script(outfile, s)
+        
