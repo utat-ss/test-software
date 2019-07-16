@@ -4,8 +4,6 @@
 #
 # By: Brytni Richards
 
-# TODO: Check if this program works for windows computers
-
 # Note: This program IS NOT completely error-proof. Incorrect messages may be
 # sent to the microcontroller if the user enters wrong values
 
@@ -274,9 +272,9 @@ def process_rx_enc_msg(enc_msg):
     print("data (%d bytes) = %s" % (len(data), bytes_to_string(data)))
 
     if type == 0x00:
-        print("Status/ping")
+        print("Ping")
     if type == 0x01:
-        print("Restart/uptime")
+        print("Subsystem status (OBC)")
         print("Restart count =", bytes_to_uint32(data[0:4]))
         print("Restart date =", date_time_to_str(data[4:7]))
         print("Restart time =", date_time_to_str(data[7:10]))
@@ -316,11 +314,79 @@ def process_rx_enc_msg(enc_msg):
     if type == 0x0F:
         print("Reset")
     if type == 0x10:
-        print("Send CAN message to EPS")
+        print("Received CAN message from EPS")
         print("Message =", bytes_to_string(data))
+
+        msg_type = data[2]
+        field_num = data[3]
+        rx_data = data[4:8]
+        print("Type =", msg_type, ", Field =", field_num, "Data = ", bytes_to_string(rx_data))
+        
+        # EPS CTRL
+        if msg_type == 1:
+            if field_num == 0:
+                print("Ping")
+            elif field_num == 1:
+                print("Battery heater - shadow setpoint 1")
+            elif field_num == 2:
+                print("Battery heater - shadow setpoint 2")
+            elif field_num == 3:
+                print("Battery heater - sun setpoint 1")
+            elif field_num == 4:
+                print("Battery heater - sun setpoint 2")
+            elif field_num == 5:
+                print("Battery heater mode - lower current threshold")
+            elif field_num == 6:
+                print("Battery heater mode - upper current threshold")
+            elif field_num == 7:
+                print("Reset")
+            elif field_num == 8:
+                print("Read EEPROM")
+            elif field_num == 9:
+                print("Erase EEPROM")
+            elif field_num == 10:
+                print("Get restart count")
+            elif field_num == 11:
+                print("Get restart reason")
+            elif field_num == 12:
+                print("Get uptime")
+            elif field_num == 13:
+                print("Start temporary low-power mode")
     if type == 0x11:
-        print("Send CAN message to PAY")
+        print("Received CAN message from PAY")
         print("Message =", bytes_to_string(data))
+
+        msg_type = data[2]
+        field_num = data[3]
+        rx_data = data[4:8]
+        print("Type =", msg_type, ", Field =", field_num, "Data = ", bytes_to_string(rx_data))
+        
+        # PAY CTRL
+        if msg_type == 4:
+            if field_num == 0:
+                print("Ping")
+            elif field_num == 1:
+                print("MF heater - setpoint 1")
+            elif field_num == 2:
+                print("MF heater - setpoint 2")
+            elif field_num == 3:
+                print("Move act plate up")
+            elif field_num == 4:
+                print("Move act plate down")
+            elif field_num == 5:
+                print("Reset")
+            elif field_num == 6:
+                print("Read EEPROM")
+            elif field_num == 7:
+                print("Erase EEPROM")
+            elif field_num == 8:
+                print("Get restart count")
+            elif field_num == 9:
+                print("Get restart reason")
+            elif field_num == 10:
+                print("Get uptime")
+            elif field_num == 11:
+                print("Start temporary low-power mode")
     if type == 0x12:
         print("Read EEPROM")
     if type == 0x13:
@@ -375,6 +441,12 @@ def send_and_receive_mult_attempts(type, arg1=0, arg2=0, data=bytes(0)):
             return True
     return False
 
+def send_and_receive_eps_can(msg_type, field_num, tx_data=0):
+    send_and_receive_mult_attempts(0x10, (msg_type << 8) | field_num, tx_data)
+
+def send_and_receive_pay_can(msg_type, field_num, tx_data=0):
+    send_and_receive_mult_attempts(0x11, (msg_type << 8) | field_num, tx_data)
+
 def print_sections():
     for section in all_sections:
         print(section)
@@ -402,8 +474,8 @@ def main_loop():
     cmd = None # Command to board
     while cmd != ("quit"): # Enter quit to stop program
         print("0. Send Raw UART")
-        print("1. Status/Ping")
-        print("2. Get Restart Info")
+        print("1. Ping")
+        print("2. Subsystem Status")
         print("3. Get RTC")
         print("4. Set RTC")
         print("5. Auto-Data Collection")
@@ -414,6 +486,7 @@ def main_loop():
         print("10. Pay Control")
         print("11. Reset")
         print("12. CAN")
+        print("13. EPS Heater Current Thresholds")
         cmd = input("Enter command number: ") # User input typed through terminal consol
 
         if cmd == ("quit"):
@@ -425,11 +498,27 @@ def main_loop():
             receive_message()
 
         elif cmd == ("1"): #Ping
-            #arguments = send_message type, length, make data in hex?, data, data2
-            send_and_receive_mult_attempts(0)
+            ss = input_subsys()
+            if ss == 0:
+                #arguments = send_message type, length, make data in hex?, data, data2
+                send_and_receive_mult_attempts(0)
+            elif ss == 1:
+                send_and_receive_eps_can(1, 0)
+            elif ss == 2:
+                send_and_receive_pay_can(4, 0)
 
-        elif cmd == ("2"): #Get restart info
-            send_and_receive_mult_attempts(1)
+        elif cmd == ("2"): #Get subsystem status
+            ss = input_subsys()
+            if ss == 0:
+                send_and_receive_mult_attempts(1)
+            elif ss == 1:
+                send_and_receive_eps_can(1, 10)
+                send_and_receive_eps_can(1, 11)
+                send_and_receive_eps_can(1, 12)
+            elif ss == 2:
+                send_and_receive_pay_can(4, 8)
+                send_and_receive_pay_can(4, 9)
+                send_and_receive_pay_can(4, 10)
 
         elif cmd == ("3"): #Get RTC
             send_and_receive_mult_attempts(2)
@@ -485,7 +574,10 @@ def main_loop():
             print("2. Read Local Block")
             print("3. Read Memory Block")
             print("4. Get Satellite Block number")
-            print("5. Set File Block Number")
+            print("5. Set Satellite Block number")
+            print("6. Set File Block Number")
+            print("7. Set Memory Section Start Address")
+            print("8. Set Memory Section End Address")
             next_cmd = input("Enter command number: ")
 
             arg1 = input_block_type()
@@ -500,6 +592,9 @@ def main_loop():
             elif next_cmd == ("4"):
                 send_and_receive_mult_attempts(19, arg1)
             elif next_cmd == ("5"):
+                arg2 = int(input("Enter block number: "))
+                send_and_receive_mult_attempts(0x14, arg1, arg2)
+            elif next_cmd == ("6"):
                 num = int(input("Enter block number: "))
                 if arg1 == 0:
                     eps_hk_section.file_block_num = num
@@ -509,13 +604,21 @@ def main_loop():
                     pay_opt_section.file_block_num = num
                 print_sections()
                 continue
+            elif next_cmd == ("7"):
+                arg2 = int(input("Enter start address: "))
+                send_and_receive_mult_attempts(0x15, arg1, arg2)
+            elif next_cmd == ("8"):
+                arg2 = int(input("Enter end address: "))
+                send_and_receive_mult_attempts(0x16, arg1, arg2)
             else:
                 print("Invalid command")
 
         elif cmd == ("8"): #Memory
             print("1. Read Flash Memory")
-            print("2. Erase Flash Memory")
-            print("3. Read EEPROM")
+            print("2. Erase Flash Memory Physical Sector")
+            print("3. Erase Flash Memory Physical Block")
+            print("4. Erase All Flash Memory")
+            print("5. Read EEPROM")
             next_cmd = input("Enter command number: ")
 
             if next_cmd == ("1"):
@@ -523,40 +626,65 @@ def main_loop():
                 arg2 = input_int("Enter number of bytes: ")
                 send_and_receive_mult_attempts(4, arg1, arg2)
             elif next_cmd == ("2"):
-                arg1 = input_int("Enter starting address: ")
-                arg2 = input_int("Enter number of bytes: ")
-                send_and_receive_mult_attempts(5, arg1, arg2)
+                arg1 = input_int("Enter address: ")
+                send_and_receive_mult_attempts(5, arg1)
             elif next_cmd == ("3"):
-                arg1 = input_subsys()
-                arg2  = input_int("Enter address: ")
-                send_and_receive_mult_attempts(18,  arg1, arg2)
+                arg1 = input_int("Enter address: ")
+                send_and_receive_mult_attempts(0x1A, arg1)
+            elif next_cmd == ("4"):
+                resp = input("ARE YOU SURE? Type 'yes' to confirm, or Enter to cancel: ")
+                if resp == "yes":
+                    send_and_receive_mult_attempts(0x19)
+                    print("Confirmed")
+                else:
+                    print("Cancelled")
+            elif next_cmd == ("5"):
+                ss = input_subsys()
+                addr = input_int("Enter address: ")
+                if ss == 0:
+                    send_and_receive_mult_attempts(18, addr, 0)
+                elif ss == 1:
+                    send_and_receive_eps_can(1, 8)
+                elif ss == 2:
+                    send_and_receive_pay_can(4, 6)
             else:
                 print("Invalid command")
 
         elif cmd == ("9"): #Heater DAC Setpoints
-            print("1. Set EPS DAC Setpoint")
-            print("2. Set PAY DAC Setpoint")
+            print("1. Set EPS - Shadow Setpoint 1")
+            print("2. Set EPS - Shadow Setpoint 2")
+            print("3. Set EPS - Sun Setpoint 1")
+            print("4. Set EPS - Sun Setpoint 2")
+            print("5. Set PAY - Setpoint 1")
+            print("6. Set PAY - Setpoint 2")
             next_cmd = input("Enter command number: ")
 
-            heater = input_int("Enter 1 (heater 1) or 2 (heater 2): ")
             setpoint = float(input("Enter setpoint (in C): "))
-            arg2 = dac_vol_to_raw_data(therm_res_to_vol(therm_temp_to_res(setpoint)))
+            data = dac_vol_to_raw_data(therm_res_to_vol(therm_temp_to_res(setpoint)))
 
             if next_cmd == ("1"):
-                send_and_receive_mult_attempts(12, heater - 1, arg2)
+                send_and_receive_eps_can(1, 1, data)
             elif next_cmd == ("2"):
-                send_and_receive_mult_attempts(13, heater - 1, arg2)
+                send_and_receive_eps_can(1, 2, data)
+            elif next_cmd == ("3"):
+                send_and_receive_eps_can(1, 3, data)
+            elif next_cmd == ("4"):
+                send_and_receive_eps_can(1, 4, data)
+            elif next_cmd == ("5"):
+                send_and_receive_pay_can(4, 1, data)
+            elif next_cmd == ("6"):
+                send_and_receive_pay_can(4, 2, data)
             else:
                 print("Invalid command")
 
         elif cmd == ("10"): #Pay Control
             arg1 = input_int("Move plate up (1) or down (2): ")
-            send_and_receive_mult_attempts(14, arg1)
+            send_and_receive_pay_can(4, 2 + arg1, data)
 
         elif cmd == ("11"): #Reset
             arg1 = input_subsys()
             send_and_receive_mult_attempts(15, arg1)
-            # TODO
+            # TODO - don't wait for response if it's OBC
 
         elif cmd == ("12"): #CAN Messages
             print("1. Send CAN to EPS")
@@ -571,6 +699,21 @@ def main_loop():
                 send_and_receive_mult_attempts(16, arg1, arg2)
             elif next_cmd == ("2"):
                 send_and_receive_mult_attempts(17, arg1, arg2)
+            else:
+                print("Invalid command")
+        
+        elif cmd == ("13"):
+            print("1. Lower")
+            print("2. Upper")
+            next_cmd = input("Enter command number: ")
+
+            threshold = float(input("Enter threshold (in A): "))
+            data = adc_eps_cur_to_raw_data(threshold)
+
+            if next_cmd == ("1"):
+                send_and_receive_eps_can(1, 5, data)
+            elif next_cmd == ("2"):
+                send_and_receive_eps_can(1, 6, data)
             else:
                 print("Invalid command")
 
