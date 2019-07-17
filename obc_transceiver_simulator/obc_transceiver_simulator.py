@@ -320,7 +320,7 @@ def process_rx_enc_msg(enc_msg):
         msg_type = data[2]
         field_num = data[3]
         rx_data = data[4:8]
-        print("Type =", msg_type, ", Field =", field_num, "Data = ", bytes_to_string(rx_data))
+        print("Type =", msg_type, ", Field =", field_num, ", Data = ", bytes_to_string(rx_data))
         
         # EPS CTRL
         if msg_type == 1:
@@ -592,10 +592,10 @@ def main_loop():
             elif next_cmd == ("4"):
                 send_and_receive_mult_attempts(19, arg1)
             elif next_cmd == ("5"):
-                arg2 = int(input("Enter block number: "))
+                arg2 = input_int("Enter block number: ")
                 send_and_receive_mult_attempts(0x14, arg1, arg2)
             elif next_cmd == ("6"):
-                num = int(input("Enter block number: "))
+                num = input_int("Enter block number: ")
                 if arg1 == 0:
                     eps_hk_section.file_block_num = num
                 elif arg1 == 1:
@@ -605,10 +605,10 @@ def main_loop():
                 print_sections()
                 continue
             elif next_cmd == ("7"):
-                arg2 = int(input("Enter start address: "))
+                arg2 = input_int("Enter start address: ")
                 send_and_receive_mult_attempts(0x15, arg1, arg2)
             elif next_cmd == ("8"):
-                arg2 = int(input("Enter end address: "))
+                arg2 = input_int("Enter end address: ")
                 send_and_receive_mult_attempts(0x16, arg1, arg2)
             else:
                 print("Invalid command")
@@ -679,13 +679,16 @@ def main_loop():
 
         elif cmd == ("10"): #Pay Control
             arg1 = input_int("Move plate up (1) or down (2): ")
-            send_and_receive_pay_can(4, 2 + arg1, data)
+            send_and_receive_mult_attempts(0x0E, arg1)
 
         elif cmd == ("11"): #Reset
             arg1 = input_subsys()
-            send_and_receive_mult_attempts(15, arg1)
-            # TODO - don't wait for response if it's OBC
-
+            if arg1 == 0:
+                # don't wait for response if it's OBC
+                send_message(15, arg1)
+            else:
+                send_and_receive_mult_attempts(15, arg1)
+            
         elif cmd == ("12"): #CAN Messages
             print("1. Send CAN to EPS")
             print("2. Send CAN to PAY")
