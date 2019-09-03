@@ -206,21 +206,20 @@ def receive_enc_msg():
         uart_rx_buf += new
 
         cr_indices = [i for i in range(len(uart_rx_buf)) if uart_rx_buf[i] == ord('\r')]
-        print("cr_indices =", cr_indices)
+        # print("cr_indices =", cr_indices)
 
         # Check length (without '\r')
         if len(cr_indices) >= 2:
             # Get first 2 CR characters
             start_index = cr_indices[0]
             end_index = cr_indices[1]
-            print("Detected two <CR> characters")
-            print("Received UART (raw):", bytes_to_string(uart_rx_buf))
+            # print("Detected two <CR> characters")
+            # print("Received UART (raw):", bytes_to_string(uart_rx_buf))
 
             enc_msg = uart_rx_buf[start_index + 1 : end_index]
             uart_rx_buf = uart_rx_buf[end_index + 1 : ]
 
-            print("len(enc_msg) =", len(enc_msg))
-            print("Received UART (encoded message):", bytes_to_string(enc_msg))
+            print("Received encoded message (%d bytes):" % len(enc_msg), bytes_to_string(enc_msg))
 
             if len(enc_msg) >= 5 and \
                     enc_msg[0] == 0x00 and \
