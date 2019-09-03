@@ -66,6 +66,10 @@ def encode_message(dec_msg):
 
 
 def decode_message(enc_msg):
+    # Easier to work with encoded message as a list of ints rather than bytes
+    enc_msg = list(enc_msg)
+    dec_msg = []
+
     # length of base-254 encoded message can be extracted from the first field, the mapping is undone
     enc_len = enc_msg[1] - 0x10
     # 64 bit integer that will hold the 56 bit values from the byte group
@@ -102,7 +106,7 @@ def decode_message(enc_msg):
             base_conversion_buff += enc_msg[ 3 + (8 * i_group) + i_byte ] * pow_254[7 - i_byte]
         
         for i_byte in range(0, 7):
-            trans_rx_dec_msg[ (7 * i_group) + i_byte ] = (base_conversion_buff // (1 << ((6 - i_byte) * 8))) % 256
+            dec_msg.append((base_conversion_buff // (1 << ((6 - i_byte) * 8))) % 256)
         
     if (num_remainder_bytes > 1):
         base_conversion_buff = 0
@@ -110,6 +114,6 @@ def decode_message(enc_msg):
             base_conversion_buff += enc_msg[ 3 + (num_byte_groups * 8) + i_byte ] * pow_254[num_remainder_bytes - 1 - i_byte]
 
         for i_byte in range(0, num_remainder_bytes - 1):
-            trans_rx_dec_msg[ (num_byte_groups * 7) + i_byte ] = (base_conversion_buff // (1 << ((num_remainder_bytes - 2 - i_byte) * 8))) % 256
+            dec_msg.append((base_conversion_buff // (1 << ((num_remainder_bytes - 2 - i_byte) * 8))) % 256)
 
     return bytes(dec_msg)

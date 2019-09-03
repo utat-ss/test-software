@@ -205,21 +205,28 @@ def receive_enc_msg():
         # print("%d new bytes" % len(new))
         uart_rx_buf += new
 
-        start_index = uart_rx_buf.find(ord('\r'))
-        end_index = uart_rx_buf.rfind(ord('\r'))
-
-        # print("start_index =", start_index)
+        cr_indices = [i for i in range(len(uart_rx_buf)) if uart_rx_buf[i] == ord('\r')]
+        print("cr_indices =", cr_indices)
 
         # Check length (without '\r')
-        if start_index != -1 and end_index != -1 and start_index != end_index:
+        if len(cr_indices) >= 2:
+            # Get first 2 CR characters
+            start_index = cr_indices[0]
+            end_index = cr_indices[1]
             print("Detected two <CR> characters")
             print("Received UART (raw):", bytes_to_string(uart_rx_buf))
+
             enc_msg = uart_rx_buf[start_index + 1 : end_index]
-            clear_uart_rx_buf()
-            print("len(enc_msg)=", len(enc_msg))
+            uart_rx_buf = uart_rx_buf[end_index + 1 : ]
+
+            print("len(enc_msg) =", len(enc_msg))
             print("Received UART (encoded message):", bytes_to_string(enc_msg))
-            if len(enc_msg) >= 2 and enc_msg[0] == 0x00 and \
-                    enc_msg[1] == len(enc_msg) - 2:
+
+            if len(enc_msg) >= 5 and \
+                    enc_msg[0] == 0x00 and \
+                    enc_msg[1] - 0x10 == len(enc_msg) - 4 and \
+                    enc_msg[2] == 0x00 and \
+                    enc_msg[len(enc_msg) - 1] == 0x00:
                 return enc_msg
             else:
                 print("Invalid message")
