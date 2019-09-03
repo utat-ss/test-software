@@ -17,6 +17,7 @@ import codecs
 import argparse
 
 from conversions import *
+from encoding import *
 from sections import *
 
 try:
@@ -173,31 +174,6 @@ def process_rx_block(arg1, arg2, data):
         pay_opt_section.write_block_to_file(arg2, header, converted)
 
 
-def encode_message(dec_msg):
-    enc_msg = b''
-    enc_msg += b'\x00'
-    enc_msg += bytes([len(dec_msg) * 2])
-    for byte in dec_msg:
-        s = "%.2x" % byte
-        enc_msg += bytes(s, 'utf-8')
-    #Special character to indicate start of send_message
-    return enc_msg
-
-def decode_message(enc_msg):
-    if len(enc_msg) < 20:
-        print("Message too short")
-        return
-    if enc_msg[0] != 0x00:
-        print("Bad start character")
-        return
-    if enc_msg[1] != len(enc_msg) - 2:
-        print("Bad length")
-        return
-    
-    dec_msg = bytes(0)
-    for i in range(2, len(enc_msg), 2):
-        dec_msg += bytes([int(enc_msg[i : i + 2], 16)])
-    return dec_msg
     
 
 # string should look something like "00:ff:a3:49:de"
