@@ -402,7 +402,7 @@ def send_message(type, arg1=0, arg2=0, data=bytes(0)):
 
     global password
     assert len(password) == 4
-    dec_msg += bytes(password)
+    dec_msg += bytes(password, 'utf-8')
 
 
     dec_msg += bytes(data)
@@ -484,6 +484,7 @@ def main_loop():
             continue
 
         elif cmd == ("p"):  # Change password
+            global password
             password = input("Enter new password: ")
             assert len(password) == 4
 
