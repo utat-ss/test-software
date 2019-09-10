@@ -35,6 +35,7 @@ except ImportError:
 # UART serial port
 ser = None # One port is used
 
+password = "UTAT"   # To send to OBC
 
 
 
@@ -398,6 +399,12 @@ def send_message(type, arg1=0, arg2=0, data=bytes(0)):
     dec_msg += bytes([type])
     dec_msg += uint32_to_bytes(arg1)
     dec_msg += uint32_to_bytes(arg2)
+
+    global password
+    assert len(password) == 4
+    dec_msg += bytes(password)
+
+
     dec_msg += bytes(data)
     print("Sending decoded message (%d bytes):" % len(dec_msg), bytes_to_string(dec_msg))
 
@@ -455,9 +462,10 @@ def read_all_missing_blocks():
 def main_loop():
     cmd = None # Command to board
     while cmd != ("quit"): # Enter quit to stop program
+        print("p. Change Password to Send to OBC")
         print("0. Send Raw UART")
-        print("1. Ping")
-        print("2. Subsystem Status")
+        print("1. Send Arbitrary Command")
+        print("2. Ping")
         print("3. Get RTC")
         print("4. Set RTC")
         print("5. Auto-Data Collection")
@@ -475,11 +483,21 @@ def main_loop():
             print("Quitting program")
             continue
 
+        elif cmd == ("p"):  # Change password
+            password = input("Enter new password: ")
+            assert len(password) == 4
+
         elif cmd == ("0"):  # Raw UART
             send_raw_uart(string_to_bytes(input("Enter raw hex for UART: ")))
             receive_message()
+        
+        elif cmd == ("1"):  # Arbitrary command
+            opcode = input_int("Enter opcode: ")
+            arg1 = input_int("Enter argument 1: ")
+            arg2 = input_int("Enter argument 2: ")
+            send_and_receive_mult_attempts(opcode, arg1, arg2)
 
-        elif cmd == ("1"): #Ping
+        elif cmd == ("2"): #Ping
             ss = input_subsys()
             if ss == 0:
                 #arguments = send_message type, length, make data in hex?, data, data2
@@ -488,19 +506,6 @@ def main_loop():
                 send_and_receive_eps_can(1, 0)
             elif ss == 2:
                 send_and_receive_pay_can(4, 0)
-
-        elif cmd == ("2"): #Get subsystem status
-            ss = input_subsys()
-            if ss == 0:
-                send_and_receive_mult_attempts(1)
-            elif ss == 1:
-                send_and_receive_eps_can(1, 10)
-                send_and_receive_eps_can(1, 11)
-                send_and_receive_eps_can(1, 12)
-            elif ss == 2:
-                send_and_receive_pay_can(4, 8)
-                send_and_receive_pay_can(4, 9)
-                send_and_receive_pay_can(4, 10)
 
         elif cmd == ("3"): #Get RTC
             send_and_receive_mult_attempts(2)
