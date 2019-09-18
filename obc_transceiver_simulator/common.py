@@ -26,3 +26,20 @@ def file_value_to_str(value):
         return "%.6f" % value
     else:
         return str(value)
+
+def str_to_int(string):
+    try: #Check to see if input is an integer
+        # See if the user tried to type in hex
+        if string.startswith("0x"):
+            ret = int(string.lstrip("0x"), 16)
+        else:
+            ret = int(string)
+        return ret
+    except Exception as e:
+        print(e)
+        print("Error! Input must be an integer or in hex")
+
+# prompt is the send_message information
+# Sends data back as an int
+def input_int(prompt):
+    return str_to_int(input(prompt))

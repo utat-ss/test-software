@@ -16,6 +16,7 @@ import os
 import codecs
 import argparse
 
+from constants import *
 from conversions import *
 from encoding import *
 from sections import *
@@ -40,21 +41,23 @@ password = "UTAT"   # To send to OBC
 
 
 def subsys_num_to_str(num):
-    if num == 0:
+    if num == Subsystem.OBC:
         return "OBC"
-    elif num == 1:
+    elif num == Subsystem.EPS:
         return "EPS"
-    elif num == 2:
+    elif num == Subsystem.PAY:
         return "PAY"
     else:
         return "UNKNOWN"
 
 def section_num_to_str(num):
-    if num == 0:
+    if num == BlockType.OBC_HK:
+        return "OBC_HK"
+    elif num == BlockType.EPS_HK:
         return "EPS_HK"
-    elif num == 1:
+    elif num == BlockType.PAY_HK:
         return "PAY_HK"
-    elif num == 2:
+    elif num == BlockType.PAY_OPT:
         return "PAY_OPT"
     else:
         return "UNKNOWN"
@@ -68,29 +71,11 @@ def parse_data(data):
 
     return (header, fields)
 
-
-# prompt is the send_message information
-# Sends data back as an int
-def input_int(prompt):
-    while True:
-        in_str = input(prompt)
-
-        try: #Check to see if input is an integer
-            # See if the user tried to type in hex
-            if in_str.startswith("0x"):
-                ret = int(in_str.lstrip("0x"), 16)
-            else:
-                ret = int(in_str)
-            return ret
-        except serial.SerialException as e:
-            print(e)
-            print("Error! Input must be an integer or in hex")
-
 def input_subsys():
-    return input_int("Enter subsystem (OBC = 0, EPS = 1, PAY = 2): ")
+    return input_int("Enter subsystem (OBC = %d, EPS = %d, PAY = %d): " % (Subsystem.OBC, Subsystem.EPS, Subsystem.PAY))
 
 def input_block_type():
-    return input_int("Enter block type (EPS_HK = 0, PAY_HK = 1, PAY_OPT = 2): ")
+    return input_int("Enter block type (OBC_HK = %d, EPS_HK = %d, PAY_HK = %d, PAY_OPT = %d): " % (BlockType.OBC_HK, BlockType.EPS_HK, BlockType.PAY_HK, BlockType.PAY_OPT))
 
 
 def print_div():
@@ -107,72 +92,72 @@ def process_rx_block(arg1, arg2, data):
     print("Expected block number:", arg2)
     print_header(header)
 
-    if arg1 == 0:
-        num_fields = len(EPS_HK_MAPPING)
-        converted = [0 for i in range(num_fields)]
-        converted[0]    = adc_raw_data_to_eps_vol(fields[0])
-        converted[1]    = adc_raw_data_to_eps_cur(fields[1])
-        converted[2]    = adc_raw_data_to_eps_cur(fields[2])
-        converted[3]    = adc_raw_data_to_eps_cur(fields[3])
-        converted[4]    = adc_raw_data_to_eps_cur(fields[4])
-        converted[5]    = adc_raw_data_to_eps_cur(fields[5])
-        converted[6]    = adc_raw_data_to_therm_temp(fields[6])
-        converted[7]    = adc_raw_data_to_therm_temp(fields[7])
-        converted[8]    = adc_raw_data_to_eps_vol(fields[8])
-        converted[9]    = adc_raw_data_to_bat_cur(fields[9])
-        converted[10]   = adc_raw_data_to_eps_cur(fields[10])
-        converted[11]   = adc_raw_data_to_eps_vol(fields[11])
-        converted[12]   = therm_res_to_temp(therm_vol_to_res(dac_raw_data_to_vol(fields[12])))
-        converted[13]   = therm_res_to_temp(therm_vol_to_res(dac_raw_data_to_vol(fields[13])))
-        converted[14]   = imu_raw_data_to_gyro(fields[14])
-        converted[15]   = imu_raw_data_to_gyro(fields[15])
-        converted[16]   = imu_raw_data_to_gyro(fields[16])
-        converted[17]   = imu_raw_data_to_gyro(fields[17])
-        converted[18]   = imu_raw_data_to_gyro(fields[18])
-        converted[19]   = imu_raw_data_to_gyro(fields[19])
+    # if arg1 == 0:
+    #     num_fields = len(EPS_HK_MAPPING)
+    #     converted = [0 for i in range(num_fields)]
+    #     converted[0]    = adc_raw_data_to_eps_vol(fields[0])
+    #     converted[1]    = adc_raw_data_to_eps_cur(fields[1])
+    #     converted[2]    = adc_raw_data_to_eps_cur(fields[2])
+    #     converted[3]    = adc_raw_data_to_eps_cur(fields[3])
+    #     converted[4]    = adc_raw_data_to_eps_cur(fields[4])
+    #     converted[5]    = adc_raw_data_to_eps_cur(fields[5])
+    #     converted[6]    = adc_raw_data_to_therm_temp(fields[6])
+    #     converted[7]    = adc_raw_data_to_therm_temp(fields[7])
+    #     converted[8]    = adc_raw_data_to_eps_vol(fields[8])
+    #     converted[9]    = adc_raw_data_to_bat_cur(fields[9])
+    #     converted[10]   = adc_raw_data_to_eps_cur(fields[10])
+    #     converted[11]   = adc_raw_data_to_eps_vol(fields[11])
+    #     converted[12]   = therm_res_to_temp(therm_vol_to_res(dac_raw_data_to_vol(fields[12])))
+    #     converted[13]   = therm_res_to_temp(therm_vol_to_res(dac_raw_data_to_vol(fields[13])))
+    #     converted[14]   = imu_raw_data_to_gyro(fields[14])
+    #     converted[15]   = imu_raw_data_to_gyro(fields[15])
+    #     converted[16]   = imu_raw_data_to_gyro(fields[16])
+    #     converted[17]   = imu_raw_data_to_gyro(fields[17])
+    #     converted[18]   = imu_raw_data_to_gyro(fields[18])
+    #     converted[19]   = imu_raw_data_to_gyro(fields[19])
 
-        # Print to screen
-        eps_hk_section.print_fields(fields, converted)
-        # Write to file
-        eps_hk_section.write_block_to_file(arg2, header, converted)
+    #     # Print to screen
+    #     eps_hk_section.print_fields(fields, converted)
+    #     # Write to file
+    #     eps_hk_section.write_block_to_file(arg2, header, converted)
         
 
-    if arg1 == 1:
-        num_fields = len(PAY_HK_MAPPING)
-        converted = [0 for i in range(num_fields)]
-        converted[0]    = temp_raw_data_to_temperature(fields[0])
-        converted[1]    = hum_raw_data_to_humidity(fields[1])
-        converted[2]    = pres_raw_data_to_pressure(fields[2])
-        converted[3]    = adc_raw_data_to_therm_temp(fields[3])
-        converted[4]    = adc_raw_data_to_therm_temp(fields[4])
-        converted[5]    = adc_raw_data_to_therm_temp(fields[5])
-        converted[6]    = adc_raw_data_to_therm_temp(fields[6])
-        converted[7]    = adc_raw_data_to_therm_temp(fields[7])
-        converted[8]    = adc_raw_data_to_therm_temp(fields[8])
-        converted[9]    = adc_raw_data_to_therm_temp(fields[9])
-        converted[10]   = adc_raw_data_to_therm_temp(fields[10])
-        converted[11]   = adc_raw_data_to_therm_temp(fields[11])
-        converted[12]   = adc_raw_data_to_therm_temp(fields[12])
-        converted[13]   = therm_res_to_temp(therm_vol_to_res(dac_raw_data_to_vol(fields[13])))
-        converted[14]   = therm_res_to_temp(therm_vol_to_res(dac_raw_data_to_vol(fields[14])))
-        converted[15]   = 0
-        converted[16]   = 0
+    # if arg1 == 1:
+    #     num_fields = len(PAY_HK_MAPPING)
+    #     converted = [0 for i in range(num_fields)]
+    #     converted[0]    = temp_raw_data_to_temperature(fields[0])
+    #     converted[1]    = hum_raw_data_to_humidity(fields[1])
+    #     converted[2]    = pres_raw_data_to_pressure(fields[2])
+    #     converted[3]    = adc_raw_data_to_therm_temp(fields[3])
+    #     converted[4]    = adc_raw_data_to_therm_temp(fields[4])
+    #     converted[5]    = adc_raw_data_to_therm_temp(fields[5])
+    #     converted[6]    = adc_raw_data_to_therm_temp(fields[6])
+    #     converted[7]    = adc_raw_data_to_therm_temp(fields[7])
+    #     converted[8]    = adc_raw_data_to_therm_temp(fields[8])
+    #     converted[9]    = adc_raw_data_to_therm_temp(fields[9])
+    #     converted[10]   = adc_raw_data_to_therm_temp(fields[10])
+    #     converted[11]   = adc_raw_data_to_therm_temp(fields[11])
+    #     converted[12]   = adc_raw_data_to_therm_temp(fields[12])
+    #     converted[13]   = therm_res_to_temp(therm_vol_to_res(dac_raw_data_to_vol(fields[13])))
+    #     converted[14]   = therm_res_to_temp(therm_vol_to_res(dac_raw_data_to_vol(fields[14])))
+    #     converted[15]   = 0
+    #     converted[16]   = 0
 
-        # Print to screen
-        pay_hk_section.print_fields(fields, converted)
-        # Write to file
-        pay_hk_section.write_block_to_file(arg2, header, converted)
+    #     # Print to screen
+    #     pay_hk_section.print_fields(fields, converted)
+    #     # Write to file
+    #     pay_hk_section.write_block_to_file(arg2, header, converted)
 
-    if arg1 == 2:
-        num_fields = len(PAY_OPT_MAPPING)
-        converted = [0 for i in range(num_fields)]
-        for i in range(num_fields):
-            converted[i] = opt_adc_raw_data_to_vol(fields[i], 1)
+    # if arg1 == 2:
+    #     num_fields = len(PAY_OPT_MAPPING)
+    #     converted = [0 for i in range(num_fields)]
+    #     for i in range(num_fields):
+    #         converted[i] = opt_adc_raw_data_to_vol(fields[i], 1)
         
-        # Print to screen
-        pay_opt_section.print_fields(fields, converted)
-        # Write to file
-        pay_opt_section.write_block_to_file(arg2, header, converted)
+    #     # Print to screen
+    #     pay_opt_section.print_fields(fields, converted)
+    #     # Write to file
+    #     pay_opt_section.write_block_to_file(arg2, header, converted)
 
 
     
@@ -254,49 +239,28 @@ def process_rx_enc_msg(enc_msg):
     print("arg2 = %d (0x%x)" % (arg2, arg2))
     print("data (%d bytes) = %s" % (len(data), bytes_to_string(data)))
 
-    if type == 0x00:
+    # if type == 0x01:
+    #     print("Subsystem status (OBC)")
+    #     print("Restart count =", bytes_to_uint32(data[0:4]))
+    #     print("Restart date =", date_time_to_str(data[4:7]))
+    #     print("Restart time =", date_time_to_str(data[7:10]))
+    #     print("Uptime =", bytes_to_uint32(data[10:14]))
+
+    if type == Command.PING_OBC:
         print("Ping")
-    if type == 0x01:
-        print("Subsystem status (OBC)")
-        print("Restart count =", bytes_to_uint32(data[0:4]))
-        print("Restart date =", date_time_to_str(data[4:7]))
-        print("Restart time =", date_time_to_str(data[7:10]))
-        print("Uptime =", bytes_to_uint32(data[10:14]))
-    if type == 0x02:
+
+    if type == Command.GET_RTC:
         print("Get RTC")
         print("Date =", date_time_to_str(data[0:3]))
         print("Time =", date_time_to_str(data[3:6]))
-    if type == 0x03:
+
+    if type == Command.SET_RTC:
         print("Set RTC")
-    if type == 0x04:
-        print("Read memory")
-        print("Data = %s" % bytes_to_string(data))
-    if type == 0x05:
-        print("Erase memory")
-    if type == 0x06:
-        print("Collect block")
-        print("Block number = %d" % bytes_to_uint32(data[0:4]))
-    if type == 0x07:
-        print("Read local block")
-        process_rx_block(arg1, arg2, data)
-    if type == 0x08:
-        print("Read memory block")
-        process_rx_block(arg1, arg2, data)
-    if type == 0x09:
-        print("Enable/disable auto data collection")
-    if type == 0x0A:
-        print("Set auto data collection period")
-    if type == 0x0B:
-        print("Resync auto data collection")
-    if type == 0x0C:
-        print("Set EPS heater setpoints")
-    if type == 0x0D:
-        print("Set PAY heater setpoints")
-    if type == 0x0E:
-        print("Actuate PAY motors")
-    if type == 0x0F:
-        print("Reset")
-    if type == 0x10:
+
+    if type == Command.READ_OBC_EEPROM:
+        print("Read EEPROM")
+
+    if type == Command.SEND_EPS_CAN_MSG:
         print("Received CAN message from EPS")
         print("Message =", bytes_to_string(data))
 
@@ -335,7 +299,8 @@ def process_rx_enc_msg(enc_msg):
                 print("Get uptime")
             elif field_num == 13:
                 print("Start temporary low-power mode")
-    if type == 0x11:
+
+    if type == Command.SEND_PAY_CAN_MSG:
         print("Received CAN message from PAY")
         print("Message =", bytes_to_string(data))
 
@@ -370,9 +335,33 @@ def process_rx_enc_msg(enc_msg):
                 print("Get uptime")
             elif field_num == 11:
                 print("Start temporary low-power mode")
-    if type == 0x12:
-        print("Read EEPROM")
-    if type == 0x13:
+
+    if type == Command.ACT_PAY_MOTORS:
+        print("Actuate PAY motors")
+
+    if type == Command.RESET_SUBSYS:
+        print("Reset subsystem")
+
+    if type == Command.READ_DATA_BLOCK:
+        print("Read data block")
+        process_rx_block(arg1, arg2, data)
+
+    if type == Command.READ_REC_LOC_DATA_BLOCK:
+        print("Read recent local data block")
+        process_rx_block(arg1, arg2, data)
+
+    if type == Command.READ_RAW_MEM_BYTES:
+        print("Read raw memory bytes")
+        print("Data = %s" % bytes_to_string(data))
+
+    if type == Command.ERASE_ALL_MEM:
+        print("Erase all memory")
+
+    if type == Command.COL_DATA_BLOCK:
+        print("Collect data block")
+        print("Block number = %d" % bytes_to_uint32(data[0:4]))
+    
+    if type == Command.GET_CUR_BLOCK_NUM:
         print("Get current block number")
         print(section_num_to_str(arg1))
         block_num = bytes_to_uint32(data[0:4])
@@ -387,7 +376,16 @@ def process_rx_enc_msg(enc_msg):
         if arg1 == 2:
             #global pay_opt_sat_block_num
             pay_opt_section.sat_block_num = block_num
+    
+    if type == Command.SET_AUTO_DATA_COL_ENABLE:
+        print("Set auto data collection enable")
 
+    if type == Command.SET_AUTO_DATA_COL_PERIOD:
+        print("Set auto data collection period")
+
+    if type == Command.RESYNC_AUTO_DATA_COL_TIMERS:
+        print("Resync auto data collection timers")
+    
     print_div()
 
 
@@ -461,57 +459,97 @@ def read_all_missing_blocks():
 
 def main_loop():
     cmd = None # Command to board
-    while cmd != ("quit"): # Enter quit to stop program
-        print("p. Change Password to Send to OBC")
-        print("0. Send Raw UART")
-        print("1. Send Arbitrary Command")
-        print("2. Ping")
-        print("3. Get RTC")
-        print("4. Set RTC")
-        print("5. Auto-Data Collection")
-        print("6. Read All Missing Blocks")
-        print("7. Blocks")
-        print("8. Memory (Flash and EEPROM)")
-        print("9. Heater DAC Setpoints")
-        print("10. Pay Control")
-        print("11. Reset")
-        print("12. CAN")
-        print("13. EPS Heater Current Thresholds")
+    while True: # Enter quit to stop program
+        # TODO - update to match opcodes, preferably in a modular way
+        print("q. Quit Program")
+        print("a. Change GS Password")
+        print("b. Send Raw UART")
+        print("c. Send Arbitrary Command")
+        print("d. Set Standard Auto Data Collection Parameters")
+        print("e. Read All Missing Blocks")
+        print("f. Set File Block Number")
+        print("0. Ping")
+        print("1. Get RTC")
+        print("2. Set RTC")
+        print("3. Read EEPROM")
+        print("4. Read EEPROM")
+        print("5. Read RAM Byte")
+        print("6. EPS CAN")
+        print("7. PAY CAN")
+        print("8. Actuate PAY Motors")
+        print("9. Reset Subsystem")
+        print("17. Read Data Block")
+        print("18. Read Local Block")
+        print("21. Read Raw Memory Bytes")
+        print("22. Erase Flash Memory Physical Sector")
+        print("23. Erase Flash Memory Physical Block")
+        print("24. Erase All Flash Memory")
+        print("32. Collect Data Block")
+        print("33. Get Satellite Block number")
+        print("34. Set Satellite Block number")
+        print("35. Set Memory Section Start Address")
+        print("36. Set Memory Section End Address")
+
         cmd = input("Enter command number: ") # User input typed through terminal consol
 
-        if cmd == ("quit"):
+        if cmd == "q":
             print("Quitting program")
-            continue
+            sys.exit(0)
 
-        elif cmd == ("p"):  # Change password
+        elif cmd == "a":  # Change password
             global password
             password = input("Enter new password: ")
             assert len(password) == 4
 
-        elif cmd == ("0"):  # Raw UART
+        elif cmd == "b":  # Raw UART
             send_raw_uart(string_to_bytes(input("Enter raw hex for UART: ")))
             receive_message()
-        
-        elif cmd == ("1"):  # Arbitrary command
+
+        elif cmd == "c":  # Arbitrary command
             opcode = input_int("Enter opcode: ")
             arg1 = input_int("Enter argument 1: ")
             arg2 = input_int("Enter argument 2: ")
             send_and_receive_mult_attempts(opcode, arg1, arg2)
+        
+        elif cmd == "d": #Auto-Data Collection
+            # Periods
+            send_and_receive_mult_attempts(Command.SET_AUTO_DATA_COL_PERIOD, BlockType.EPS_HK, 60)
+            send_and_receive_mult_attempts(Command.SET_AUTO_DATA_COL_PERIOD, BlockType.PAY_HK, 120)
+            send_and_receive_mult_attempts(Command.SET_AUTO_DATA_COL_PERIOD, BlockType.PAY_OPT, 300)
+            # Enables
+            send_and_receive_mult_attempts(Command.SET_AUTO_DATA_COL_ENABLE, BlockType.EPS_HK, 1)
+            send_and_receive_mult_attempts(Command.SET_AUTO_DATA_COL_ENABLE, BlockType.PAY_HK, 1)
+            send_and_receive_mult_attempts(Command.SET_AUTO_DATA_COL_ENABLE, BlockType.PAY_OPT, 1)
+        
+        elif cmd == "e":  # Read missing blocks
+            read_all_missing_blocks()
 
-        elif cmd == ("2"): #Ping
+        elif cmd == "f":
+            arg1 = input_block_type()
+            num = input_int("Enter block number: ")
+            if arg1 == BlockType.EPS_HK:
+                eps_hk_section.file_block_num = num
+            elif arg1 == BlockType.PAY_HK:
+                pay_hk_section.file_block_num = num
+            elif arg1 == BlockType.PAY_OPT:
+                pay_opt_section.file_block_num = num
+            print_sections()
+
+        opcode = str_to_int(cmd)
+        
+        if opcode == Command.PING_OBC: #Ping
             ss = input_subsys()
-            if ss == 0:
-                #arguments = send_message type, length, make data in hex?, data, data2
-                send_and_receive_mult_attempts(0)
-            elif ss == 1:
-                send_and_receive_eps_can(1, 0)
-            elif ss == 2:
-                send_and_receive_pay_can(4, 0)
+            if ss == Subsystem.OBC:
+                send_and_receive_mult_attempts(Command.PING_OBC)
+            elif ss == Subsystem.EPS:
+                send_and_receive_eps_can(CAN.EPS_CTRL, EPS_CTRL.PING)
+            elif ss == Subsystem.PAY:
+                send_and_receive_pay_can(CAN.PAY_CTRL, PAY_CTRL.PING)
 
-        elif cmd == ("3"): #Get RTC
-            send_and_receive_mult_attempts(2)
+        elif opcode == Command.GET_RTC: #Get RTC
+            send_and_receive_mult_attempts(Command.GET_RTC)
 
-        elif cmd == ("4"): #Set RTC
+        elif opcode == Command.SET_RTC: #Set RTC
             year = input_int("Enter year: ")
             month = input_int("Enter month: ")
             day = input_int("Enter day: ")
@@ -522,191 +560,155 @@ def main_loop():
             second = input_int("Enter seconds: ")
             arg2 = bytes_to_uint24([hour, minute, second])
 
-            send_and_receive_mult_attempts (3, arg1, arg2)
+            send_and_receive_mult_attempts (Command.SET_RTC, arg1, arg2)
         
-        elif cmd == ("5"): #Auto-Data Collection
-            print("1. Enable/Disable")
-            print("2. Period")
-            print("3. Resync")
-            print("4. Set Default On Settings")
-            next_cmd = input("Enter command number: ")
-
-            if next_cmd == ("1"):
-                arg1 = input_block_type()
-                arg2 = input_int("Disable (0) or Enable (1): ")
-                send_and_receive_mult_attempts(9, arg1, arg2)
-            elif next_cmd == ("2"):
-                arg1 = input_block_type()
-                arg2 = input_int("Enter period in seconds: ")
-                send_and_receive_mult_attempts(10, arg1, arg2)
-            elif next_cmd == ("3"):
-                send_and_receive_mult_attempts(11)
-            elif next_cmd == ("4"):
-                # Periods
-                send_and_receive_mult_attempts(10, 0, 60)
-                send_and_receive_mult_attempts(10, 1, 120)
-                send_and_receive_mult_attempts(10, 2, 300)
-                # Enables
-                send_and_receive_mult_attempts(9, 0, 1)
-                send_and_receive_mult_attempts(9, 1, 1)
-                send_and_receive_mult_attempts(9, 2, 1)
-                continue    # Don't receive again at bottom of loop
-            else:
-                print("Invalid command")
-        
-        elif cmd == ("6"):  # Read missing blocks
-            read_all_missing_blocks()
-
-        elif cmd == ("7"): #Blocks
-            print("1. Collect Block")
-            print("2. Read Local Block")
-            print("3. Read Memory Block")
-            print("4. Get Satellite Block number")
-            print("5. Set Satellite Block number")
-            print("6. Set File Block Number")
-            print("7. Set Memory Section Start Address")
-            print("8. Set Memory Section End Address")
-            next_cmd = input("Enter command number: ")
-
+        elif opcode == Command.SET_AUTO_DATA_COL_ENABLE: #Auto-Data Collection
             arg1 = input_block_type()
+            arg2 = input_int("Disable (0) or Enable (1): ")
+            send_and_receive_mult_attempts(Command.SET_AUTO_DATA_COL_ENABLE, arg1, arg2)
 
-            if next_cmd == ("1"):
-                send_and_receive_mult_attempts(6, arg1)
-            elif next_cmd == ("2"):
-                send_and_receive_mult_attempts(7, arg1)
-            elif next_cmd == ("3"):
-                arg2 = input_int("Enter block number: ")
-                send_and_receive_mult_attempts(8, arg1, arg2)
-            elif next_cmd == ("4"):
-                send_and_receive_mult_attempts(19, arg1)
-            elif next_cmd == ("5"):
-                arg2 = input_int("Enter block number: ")
-                send_and_receive_mult_attempts(0x14, arg1, arg2)
-            elif next_cmd == ("6"):
-                num = input_int("Enter block number: ")
-                if arg1 == 0:
-                    eps_hk_section.file_block_num = num
-                elif arg1 == 1:
-                    pay_hk_section.file_block_num = num
-                elif arg1 == 2:
-                    pay_opt_section.file_block_num = num
-                print_sections()
-                continue
-            elif next_cmd == ("7"):
-                arg2 = input_int("Enter start address: ")
-                send_and_receive_mult_attempts(0x15, arg1, arg2)
-            elif next_cmd == ("8"):
-                arg2 = input_int("Enter end address: ")
-                send_and_receive_mult_attempts(0x16, arg1, arg2)
+        elif opcode == Command.SET_AUTO_DATA_COL_PERIOD: #Auto-Data Collection
+            arg1 = input_block_type()
+            arg2 = input_int("Enter period in seconds: ")
+            send_and_receive_mult_attempts(Command.SET_AUTO_DATA_COL_PERIOD, arg1, arg2)
+
+        elif opcode == Command.RESYNC_AUTO_DATA_COL_TIMERS: #Auto-Data Collection
+            send_and_receive_mult_attempts(Command.RESYNC_AUTO_DATA_COL_TIMERS)
+
+        elif opcode == Command.COL_DATA_BLOCK:
+            arg1 = input_block_type()
+            send_and_receive_mult_attempts(Command.COL_DATA_BLOCK, arg1)
+
+        elif opcode == Command.READ_REC_LOC_DATA_BLOCK:
+            arg1 = input_block_type()
+            send_and_receive_mult_attempts(Command.READ_REC_LOC_DATA_BLOCK, arg1)
+
+        elif opcode == Command.READ_DATA_BLOCK:
+            arg1 = input_block_type()
+            arg2 = input_int("Enter block number: ")
+            send_and_receive_mult_attempts(Command.READ_DATA_BLOCK, arg1, arg2)
+
+        elif opcode == Command.GET_CUR_BLOCK_NUM:
+            arg1 = input_block_type()
+            send_and_receive_mult_attempts(Command.GET_CUR_BLOCK_NUM, arg1)
+
+        elif opcode == Command.SET_CUR_BLOCK_NUM:
+            arg1 = input_block_type()
+            arg2 = input_int("Enter block number: ")
+            send_and_receive_mult_attempts(Command.SET_CUR_BLOCK_NUM, arg1, arg2)
+        
+        elif opcode == Command.SET_MEM_SEC_START_ADDR:
+            arg1 = input_block_type()
+            arg2 = input_int("Enter start address: ")
+            send_and_receive_mult_attempts(Command.SET_MEM_SEC_START_ADDR, arg1, arg2)
+
+        elif opcode == Command.SET_MEM_SEC_END_ADDR:
+            arg1 = input_block_type()
+            arg2 = input_int("Enter end address: ")
+            send_and_receive_mult_attempts(Command.SET_MEM_SEC_END_ADDR, arg1, arg2)
+
+        elif opcode == Command.READ_RAW_MEM_BYTES:
+            arg1 = input_int("Enter starting address: ")
+            arg2 = input_int("Enter number of bytes: ")
+            send_and_receive_mult_attempts(Command.READ_RAW_MEM_BYTES, arg1, arg2)
+
+        elif opcode == Command.ERASE_MEM_PHY_SECTOR:
+            arg1 = input_int("Enter address: ")
+            send_and_receive_mult_attempts(Command.ERASE_MEM_PHY_SECTOR, arg1)
+
+        elif opcode == Command.ERASE_MEM_PHY_BLOCK:
+            arg1 = input_int("Enter address: ")
+            send_and_receive_mult_attempts(Command.ERASE_MEM_PHY_BLOCK, arg1)
+
+        elif opcode == Command.ERASE_ALL_MEM:
+            resp = input("ARE YOU SURE? Type 'yes' to confirm, or Enter to cancel: ")
+            if resp == "yes":
+                send_and_receive_mult_attempts(Command.ERASE_ALL_MEM)
+                print("Confirmed")
             else:
-                print("Invalid command")
+                print("Cancelled")
 
-        elif cmd == ("8"): #Memory
-            print("1. Read Flash Memory")
-            print("2. Erase Flash Memory Physical Sector")
-            print("3. Erase Flash Memory Physical Block")
-            print("4. Erase All Flash Memory")
-            print("5. Read EEPROM")
-            next_cmd = input("Enter command number: ")
+        elif opcode == Command.READ_OBC_EEPROM:
+            ss = input_subsys()
+            addr = input_int("Enter address: ")
+            if ss == Subsystem.OBC:
+                send_and_receive_mult_attempts(Command.READ_OBC_EEPROM, addr, 0)
+            elif ss == Subsystem.EPS:
+                send_and_receive_eps_can(CAN.EPS_CTRL, EPS_CTRL.READ_EEPROM)
+            elif ss == Subsystem.PAY:
+                send_and_receive_pay_can(CAN.PAY_CTRL, PAY_CTRL.READ_EEPROM)
 
-            if next_cmd == ("1"):
-                arg1 = input_int("Enter starting address: ")
-                arg2 = input_int("Enter number of bytes: ")
-                send_and_receive_mult_attempts(4, arg1, arg2)
-            elif next_cmd == ("2"):
-                arg1 = input_int("Enter address: ")
-                send_and_receive_mult_attempts(5, arg1)
-            elif next_cmd == ("3"):
-                arg1 = input_int("Enter address: ")
-                send_and_receive_mult_attempts(0x1A, arg1)
-            elif next_cmd == ("4"):
-                resp = input("ARE YOU SURE? Type 'yes' to confirm, or Enter to cancel: ")
-                if resp == "yes":
-                    send_and_receive_mult_attempts(0x19)
-                    print("Confirmed")
-                else:
-                    print("Cancelled")
-            elif next_cmd == ("5"):
-                ss = input_subsys()
-                addr = input_int("Enter address: ")
-                if ss == 0:
-                    send_and_receive_mult_attempts(18, addr, 0)
-                elif ss == 1:
-                    send_and_receive_eps_can(1, 8)
-                elif ss == 2:
-                    send_and_receive_pay_can(4, 6)
-            else:
-                print("Invalid command")
+        # TODO
+        # elif opcode == Command.PING_OBC: #Heater DAC Setpoints
+        #     print("1. Set EPS - Shadow Setpoint 1")
+        #     print("2. Set EPS - Shadow Setpoint 2")
+        #     print("3. Set EPS - Sun Setpoint 1")
+        #     print("4. Set EPS - Sun Setpoint 2")
+        #     print("5. Set PAY - Setpoint 1")
+        #     print("6. Set PAY - Setpoint 2")
+        #     next_cmd = input("Enter command number: ")
 
-        elif cmd == ("9"): #Heater DAC Setpoints
-            print("1. Set EPS - Shadow Setpoint 1")
-            print("2. Set EPS - Shadow Setpoint 2")
-            print("3. Set EPS - Sun Setpoint 1")
-            print("4. Set EPS - Sun Setpoint 2")
-            print("5. Set PAY - Setpoint 1")
-            print("6. Set PAY - Setpoint 2")
-            next_cmd = input("Enter command number: ")
+        #     setpoint = float(input("Enter setpoint (in C): "))
+        #     data = dac_vol_to_raw_data(therm_res_to_vol(therm_temp_to_res(setpoint)))
 
-            setpoint = float(input("Enter setpoint (in C): "))
-            data = dac_vol_to_raw_data(therm_res_to_vol(therm_temp_to_res(setpoint)))
+        #     if next_cmd == ("1"):
+        #         send_and_receive_eps_can(1, 1, data)
+        #     elif next_cmd == ("2"):
+        #         send_and_receive_eps_can(1, 2, data)
+        #     elif next_cmd == ("3"):
+        #         send_and_receive_eps_can(1, 3, data)
+        #     elif next_cmd == ("4"):
+        #         send_and_receive_eps_can(1, 4, data)
+        #     elif next_cmd == ("5"):
+        #         send_and_receive_pay_can(4, 1, data)
+        #     elif next_cmd == ("6"):
+        #         send_and_receive_pay_can(4, 2, data)
+        #     else:
+        #         print("Invalid command")
 
-            if next_cmd == ("1"):
-                send_and_receive_eps_can(1, 1, data)
-            elif next_cmd == ("2"):
-                send_and_receive_eps_can(1, 2, data)
-            elif next_cmd == ("3"):
-                send_and_receive_eps_can(1, 3, data)
-            elif next_cmd == ("4"):
-                send_and_receive_eps_can(1, 4, data)
-            elif next_cmd == ("5"):
-                send_and_receive_pay_can(4, 1, data)
-            elif next_cmd == ("6"):
-                send_and_receive_pay_can(4, 2, data)
-            else:
-                print("Invalid command")
+        elif opcode == Command.ACT_PAY_MOTORS: #Pay Control
+            print("1. Move plate up")
+            print("2. Move plate down")
+            print("3. Run deployment sequence")
+            arg1 = input_int("Enter command number: ")
+            arg1 += 14
+            send_and_receive_mult_attempts(Command.ACT_PAY_MOTORS, arg1)
 
-        elif cmd == ("10"): #Pay Control
-            arg1 = input_int("Move plate up (1) or down (2): ")
-            send_and_receive_mult_attempts(0x0E, arg1)
-
-        elif cmd == ("11"): #Reset
+        elif opcode == Command.RESET_SUBSYS: #Reset
             arg1 = input_subsys()
-            if arg1 == 0:
+            if arg1 == Subsystem.OBC:
                 # don't wait for response if it's OBC
-                send_message(15, arg1)
+                send_message(Command.RESET_SUBSYS, arg1)
             else:
                 send_and_receive_mult_attempts(15, arg1)
             
-        elif cmd == ("12"): #CAN Messages
-            print("1. Send CAN to EPS")
-            print("2. Send CAN to PAY")
-            next_cmd = input("Enter command number: ")
-
+        elif opcode == Command.SEND_EPS_CAN_MSG:
             msg = string_to_bytes(input("Enter 8 bytes: "))
             arg1 = bytes_to_uint32(msg[0:4])
             arg2 = bytes_to_uint32(msg[4:8])
+            send_and_receive_mult_attempts(Command.SEND_EPS_CAN_MSG, arg1, arg2)
 
-            if next_cmd == ("1"):
-                send_and_receive_mult_attempts(16, arg1, arg2)
-            elif next_cmd == ("2"):
-                send_and_receive_mult_attempts(17, arg1, arg2)
-            else:
-                print("Invalid command")
-        
-        elif cmd == ("13"):
-            print("1. Lower")
-            print("2. Upper")
-            next_cmd = input("Enter command number: ")
+        elif opcode == Command.SEND_PAY_CAN_MSG:
+            msg = string_to_bytes(input("Enter 8 bytes: "))
+            arg1 = bytes_to_uint32(msg[0:4])
+            arg2 = bytes_to_uint32(msg[4:8])
+            send_and_receive_mult_attempts(Command.SEND_PAY_CAN_MSG, arg1, arg2)
 
-            threshold = float(input("Enter threshold (in A): "))
-            data = adc_eps_cur_to_raw_data(threshold)
+        # TODO
+        # elif opcode == Command.PING_OBC:
+        #     print("1. Lower")
+        #     print("2. Upper")
+        #     next_cmd = input("Enter command number: ")
 
-            if next_cmd == ("1"):
-                send_and_receive_eps_can(1, 5, data)
-            elif next_cmd == ("2"):
-                send_and_receive_eps_can(1, 6, data)
-            else:
-                print("Invalid command")
+        #     threshold = float(input("Enter threshold (in A): "))
+        #     data = adc_eps_cur_to_raw_data(threshold)
+
+        #     if next_cmd == ("1"):
+        #         send_and_receive_eps_can(1, 5, data)
+        #     elif next_cmd == ("2"):
+        #         send_and_receive_eps_can(1, 6, data)
+        #     else:
+        #         print("Invalid command")
 
         else:
             print("Invalid command")
