@@ -168,14 +168,8 @@ def send_raw_uart(uart_bytes):
     print("Sending UART (%d bytes):" % len(uart_bytes), bytes_to_string(uart_bytes))
     ser.write(uart_bytes)
 
-
-uart_rx_buf = bytes(0)
-def clear_uart_rx_buf():
-    global uart_rx_buf
-    uart_rx_buf = bytes(0)
-
 def receive_enc_msg():
-    global uart_rx_buf
+    uart_rx_buf = bytes(0)
 
     # Read from serial to bytes
     # DO NOT DECODE IT WITH UTF-8, IT DISCARDS ANY CHARACTERS > 127
@@ -191,10 +185,11 @@ def receive_enc_msg():
         # print("%d new bytes" % len(new))
         uart_rx_buf += new
 
+        # Get indices of all '\r' (<CR>) bytes
         cr_indices = [i for i in range(len(uart_rx_buf)) if uart_rx_buf[i] == ord('\r')]
         # print("cr_indices =", cr_indices)
 
-        # Check length (without '\r')
+        # Need 2 <CR> bytes to start/end message
         if len(cr_indices) >= 2:
             # Get first 2 CR characters
             start_index = cr_indices[0]
@@ -217,10 +212,8 @@ def receive_enc_msg():
                 print("Invalid message")
                 return None
 
-    # Don't clear the buffer here
-    clear_uart_rx_buf()
     # print("Received UART (raw):", bytes_to_string(uart_rx_buf))
-    print("No encoded message found")
+    print("No RX encoded message found")
     return None
 
 def process_rx_enc_msg(enc_msg):
@@ -229,7 +222,8 @@ def process_rx_enc_msg(enc_msg):
     dec_msg = decode_message(enc_msg)
     print("Received decoded message (%d bytes):" % len(dec_msg), bytes_to_string(dec_msg))
 
-    type = dec_msg[0]
+    is_ack_nack = bool((dec_msg[0] >> 7) & 0x1)
+    type = dec_msg[0] & 0x7F
     arg1 = bytes_to_uint32(dec_msg[1:5])
     arg2 = bytes_to_uint32(dec_msg[5:9])
     data = dec_msg[9:]
@@ -238,6 +232,30 @@ def process_rx_enc_msg(enc_msg):
     print("arg1 = %d (0x%x)" % (arg1, arg1))
     print("arg2 = %d (0x%x)" % (arg2, arg2))
     print("data (%d bytes) = %s" % (len(data), bytes_to_string(data)))
+
+    # TODO - refactor
+    if is_ack_nack:
+        print("Got command ACK/NACK")
+
+        if data[0] == 0:
+            print("OK")
+        elif data[0] == 1:
+            print("Invalid packet")
+        elif data[0] == 2:
+            print("Invalid decoded format")
+        elif data[0] == 3:
+            print("Invalid opcode")
+        elif data[0] == 4:
+            print("Invalid password")
+        else:
+            print("UNKNOWN")
+            sys.exit(1)
+
+        print_div()
+        return
+
+    
+    print("Got command response")
 
     # if type == 0x01:
     #     print("Subsystem status (OBC)")
@@ -424,7 +442,11 @@ def receive_message():
 def send_and_receive_mult_attempts(type, arg1=0, arg2=0, data=bytes(0)):
     for i in range(10):
         send_message(type, arg1, arg2, data)
-        if receive_message():
+        # TODO
+        got_ack = True
+        # got_ack = receive_message()
+        got_resp = receive_message()
+        if got_ack and got_resp:
             return True
     return False
 
@@ -513,10 +535,13 @@ def main_loop():
         
         elif cmd == "d": #Auto-Data Collection
             # Periods
+            send_and_receive_mult_attempts(Command.SET_AUTO_DATA_COL_PERIOD, BlockType.OBC_HK, 60)
             send_and_receive_mult_attempts(Command.SET_AUTO_DATA_COL_PERIOD, BlockType.EPS_HK, 60)
             send_and_receive_mult_attempts(Command.SET_AUTO_DATA_COL_PERIOD, BlockType.PAY_HK, 120)
             send_and_receive_mult_attempts(Command.SET_AUTO_DATA_COL_PERIOD, BlockType.PAY_OPT, 300)
+
             # Enables
+            send_and_receive_mult_attempts(Command.SET_AUTO_DATA_COL_ENABLE, BlockType.OBC_HK, 1)
             send_and_receive_mult_attempts(Command.SET_AUTO_DATA_COL_ENABLE, BlockType.EPS_HK, 1)
             send_and_receive_mult_attempts(Command.SET_AUTO_DATA_COL_ENABLE, BlockType.PAY_HK, 1)
             send_and_receive_mult_attempts(Command.SET_AUTO_DATA_COL_ENABLE, BlockType.PAY_OPT, 1)

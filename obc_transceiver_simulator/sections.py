@@ -6,13 +6,21 @@ OUT_FOLDER = "out"
 
 COMMON_HEADER = [
     "Expected Block Number",
-    "Block Number",
+    "Actual Block Number",
     "Error",
     "Date",
     "Time"
 ]
 
 # Name, unit, mapping for reordering measurements
+OBC_HK_MAPPING = [
+    ("Uptime",          "s",    0   ),
+    ("Restart count",   "",     1   ),
+    ("Restart reason",  "",     2   ),
+    ("Restart date",    "",     3   ),
+    ("Restart time",    "",     4   )
+]
+
 EPS_HK_MAPPING = [
     ("BB Vol",                  "V",        6   ),
     ("BB Cur",                  "A",        7   ),
@@ -139,8 +147,9 @@ class Section(object):
 
 
 # Memory sections
+obc_hk_section = Section("OBC_HK", "obc_hk.csv", OBC_HK_MAPPING)
 eps_hk_section = Section("EPS_HK", "eps_hk.csv", EPS_HK_MAPPING)
 pay_hk_section = Section("PAY_HK", "pay_hk.csv", PAY_HK_MAPPING)
 pay_opt_section = Section("PAY_OPT", "pay_opt.csv", PAY_OPT_MAPPING)
 
-all_sections = [eps_hk_section, pay_hk_section, pay_opt_section]
+all_sections = [obc_hk_section, eps_hk_section, pay_hk_section, pay_opt_section]
