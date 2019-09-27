@@ -83,9 +83,9 @@ def print_div():
 
 def print_header(header):
     print("Block number = %d" % bytes_to_uint24(header[0:3]))
-    print("Error = %d" % header[3])
-    print("Date = %s" % date_time_to_str(header[4:7]))
-    print("Time = %s" % date_time_to_str(header[7:10]))
+    print("Date = %s" % date_time_to_str(header[3:6]))
+    print("Time = %s" % date_time_to_str(header[6:9]))
+    print("Success = %d" % header[9])
 
 def process_rx_block(arg1, arg2, data):
     (header, fields) = parse_data(data)
@@ -223,12 +223,12 @@ def process_rx_enc_msg(enc_msg):
     print("Received decoded message (%d bytes):" % len(dec_msg), bytes_to_string(dec_msg))
 
     is_ack_nack = bool((dec_msg[0] >> 7) & 0x1)
-    type = dec_msg[0] & 0x7F
+    opcode = dec_msg[0] & 0x7F
     arg1 = bytes_to_uint32(dec_msg[1:5])
     arg2 = bytes_to_uint32(dec_msg[5:9])
     data = dec_msg[9:]
 
-    print("type = %d (0x%x)" % (type, type))
+    print("opcode = %d (0x%x)" % (opcode, opcode))
     print("arg1 = %d (0x%x)" % (arg1, arg1))
     print("arg2 = %d (0x%x)" % (arg2, arg2))
     print("data (%d bytes) = %s" % (len(data), bytes_to_string(data)))
@@ -264,21 +264,21 @@ def process_rx_enc_msg(enc_msg):
     #     print("Restart time =", date_time_to_str(data[7:10]))
     #     print("Uptime =", bytes_to_uint32(data[10:14]))
 
-    if type == Command.PING_OBC:
+    if opcode == Command.PING_OBC:
         print("Ping")
 
-    if type == Command.GET_RTC:
+    if opcode == Command.GET_RTC:
         print("Get RTC")
         print("Date =", date_time_to_str(data[0:3]))
         print("Time =", date_time_to_str(data[3:6]))
 
-    if type == Command.SET_RTC:
+    if opcode == Command.SET_RTC:
         print("Set RTC")
 
-    if type == Command.READ_OBC_EEPROM:
+    if opcode == Command.READ_OBC_EEPROM:
         print("Read EEPROM")
 
-    if type == Command.SEND_EPS_CAN_MSG:
+    if opcode == Command.SEND_EPS_CAN_MSG:
         print("Received CAN message from EPS")
         print("Message =", bytes_to_string(data))
 
@@ -318,7 +318,7 @@ def process_rx_enc_msg(enc_msg):
             elif field_num == 13:
                 print("Start temporary low-power mode")
 
-    if type == Command.SEND_PAY_CAN_MSG:
+    if opcode == Command.SEND_PAY_CAN_MSG:
         print("Received CAN message from PAY")
         print("Message =", bytes_to_string(data))
 
@@ -354,32 +354,32 @@ def process_rx_enc_msg(enc_msg):
             elif field_num == 11:
                 print("Start temporary low-power mode")
 
-    if type == Command.ACT_PAY_MOTORS:
+    if opcode == Command.ACT_PAY_MOTORS:
         print("Actuate PAY motors")
 
-    if type == Command.RESET_SUBSYS:
+    if opcode == Command.RESET_SUBSYS:
         print("Reset subsystem")
 
-    if type == Command.READ_DATA_BLOCK:
+    if opcode == Command.READ_DATA_BLOCK:
         print("Read data block")
         process_rx_block(arg1, arg2, data)
 
-    if type == Command.READ_REC_LOC_DATA_BLOCK:
+    if opcode == Command.READ_REC_LOC_DATA_BLOCK:
         print("Read recent local data block")
         process_rx_block(arg1, arg2, data)
 
-    if type == Command.READ_RAW_MEM_BYTES:
+    if opcode == Command.READ_RAW_MEM_BYTES:
         print("Read raw memory bytes")
         print("Data = %s" % bytes_to_string(data))
 
-    if type == Command.ERASE_ALL_MEM:
+    if opcode == Command.ERASE_ALL_MEM:
         print("Erase all memory")
 
-    if type == Command.COL_DATA_BLOCK:
+    if opcode == Command.COL_DATA_BLOCK:
         print("Collect data block")
         print("Block number = %d" % bytes_to_uint32(data[0:4]))
     
-    if type == Command.GET_CUR_BLOCK_NUM:
+    if opcode == Command.GET_CUR_BLOCK_NUM:
         print("Get current block number")
         print(section_num_to_str(arg1))
         block_num = bytes_to_uint32(data[0:4])
@@ -395,13 +395,13 @@ def process_rx_enc_msg(enc_msg):
             #global pay_opt_sat_block_num
             pay_opt_section.sat_block_num = block_num
     
-    if type == Command.SET_AUTO_DATA_COL_ENABLE:
+    if opcode == Command.SET_AUTO_DATA_COL_ENABLE:
         print("Set auto data collection enable")
 
-    if type == Command.SET_AUTO_DATA_COL_PERIOD:
+    if opcode == Command.SET_AUTO_DATA_COL_PERIOD:
         print("Set auto data collection period")
 
-    if type == Command.RESYNC_AUTO_DATA_COL_TIMERS:
+    if opcode == Command.RESYNC_AUTO_DATA_COL_TIMERS:
         print("Resync auto data collection timers")
     
     print_div()
@@ -441,10 +441,9 @@ def receive_message():
 
 def send_and_receive_mult_attempts(type, arg1=0, arg2=0, data=bytes(0)):
     for i in range(10):
+        # TODO - receive previous characters and discard before sending?
         send_message(type, arg1, arg2, data)
-        # TODO
-        got_ack = True
-        # got_ack = receive_message()
+        got_ack = receive_message()
         got_resp = receive_message()
         if got_ack and got_resp:
             return True
@@ -494,7 +493,7 @@ def main_loop():
         print("1. Get RTC")
         print("2. Set RTC")
         print("3. Read EEPROM")
-        print("4. Read EEPROM")
+        print("4. Erase EEPROM")
         print("5. Read RAM Byte")
         print("6. EPS CAN")
         print("7. PAY CAN")
@@ -512,7 +511,8 @@ def main_loop():
         print("35. Set Memory Section Start Address")
         print("36. Set Memory Section End Address")
 
-        cmd = input("Enter command number: ") # User input typed through terminal consol
+        cmd = input("Enter command number: ") # User input typed through terminal console
+        opcode = None
 
         if cmd == "q":
             print("Quitting program")
@@ -559,6 +559,13 @@ def main_loop():
             elif arg1 == BlockType.PAY_OPT:
                 pay_opt_section.file_block_num = num
             print_sections()
+        
+        else:
+            opcode = 0xFF
+        
+        # TODO - clean up
+        if opcode is None:
+            continue
 
         opcode = str_to_int(cmd)
         

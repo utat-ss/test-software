@@ -38,6 +38,7 @@ def str_to_int(string):
     except Exception as e:
         print(e)
         print("Error! Input must be an integer or in hex")
+        raise e
 
 # prompt is the send_message information
 # Sends data back as an int
