@@ -59,6 +59,10 @@ def section_num_to_str(num):
         return "PAY_HK"
     elif num == BlockType.PAY_OPT:
         return "PAY_OPT"
+    elif num == BlockType.PRIM_CMD_LOG:
+        return "PRIM_CMD_LOG"
+    elif num == BlockType.SEC_CMD_LOG:
+        return "SEC_CMD_LOG"
     else:
         return "UNKNOWN"
 
@@ -75,7 +79,7 @@ def input_subsys():
     return input_int("Enter subsystem (OBC = %d, EPS = %d, PAY = %d): " % (Subsystem.OBC, Subsystem.EPS, Subsystem.PAY))
 
 def input_block_type():
-    return input_int("Enter block type (OBC_HK = %d, EPS_HK = %d, PAY_HK = %d, PAY_OPT = %d): " % (BlockType.OBC_HK, BlockType.EPS_HK, BlockType.PAY_HK, BlockType.PAY_OPT))
+    return input_int("Enter block type (OBC_HK = %d, EPS_HK = %d, PAY_HK = %d, PAY_OPT = %d, PRIM_CMD_LOG = %d, SEC_CMD_LOG = %d): " % (BlockType.OBC_HK, BlockType.EPS_HK, BlockType.PAY_HK, BlockType.PAY_OPT, BlockType.PRIM_CMD_LOG, BlockType.SEC_CMD_LOG))
 
 
 def print_div():
@@ -159,7 +163,26 @@ def process_rx_block(arg1, arg2, data):
     #     # Write to file
     #     pay_opt_section.write_block_to_file(arg2, header, converted)
 
+def process_cmd_block(arg1, arg2, data):
+    print("Expected starting block number:", arg1)
+    print("Expected block count:", arg2)
+    assert len(data) % 19 == 0
 
+    count = len(data) // 19
+    print("%d blocks" % count)
+    for i in range(count):
+        block_data = data[i * 19 : (i + 1) * 19]
+
+        header = block_data[0:10]
+        opcode = block_data[10]
+        arg1 = bytes_to_uint32(block_data[11:15])
+        arg2 = bytes_to_uint32(block_data[15:19])
+
+        print_div()
+        print_header(header)
+        print("Opcode = %d" % opcode)
+        print("Argument 1 = %d" % arg1)
+        print("Argument 2 = %d" % arg2)
     
 
 # string should look something like "00:ff:a3:49:de"
@@ -363,6 +386,14 @@ def process_rx_enc_msg(enc_msg):
     if opcode == Command.READ_DATA_BLOCK:
         print("Read data block")
         process_rx_block(arg1, arg2, data)
+    
+    if opcode == Command.READ_PRIM_CMD_BLOCKS:
+        print("Read primary command blocks")
+        process_cmd_block(arg1, arg2, data)
+    
+    if opcode == Command.READ_SEC_CMD_BLOCKS:
+        print("Read secondary command blocks")
+        process_cmd_block(arg1, arg2, data)
 
     if opcode == Command.READ_REC_LOC_DATA_BLOCK:
         print("Read recent local data block")
@@ -501,6 +532,8 @@ def main_loop():
         print("9. Reset Subsystem")
         print("17. Read Data Block")
         print("18. Read Local Block")
+        print("19. Read Primary Command Blocks")
+        print("20. Read Secondary Command Blocks")
         print("21. Read Raw Memory Bytes")
         print("22. Erase Flash Memory Physical Sector")
         print("23. Erase Flash Memory Physical Block")
@@ -614,6 +647,16 @@ def main_loop():
         elif opcode == Command.READ_REC_LOC_DATA_BLOCK:
             arg1 = input_block_type()
             send_and_receive_mult_attempts(Command.READ_REC_LOC_DATA_BLOCK, arg1)
+        
+        elif opcode == Command.READ_PRIM_CMD_BLOCKS:
+            arg1 = input_int("Enter starting block number: ")
+            arg2 = input_int("Enter number of blocks: ")
+            send_and_receive_mult_attempts(Command.READ_PRIM_CMD_BLOCKS, arg1, arg2)
+        
+        elif opcode == Command.READ_SEC_CMD_BLOCKS:
+            arg1 = input_int("Enter starting block number: ")
+            arg2 = input_int("Enter number of blocks: ")
+            send_and_receive_mult_attempts(Command.READ_SEC_CMD_BLOCKS, arg1, arg2)
 
         elif opcode == Command.READ_DATA_BLOCK:
             arg1 = input_block_type()

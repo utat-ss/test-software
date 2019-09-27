@@ -41,10 +41,12 @@ class Subsystem(IntEnum):
     PAY = 3
 
 class BlockType(IntEnum):
-    OBC_HK  = 1
-    EPS_HK  = 2
-    PAY_HK  = 3
-    PAY_OPT = 4
+    OBC_HK          = 1
+    EPS_HK          = 2
+    PAY_HK          = 3
+    PAY_OPT         = 4
+    PRIM_CMD_LOG    = 5
+    SEC_CMD_LOG     = 6
 
 class CAN(IntEnum):
     EPS_CTRL = 0x02
