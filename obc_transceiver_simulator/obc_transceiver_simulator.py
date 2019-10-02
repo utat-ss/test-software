@@ -513,6 +513,7 @@ def main_loop():
     cmd = None # Command to board
     while True: # Enter quit to stop program
         # TODO - update to match opcodes, preferably in a modular way
+        # TODO - command to disable all auto data collection
         print("q. Quit Program")
         print("a. Change GS Password")
         print("b. Send Raw UART")
@@ -597,7 +598,7 @@ def main_loop():
             opcode = 0xFF
         
         # TODO - clean up
-        if opcode is None:
+        if opcode != 0xFF:
             continue
 
         opcode = str_to_int(cmd)
@@ -826,6 +827,7 @@ if __name__ == "__main__":
         print("Using port " + uart + " for UART")
     except serial.SerialException as e:
         print("ERROR: Port " + uart + " is in use")
+        sys.exit(1)
 
     for section in all_sections:
         section.load_file()
