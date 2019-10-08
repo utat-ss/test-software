@@ -1,6 +1,7 @@
-from commands import *
+
 from common import *
 from encoding import *
+from packets import *
 from sections import *
 
 def print_header(header):
@@ -32,9 +33,16 @@ def process_cmd_block(arg1, arg2, data):
 
 
 def process_rx_packet(packet):
+    from commands import g_all_commands
+    global g_all_commands
+
     print_div()
-    print("Received encoded message (%d bytes):" % len(packet.enc_msg), bytes_to_string(packet.enc_msg))
-    print("Received decoded message (%d bytes):" % len(packet.dec_msg), bytes_to_string(packet.dec_msg))
+    print("RX packet - received %s" % ("ACK" if packet.is_ack else "response"))
+
+    print([command.name for command in g_all_commands if command.opcode == packet.opcode][0])
+
+    print("Encoded (%d bytes):" % len(packet.enc_msg), bytes_to_string(packet.enc_msg))
+    print("Decoded (%d bytes):" % len(packet.dec_msg), bytes_to_string(packet.dec_msg))
 
     print("Opcode = 0x%x (%d)" % (packet.opcode, packet.opcode))
     print("Argument 1 = 0x%x (%d)" % (packet.arg1, packet.arg1))
@@ -42,8 +50,6 @@ def process_rx_packet(packet):
     print("Data (%d bytes) = %s" % (len(packet.data), bytes_to_string(packet.data)))
 
     if packet.is_ack:
-        print("Received ACK/NACK")
-
         # TODO - status variable/byte?
         if packet.data[0] == 0:
             print("OK")
@@ -59,12 +65,11 @@ def process_rx_packet(packet):
             sys.exit(1)
 
     else:
-        print("Got command response")
-
-        global g_all_commands
+        # from commands import g_all_commands
+        # global g_all_commands
         for command in g_all_commands:
             if command.opcode == packet.opcode:
-                command.run_rx()
+                command.run_rx(packet)
                 break
         else:
             sys.exit(1)
@@ -72,11 +77,11 @@ def process_rx_packet(packet):
     print_div()
 
 
-def send_and_receive_eps_can(msg_type, field_num, tx_data=0):
-    send_and_receive_packet(0x10, (msg_type << 8) | field_num, tx_data)
+def send_and_receive_eps_can(ser, msg_type, field_num, tx_data, password):
+    send_and_receive_packet(ser, 0x10, (msg_type << 8) | field_num, tx_data, password)
 
-def send_and_receive_pay_can(msg_type, field_num, tx_data=0):
-    send_and_receive_packet(0x11, (msg_type << 8) | field_num, tx_data)
+def send_and_receive_pay_can(ser, msg_type, field_num, tx_data, password):
+    send_and_receive_packet(ser, 0x11, (msg_type << 8) | field_num, tx_data, password)
 
 
 
@@ -84,62 +89,37 @@ def print_sections():
     for section in g_all_sections:
         print(section)
 
-def get_sat_block_nums():
+def get_sat_block_nums(ser, password):
     print("Getting satellite block numbers...")
     for i in range(len(g_all_sections)):
-        send_and_receive_packet(19, i)
+        send_and_receive_packet(ser, 19, i, 0, password)
     print_sections()
 
 
-def read_all_missing_blocks():
-    get_sat_block_nums()
+def read_all_missing_blocks(ser, password):
+    get_sat_block_nums(ser, password)
     print_sections()
 
     print("Reading all missing blocks...")
     for i, section in enumerate(g_all_sections):
         for block_num in range(section.file_block_num, section.sat_block_num):
             print("Reading block #", block_num)
-            if not send_and_receive_packet(8, i, block_num):
+            if not send_and_receive_packet(ser, 8, i, block_num, password):
                 return
 
 
-def send_and_receive_packet(type, arg1=0, arg2=0, data=bytes(0), attempts=10):
+def send_and_receive_packet(ser, opcode, arg1, arg2, password, attempts=10):
     for i in range(attempts):
         # TODO - receive previous characters and discard before sending?
-        send_tx_packet(type, arg1, arg2, data)
-        got_ack = receive_rx_packet()
-        got_resp = receive_rx_packet()
-        if got_ack and got_resp:
+        send_tx_packet(ser, TXPacket(opcode, arg1, arg2, password))
+
+        ack_packet = receive_rx_packet(ser)
+        process_rx_packet(ack_packet)
+
+        resp_packet = receive_rx_packet(ser)
+        process_rx_packet(resp_packet)
+
+        if ack_packet is not None and resp_packet is not None:
             return True
     return False
 
-class TXPacket(object):
-    def __init__(self, opcode, arg1, arg2, data):
-        self.opcode = opcode
-        self.arg1 = arg1
-        self.arg2 = arg2
-        self.data = data
-
-        global g_password
-        assert len(g_password) == 4
-
-        self.dec_pkt = b''
-        self.dec_pkt += bytes([self.opcode])
-        self.dec_pkt += uint32_to_bytes(self.arg1)
-        self.dec_pkt += uint32_to_bytes(self.arg2)
-        self.dec_pkt += bytes(g_password, 'utf-8')
-        self.dec_pkt += bytes(data)
-
-        self.enc_pkt = encode_packet(self.dec_pkt)
-
-
-
-class RXPacket(object):
-    def __init__(self, enc_msg):
-        self.enc_msg = enc_msg
-        self.dec_msg = decode_packet(self.enc_msg)
-        self.is_ack = bool((dec_msg[0] >> 7) & 0x1)
-        self.opcode = dec_msg[0] & 0x7F
-        self.arg1 = bytes_to_uint32(dec_msg[1:5])
-        self.arg2 = bytes_to_uint32(dec_msg[5:9])
-        self.data = dec_msg[9:]

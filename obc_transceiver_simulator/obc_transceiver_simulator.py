@@ -16,123 +16,122 @@ import os
 import codecs
 import argparse
 
+from command_utilities import *
 from commands import *
+from common import *
 from constants import *
 from conversions import *
 from encoding import *
 from sections import *
 
-import_serial()
+try:
+    import serial
+    import serial.tools.list_ports
+except ImportError:
+    print("Error: This program requires the pyserial module. To install " +
+        "pyserial,\nvisit https://pypi.org/project/pyserial/ or run\n" +
+        "    $ pip install pyserial\n" +
+        "in the command line.")
+    sys.exit(1)
 
+
+
+def run_sim_cmd():
+    global g_password
+
+    print("a. Send Arbitrary Command")
+    print("b. Send Raw UART")
+    print("c. Set Standard Auto Data Collection Parameters")
+    print("d. Disable All Auto Data Collection")
+    print("e. Read All Missing Blocks")
+    print("f. Set Ground Station File Block Number")
+    print("g. Set Ground Station Password")
+
+    cmd = input("Enter command: ")
+
+    if cmd == "a":  # Arbitrary command
+        opcode = input_int("Enter opcode: ")
+        arg1 = input_int("Enter argument 1: ")
+        arg2 = input_int("Enter argument 2: ")
+        send_and_receive_packet(g_serial, opcode, arg1, arg2, g_password)
+
+    elif cmd == "b":  # Raw UART
+        send_raw_uart(g_serial, string_to_bytes(input("Enter raw hex for UART: ")))
+        rx_packet = receive_rx_packet(g_serial)
+        process_rx_packet(rx_packet)
+
+    elif cmd == "c": #Auto-Data Collection
+        # Periods
+        send_and_receive_packet(g_serial, CommandOpcode.SET_AUTO_DATA_COL_PERIOD, BlockType.OBC_HK, 60, g_password)
+        send_and_receive_packet(g_serial, CommandOpcode.SET_AUTO_DATA_COL_PERIOD, BlockType.EPS_HK, 60, g_password)
+        send_and_receive_packet(g_serial, CommandOpcode.SET_AUTO_DATA_COL_PERIOD, BlockType.PAY_HK, 120, g_password)
+        send_and_receive_packet(g_serial, CommandOpcode.SET_AUTO_DATA_COL_PERIOD, BlockType.PAY_OPT, 300, g_password)
+
+        # Enables
+        send_and_receive_packet(g_serial, CommandOpcode.SET_AUTO_DATA_COL_ENABLE, BlockType.OBC_HK, 1, g_password)
+        send_and_receive_packet(g_serial, CommandOpcode.SET_AUTO_DATA_COL_ENABLE, BlockType.EPS_HK, 1, g_password)
+        send_and_receive_packet(g_serial, CommandOpcode.SET_AUTO_DATA_COL_ENABLE, BlockType.PAY_HK, 1, g_password)
+        send_and_receive_packet(g_serial, CommandOpcode.SET_AUTO_DATA_COL_ENABLE, BlockType.PAY_OPT, 1, g_password)
+    
+    elif cmd == "d": #Auto-Data Collection
+        # Enables
+        send_and_receive_packet(g_serial, CommandOpcode.SET_AUTO_DATA_COL_ENABLE, BlockType.OBC_HK, 0, g_password)
+        send_and_receive_packet(g_serial, CommandOpcode.SET_AUTO_DATA_COL_ENABLE, BlockType.EPS_HK, 0, g_password)
+        send_and_receive_packet(g_serial, CommandOpcode.SET_AUTO_DATA_COL_ENABLE, BlockType.PAY_HK, 0, g_password)
+        send_and_receive_packet(g_serial, CommandOpcode.SET_AUTO_DATA_COL_ENABLE, BlockType.PAY_OPT, 0, g_password)
+
+    elif cmd == "e":  # Read missing blocks
+        read_all_missing_blocks(g_serial, g_password)
+
+    elif cmd == "f":
+        arg1 = input_block_type()
+        num = input_int("Enter block number: ")
+        if arg1 == BlockType.EPS_HK:
+            eps_hk_section.file_block_num = num
+        elif arg1 == BlockType.PAY_HK:
+            pay_hk_section.file_block_num = num
+        elif arg1 == BlockType.PAY_OPT:
+            pay_opt_section.file_block_num = num
+        print_sections()
+    
+    elif cmd == "g":  # Change password
+        g_password = input("Enter new password: ")
+        assert len(g_password) == 4
 
 def main_loop():
-    cmd = None # CommandOpcode to board
-    while True: # Enter quit to stop program
-        # TODO - update to match opcodes, preferably in a modular way
+    while True:
         # TODO - command to disable all auto data collection
-        print("q. Quit Program")
-        print("a. Change GS Password")
-        print("b. Send Raw UART")
-        print("c. Send Arbitrary CommandOpcode")
-        print("d. Set Standard Auto Data Collection Parameters")
-        print("e. Read All Missing Blocks")
-        print("f. Set File Block Number")
-        print("0. Ping")
-        print("1. Get RTC")
-        print("2. Set RTC")
-        print("3. Read EEPROM")
-        print("4. Erase EEPROM")
-        print("5. Read RAM Byte")
-        print("6. EPS CAN")
-        print("7. PAY CAN")
-        print("8. Actuate PAY Motors")
-        print("9. Reset Subsystem")
-        print("17. Read Data Block")
-        print("18. Read Local Block")
-        print("19. Read Primary CommandOpcode Blocks")
-        print("20. Read Secondary CommandOpcode Blocks")
-        print("21. Read Raw Memory Bytes")
-        print("22. Erase Flash Memory Physical Sector")
-        print("23. Erase Flash Memory Physical Block")
-        print("24. Erase All Flash Memory")
-        print("32. Collect Data Block")
-        print("33. Get Satellite Block number")
-        print("34. Set Satellite Block number")
-        print("35. Set Memory Section Start Address")
-        print("36. Set Memory Section End Address")
 
-        cmd = input("Enter command number: ") # User input typed through terminal console
-        opcode = None
-
-        if cmd == "q":
-            print("Quitting program")
+        # Print top-level command groups
+        print("a. Simulator Options")
+        print("q. Quit Simulator")
+        for (num, desc) in g_command_groups:
+            print("%d. %s" % (num, desc))
+        
+        cmd = input("Enter command group: ") # User input typed through terminal console
+        if cmd == "a":
+            run_sim_cmd()
+            
+        elif cmd == "q":
+            print("Quitting simulator")
             sys.exit(0)
 
-        elif cmd == "a":  # Change password
-            global g_password
-            g_password = input("Enter new password: ")
-            assert len(g_password) == 4
-
-        elif cmd == "b":  # Raw UART
-            send_raw_uart(string_to_bytes(input("Enter raw hex for UART: ")))
-            receive_rx_packet()
-
-        elif cmd == "c":  # Arbitrary command
-            opcode = input_int("Enter opcode: ")
-            arg1 = input_int("Enter argument 1: ")
-            arg2 = input_int("Enter argument 2: ")
-            send_and_receive_packet(opcode, arg1, arg2)
-        
-        elif cmd == "d": #Auto-Data Collection
-            # Periods
-            send_and_receive_packet(CommandOpcode.SET_AUTO_DATA_COL_PERIOD, BlockType.OBC_HK, 60)
-            send_and_receive_packet(CommandOpcode.SET_AUTO_DATA_COL_PERIOD, BlockType.EPS_HK, 60)
-            send_and_receive_packet(CommandOpcode.SET_AUTO_DATA_COL_PERIOD, BlockType.PAY_HK, 120)
-            send_and_receive_packet(CommandOpcode.SET_AUTO_DATA_COL_PERIOD, BlockType.PAY_OPT, 300)
-
-            # Enables
-            send_and_receive_packet(CommandOpcode.SET_AUTO_DATA_COL_ENABLE, BlockType.OBC_HK, 1)
-            send_and_receive_packet(CommandOpcode.SET_AUTO_DATA_COL_ENABLE, BlockType.EPS_HK, 1)
-            send_and_receive_packet(CommandOpcode.SET_AUTO_DATA_COL_ENABLE, BlockType.PAY_HK, 1)
-            send_and_receive_packet(CommandOpcode.SET_AUTO_DATA_COL_ENABLE, BlockType.PAY_OPT, 1)
-        
-        elif cmd == "e":  # Read missing blocks
-            read_all_missing_blocks()
-
-        elif cmd == "f":
-            arg1 = input_block_type()
-            num = input_int("Enter block number: ")
-            if arg1 == BlockType.EPS_HK:
-                eps_hk_section.file_block_num = num
-            elif arg1 == BlockType.PAY_HK:
-                pay_hk_section.file_block_num = num
-            elif arg1 == BlockType.PAY_OPT:
-                pay_opt_section.file_block_num = num
-            print_sections()
-        
         else:
-            opcode = 0xFF
-        
-        # TODO - clean up
-        if opcode != 0xFF:
-            continue
+            # A base opcode covers a group of 16 numbers
+            base_opcode = str_to_int(cmd) << 4
+            # List the commands within this group of opcodes
+            for command in g_all_commands:
+                if base_opcode <= command.opcode and command.opcode < base_opcode + 0x10:
+                    print("%d. %s" % (command.opcode - base_opcode, command.name))
 
-        opcode = str_to_int(cmd)
-
-
-
- 
-
-
-        
-
-        else:
-            print("Invalid command")
+            end_opcode = input_int("Enter command: ")
+            # Check which command it corresponds to
+            for command in g_all_commands:
+                if base_opcode + end_opcode == command.opcode:
+                    command.run_tx()
 
 
-
-
-if __name__ == "__main__":
+if __name__ == "__main__":    
     check_python3()
 
     print("Transceiver simulation starting...")
@@ -159,6 +158,9 @@ if __name__ == "__main__":
     except serial.SerialException as e:
         print("ERROR: Port " + uart + " is in use")
         sys.exit(1)
+
+    # TODO - better way?
+    Command.serial = g_serial
 
     for section in g_all_sections:
         section.load_file()

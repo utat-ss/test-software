@@ -1,15 +1,21 @@
 import sys
 
+from command_utilities import *
+from command_utilities import send_and_receive_packet   # TODO - figure out why this needs to be done separately
 from common import *
 from constants import *
 from packets import *
 
 
 class Command(object):
+    # TODO - better way?
+    serial = None
+
     def __init__(self):
         self.name = "UNKNOWN"
         self.opcode = 0xFF
-        sys.exit(1)
+        self.serial = g_serial
+        self.password = g_password
     
     def run_tx(self):
         sys.exit(1)
@@ -21,11 +27,13 @@ class Command(object):
 
 class PingOBC(Command):
     def __init__(self):
+        super().__init__()
         self.name = "Ping OBC"
         self.opcode = CommandOpcode.PING_OBC
 
     def run_tx(self):
-        send_tx_packet(self.opcode, 0, 0)
+        
+        send_and_receive_packet(Command.serial, self.opcode, 0, 0, self.password)
     
     # packet must be an RXPacket
     def run_rx(self, packet):
@@ -681,7 +689,7 @@ class SetAutoDataCollectionEnable(object):
     
     # packet must be an RXPacket
     def run_rx(self, packet):
-        sys.exit(1)
+        print("%s - %s" % (section_num_to_str(packet.arg1), "enabled" if packet.arg2 else "disabled"))
 
 
 
@@ -711,13 +719,13 @@ class SetAutoDataCollectionPeriod(object):
     
     # packet must be an RXPacket
     def run_rx(self, packet):
-        sys.exit(1)
+        print("%s - %d seconds" % (section_num_to_str(packet.arg1), packet.arg2))
 
 
 
 class GetAutoDataCollectionTimers(object):
     def __init__(self):
-        self.name = "UNKNOWN"
+        self.name = "Get Auto Data Collection Timers"
         self.opcode = CommandOpcode.GET_AUTO_DATA_COL_TIMERS
     
     def run_tx(self):
@@ -778,4 +786,10 @@ g_all_commands = [
     SetAutoDataCollectionPeriod(),
     GetAutoDataCollectionTimers(),
     ResyncAutoDataCollectionTimers(),
+]
+
+g_command_groups = [
+    (0, "General"),
+    (1, "Read Data"),
+    (2, "Memory and Data Collection"),
 ]

@@ -1,7 +1,38 @@
-from command_utilities import *
 from common import *
+from encoding import *
 
-def receive_enc_msg():
+
+class TXPacket(object):
+    def __init__(self, opcode, arg1, arg2, password):
+        self.opcode = opcode
+        self.arg1 = arg1
+        self.arg2 = arg2
+        self.password = password
+        assert len(self.password) == 4
+
+        self.dec_pkt = b''
+        self.dec_pkt += bytes([self.opcode])
+        self.dec_pkt += uint32_to_bytes(self.arg1)
+        self.dec_pkt += uint32_to_bytes(self.arg2)
+        self.dec_pkt += bytes(self.password, 'utf-8')
+
+        self.enc_pkt = encode_packet(self.dec_pkt)
+
+
+class RXPacket(object):
+    def __init__(self, enc_msg):
+        self.enc_msg = enc_msg
+        self.dec_msg = decode_packet(self.enc_msg)
+        self.is_ack = bool((self.dec_msg[0] >> 7) & 0x1)
+        self.opcode = self.dec_msg[0] & 0x7F
+        self.arg1 = bytes_to_uint32(self.dec_msg[1:5])
+        self.arg2 = bytes_to_uint32(self.dec_msg[5:9])
+        self.data = self.dec_msg[9:]
+
+
+def receive_rx_packet(ser):
+    print("Waiting for RX packet...")
+
     uart_rx_buf = bytes(0)
 
     # Read from serial to bytes
@@ -14,7 +45,7 @@ def receive_enc_msg():
     # Make sure to delay for longer than 2 seconds
     # (OBC needs to clear its UART RX buffer after 2 seconds)
     for i in range(30):
-        new = g_serial.read(2 ** 16)
+        new = ser.read(2 ** 16)
         # print("%d new bytes" % len(new))
         uart_rx_buf += new
 
@@ -33,7 +64,7 @@ def receive_enc_msg():
             enc_msg = uart_rx_buf[start_index + 1 : end_index]
             uart_rx_buf = uart_rx_buf[end_index + 1 : ]
 
-            print("Received encoded message (%d bytes):" % len(enc_msg), bytes_to_string(enc_msg))
+            # print("Received encoded packet (%d bytes):" % len(enc_msg), bytes_to_string(enc_msg))
 
             # TODO - rename packet
             if len(enc_msg) >= 5 and \
@@ -41,51 +72,44 @@ def receive_enc_msg():
                     enc_msg[1] - 0x10 == len(enc_msg) - 4 and \
                     enc_msg[2] == 0x00 and \
                     enc_msg[len(enc_msg) - 1] == 0x00:
+                print("Successfully received RX packet")
                 return RXPacket(enc_msg)
             else:
-                print("Invalid message")
+                print("Invalid RX packet")
                 return None
 
     # print("Received UART (raw):", bytes_to_string(uart_rx_buf))
-    print("No RX encoded message found")
+    print("No RX packet found")
     return None
 
 # string should look something like "00:ff:a3:49:de"
 # Use `bytearray` instead of `bytes`
-def send_raw_uart(uart_bytes):
+def send_raw_uart(ser, uart_bytes):
     print("Sending UART (%d bytes):" % len(uart_bytes), bytes_to_string(uart_bytes))
-    g_serial.write(uart_bytes)
+    ser.write(uart_bytes)
 
 
 #Type and num_chars must be an integer
 #if string is true, s are string hexadecimal values
-def send_tx_packet(packet):
+def send_tx_packet(ser, packet):
+    from commands import g_all_commands
+    global g_all_commands
+
     #change length and type to binary
     print_div()
 
-    print("Sending command request packet")
+    print("TX packet - sending request")
+
+    print([command.name for command in g_all_commands if command.opcode == packet.opcode][0])
 
     print("Opcode = 0x%x (%d)" % (packet.opcode, packet.opcode))
     print("Argument 1 = 0x%x (%d)" % (packet.arg1, packet.arg1))
     print("Argument 2 = 0x%x (%d)" % (packet.arg2, packet.arg2))
-    print("Data (%d bytes) = %s" % (len(packet.data), bytes_to_string(packet.data)))
-    print("Password = %s" % bytes_to_string(g_password))
+    print("Password = %s" % packet.password)
 
-    print("Decoded message (%d bytes):" % len(packet.dec_msg), bytes_to_string(packet.dec_msg))
-    print("Encoded message (%d bytes):" % len(packet.enc_msg), bytes_to_string(packet.enc_msg))
+    print("Decoded (%d bytes):" % len(packet.dec_pkt), bytes_to_string(packet.dec_pkt))
+    print("Encoded (%d bytes):" % len(packet.enc_pkt), bytes_to_string(packet.enc_pkt))
 
-    send_raw_uart(packet.enc_msg)
+    send_raw_uart(ser, packet.enc_pkt)
 
     print_div()
-
-
-def receive_rx_packet():
-    print("Waiting for received message...")
-    enc_msg = receive_enc_msg()
-    if enc_msg is not None:
-        print("Successfully received message")
-        process_rx_packet(enc_msg)
-        return True
-    else:
-        print("Failed to receive message")
-        return False

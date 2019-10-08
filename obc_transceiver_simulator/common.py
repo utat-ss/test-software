@@ -3,21 +3,12 @@ import sys
 
 from constants import *
 
+
 # Global Variables
 # UART serial port
 g_serial = None # One port is used
-g_password = "UTAT"   # To send to OBC
+g_password = "UTAT"   # To send to OBC, store as a string
 
-def import_serial():
-    try:
-        import serial
-        import serial.tools.list_ports
-    except ImportError:
-        print("Error: This program requires the pyserial module. To install " +
-            "pyserial,\nvisit https://pypi.org/project/pyserial/ or run\n" +
-            "    $ pip install pyserial\n" +
-            "in the command line.")
-        sys.exit(1)
 
 def check_python3():
     # Detects if correct python version is being run
