@@ -1,6 +1,6 @@
 from enum import IntEnum
 
-class Command(IntEnum):
+class CommandOpcode(IntEnum):
     PING_OBC                    = 0x00
     GET_RTC                     = 0x01
     SET_RTC                     = 0x02

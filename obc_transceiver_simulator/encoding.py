@@ -5,7 +5,7 @@ This attempts to follow obc/src/transceiver.c as closely as possible.
 
 
 
-def encode_message(dec_msg):
+def encode_packet(dec_msg):
     enc_msg = []    # Convert to bytes later
 
     # 64 bit integer that will hold the 56 bit values from the byte groups
@@ -65,7 +65,7 @@ def encode_message(dec_msg):
     return bytes(enc_msg)
 
 
-def decode_message(enc_msg):
+def decode_packet(enc_msg):
     # Easier to work with encoded message as a list of ints rather than bytes
     enc_msg = list(enc_msg)
     dec_msg = []

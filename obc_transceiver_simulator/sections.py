@@ -152,4 +152,4 @@ eps_hk_section = Section("EPS_HK", "eps_hk.csv", EPS_HK_MAPPING)
 pay_hk_section = Section("PAY_HK", "pay_hk.csv", PAY_HK_MAPPING)
 pay_opt_section = Section("PAY_OPT", "pay_opt.csv", PAY_OPT_MAPPING)
 
-all_sections = [obc_hk_section, eps_hk_section, pay_hk_section, pay_opt_section]
+g_all_sections = [obc_hk_section, eps_hk_section, pay_hk_section, pay_opt_section]
