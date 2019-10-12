@@ -51,7 +51,7 @@ def run_sim_cmd():
         opcode = input_int("Enter opcode: ")
         arg1 = input_int("Enter argument 1: ")
         arg2 = input_int("Enter argument 2: ")
-        send_and_receive_packet(opcode, arg1, arg2, Global.password)
+        send_and_receive_packet(opcode, arg1, arg2)
 
     elif cmd == "b":  # Raw UART
         send_raw_uart(string_to_bytes(input("Enter raw hex for UART: ")))
