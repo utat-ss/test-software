@@ -37,8 +37,6 @@ except ImportError:
 
 
 def run_sim_cmd():
-    global g_password
-
     print("a. Send Arbitrary Command")
     print("b. Send Raw UART")
     print("c. Set Standard Auto Data Collection Parameters")
@@ -53,35 +51,35 @@ def run_sim_cmd():
         opcode = input_int("Enter opcode: ")
         arg1 = input_int("Enter argument 1: ")
         arg2 = input_int("Enter argument 2: ")
-        send_and_receive_packet(g_serial, opcode, arg1, arg2, g_password)
+        send_and_receive_packet(opcode, arg1, arg2, Global.password)
 
     elif cmd == "b":  # Raw UART
-        send_raw_uart(g_serial, string_to_bytes(input("Enter raw hex for UART: ")))
-        rx_packet = receive_rx_packet(g_serial)
+        send_raw_uart(string_to_bytes(input("Enter raw hex for UART: ")))
+        rx_packet = receive_rx_packet()
         process_rx_packet(rx_packet)
 
     elif cmd == "c": #Auto-Data Collection
         # Periods
-        send_and_receive_packet(g_serial, CommandOpcode.SET_AUTO_DATA_COL_PERIOD, BlockType.OBC_HK, 60, g_password)
-        send_and_receive_packet(g_serial, CommandOpcode.SET_AUTO_DATA_COL_PERIOD, BlockType.EPS_HK, 60, g_password)
-        send_and_receive_packet(g_serial, CommandOpcode.SET_AUTO_DATA_COL_PERIOD, BlockType.PAY_HK, 120, g_password)
-        send_and_receive_packet(g_serial, CommandOpcode.SET_AUTO_DATA_COL_PERIOD, BlockType.PAY_OPT, 300, g_password)
+        send_and_receive_packet(CommandOpcode.SET_AUTO_DATA_COL_PERIOD, BlockType.OBC_HK, 60)
+        send_and_receive_packet(CommandOpcode.SET_AUTO_DATA_COL_PERIOD, BlockType.EPS_HK, 60)
+        send_and_receive_packet(CommandOpcode.SET_AUTO_DATA_COL_PERIOD, BlockType.PAY_HK, 120)
+        send_and_receive_packet(CommandOpcode.SET_AUTO_DATA_COL_PERIOD, BlockType.PAY_OPT, 300)
 
         # Enables
-        send_and_receive_packet(g_serial, CommandOpcode.SET_AUTO_DATA_COL_ENABLE, BlockType.OBC_HK, 1, g_password)
-        send_and_receive_packet(g_serial, CommandOpcode.SET_AUTO_DATA_COL_ENABLE, BlockType.EPS_HK, 1, g_password)
-        send_and_receive_packet(g_serial, CommandOpcode.SET_AUTO_DATA_COL_ENABLE, BlockType.PAY_HK, 1, g_password)
-        send_and_receive_packet(g_serial, CommandOpcode.SET_AUTO_DATA_COL_ENABLE, BlockType.PAY_OPT, 1, g_password)
+        send_and_receive_packet(CommandOpcode.SET_AUTO_DATA_COL_ENABLE, BlockType.OBC_HK, 1)
+        send_and_receive_packet(CommandOpcode.SET_AUTO_DATA_COL_ENABLE, BlockType.EPS_HK, 1)
+        send_and_receive_packet(CommandOpcode.SET_AUTO_DATA_COL_ENABLE, BlockType.PAY_HK, 1)
+        send_and_receive_packet(CommandOpcode.SET_AUTO_DATA_COL_ENABLE, BlockType.PAY_OPT, 1)
     
     elif cmd == "d": #Auto-Data Collection
         # Enables
-        send_and_receive_packet(g_serial, CommandOpcode.SET_AUTO_DATA_COL_ENABLE, BlockType.OBC_HK, 0, g_password)
-        send_and_receive_packet(g_serial, CommandOpcode.SET_AUTO_DATA_COL_ENABLE, BlockType.EPS_HK, 0, g_password)
-        send_and_receive_packet(g_serial, CommandOpcode.SET_AUTO_DATA_COL_ENABLE, BlockType.PAY_HK, 0, g_password)
-        send_and_receive_packet(g_serial, CommandOpcode.SET_AUTO_DATA_COL_ENABLE, BlockType.PAY_OPT, 0, g_password)
+        send_and_receive_packet(CommandOpcode.SET_AUTO_DATA_COL_ENABLE, BlockType.OBC_HK, 0)
+        send_and_receive_packet(CommandOpcode.SET_AUTO_DATA_COL_ENABLE, BlockType.EPS_HK, 0)
+        send_and_receive_packet(CommandOpcode.SET_AUTO_DATA_COL_ENABLE, BlockType.PAY_HK, 0)
+        send_and_receive_packet(CommandOpcode.SET_AUTO_DATA_COL_ENABLE, BlockType.PAY_OPT, 0)
 
     elif cmd == "e":  # Read missing blocks
-        read_all_missing_blocks(g_serial, g_password)
+        read_all_missing_blocks()
 
     elif cmd == "f":
         arg1 = input_block_type()
@@ -95,8 +93,8 @@ def run_sim_cmd():
         print_sections()
     
     elif cmd == "g":  # Change password
-        g_password = input("Enter new password: ")
-        assert len(g_password) == 4
+        Global.password = input("Enter new password: ")
+        assert len(Global.password) == 4
 
 def main_loop():
     while True:
@@ -113,6 +111,7 @@ def main_loop():
             run_sim_cmd()
             
         elif cmd == "q":
+            Global.serial.close() # Close serial port when program done
             print("Quitting simulator")
             sys.exit(0)
 
@@ -153,14 +152,11 @@ if __name__ == "__main__":
     
     try:
         # TODO - figure out inter_byte_timeout
-        g_serial = serial.Serial(uart, baud, timeout=0.1)
+        Global.serial = serial.Serial(uart, baud, timeout=0.1)
         print("Using port " + uart + " for UART")
     except serial.SerialException as e:
         print("ERROR: Port " + uart + " is in use")
         sys.exit(1)
-
-    # TODO - better way?
-    Command.serial = g_serial
 
     for section in g_all_sections:
         section.load_file()
@@ -170,5 +166,5 @@ if __name__ == "__main__":
     for section in g_all_sections:
         section.data_file.close()
 
-    g_serial.close() # Close serial port when program done
+    Global.serial.close() # Close serial port when program done
     print("Quit Transceiver Simulator")

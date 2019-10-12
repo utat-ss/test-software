@@ -14,8 +14,6 @@ class Command(object):
     def __init__(self):
         self.name = "UNKNOWN"
         self.opcode = 0xFF
-        self.serial = g_serial
-        self.password = g_password
     
     def run_tx(self):
         sys.exit(1)
@@ -32,8 +30,7 @@ class PingOBC(Command):
         self.opcode = CommandOpcode.PING_OBC
 
     def run_tx(self):
-        
-        send_and_receive_packet(Command.serial, self.opcode, 0, 0, self.password)
+        send_and_receive_packet(self.opcode, 0, 0)
     
     # packet must be an RXPacket
     def run_rx(self, packet):
@@ -72,7 +69,7 @@ class SetRTC(object):
     
     # packet must be an RXPacket
     def run_rx(self, packet):
-        sys.exit(1)
+        pass
 
 class ReadOBCEEPROM(object):
     def __init__(self):
@@ -80,18 +77,12 @@ class ReadOBCEEPROM(object):
         self.opcode = CommandOpcode.READ_OBC_EEPROM
     
     def run_tx(self):
-        ss = input_subsys()
         addr = input_int("Enter address: ")
-        if ss == Subsystem.OBC:
-            send_and_receive_packet(CommandOpcode.READ_OBC_EEPROM, addr, 0)
-        elif ss == Subsystem.EPS:
-            send_and_receive_eps_can(CAN.EPS_CTRL, EPS_CTRL.READ_EEPROM)
-        elif ss == Subsystem.PAY:
-            send_and_receive_pay_can(CAN.PAY_CTRL, PAY_CTRL.READ_EEPROM)
-    
+        send_and_receive_packet(CommandOpcode.READ_OBC_EEPROM, addr, 0)
+
     # packet must be an RXPacket
     def run_rx(self, packet):
-        sys.exit(1)
+        pass
 
 class EraseOBCEEPROM(object):
     def __init__(self):
@@ -99,11 +90,12 @@ class EraseOBCEEPROM(object):
         self.opcode = CommandOpcode.ERASE_OBC_EEPROM
     
     def run_tx(self):
-        sys.exit(1)
+        addr = input_int("Enter address: ")
+        send_and_receive_packet(CommandOpcode.ERASE_OBC_EEPROM, addr, 0)
     
     # packet must be an RXPacket
     def run_rx(self, packet):
-        sys.exit(1)
+        pass
 
 class ReadOBCRAMByte(object):
     def __init__(self):
@@ -111,11 +103,12 @@ class ReadOBCRAMByte(object):
         self.opcode = CommandOpcode.READ_OBC_RAM_BYTE
     
     def run_tx(self):
-        sys.exit(1)
+        addr = input_int("Enter address: ")
+        send_and_receive_packet(CommandOpcode.READ_OBC_RAM_BYTE, addr, 0)
     
     # packet must be an RXPacket
     def run_rx(self, packet):
-        sys.exit(1)
+        pass
 
 class SendEPSCANMessage(object):
     def __init__(self):
@@ -123,15 +116,19 @@ class SendEPSCANMessage(object):
         self.opcode = CommandOpcode.SEND_EPS_CAN_MSG
     
     def run_tx(self):
-        print("1. Ping")
+        print("0. Ping")
+        print("14. Read EEPROM")
+        print("15. Erase EEPROM")
         cmd = input_int("Enter command number: ")
-
-        if cmd == 1:
+        
+        if cmd == 0:
             send_and_receive_eps_can(CAN.EPS_CTRL, EPS_CTRL.PING)
-            msg = string_to_bytes(input("Enter 8 bytes: "))
-            arg1 = bytes_to_uint32(msg[0:4])
-            arg2 = bytes_to_uint32(msg[4:8])
-            send_and_receive_packet(CommandOpcode.SEND_EPS_CAN_MSG, arg1, arg2)
+
+        elif cmd == 14:
+            send_and_receive_eps_can(CAN.EPS_CTRL, EPS_CTRL.READ_EEPROM)
+
+        elif cmd == 15:
+            send_and_receive_pay_can(CAN.PAY_CTRL, PAY_CTRL.ERASE_EEPROM)
 
         # TODO
         # elif opcode == CommandOpcode.PING_OBC: #Heater DAC Setpoints
@@ -179,19 +176,13 @@ class SendEPSCANMessage(object):
     
     # packet must be an RXPacket
     def run_rx(self, packet):
-        sys.exit(1)
-
-
-        print("Received CAN message from EPS")
-        print("Message =", bytes_to_string(data))
-
-        msg_type = data[2]
-        field_num = data[3]
-        rx_data = data[4:8]
-        print("Type =", msg_type, ", Field =", field_num, ", Data = ", bytes_to_string(rx_data))
+        opcode = packet.data[2]
+        field_num = packet.data[3]
+        rx_data = packet.data[4:8]
+        print("Opcode =", opcode, ", Field =", field_num, ", Data = ", bytes_to_string(rx_data))
         
         # EPS CTRL
-        if msg_type == 1:
+        if opcode == 1:
             if field_num == 0:
                 print("Ping")
             elif field_num == 1:
@@ -212,9 +203,9 @@ class SendEPSCANMessage(object):
                 print("Read EEPROM")
             elif field_num == 9:
                 print("Erase EEPROM")
-            elif field_num == 10:
+            elif field_num == 14:
                 print("Get restart count")
-            elif field_num == 11:
+            elif field_num == 15:
                 print("Get restart reason")
             elif field_num == 12:
                 print("Get uptime")
@@ -230,32 +221,21 @@ class SendPAYCANMessage(object):
         self.opcode = CommandOpcode.SEND_PAY_CAN_MSG
     
     def run_tx(self):
-        print("1. Ping")
+        print("0. Ping")
         cmd = input_int("Enter command number: ")
 
-        if cmd == 1:
+        if cmd == 0:
             send_and_receive_pay_can(CAN.PAY_CTRL, PAY_CTRL.PING)
-
-        msg = string_to_bytes(input("Enter 8 bytes: "))
-        arg1 = bytes_to_uint32(msg[0:4])
-        arg2 = bytes_to_uint32(msg[4:8])
-        send_and_receive_packet(CommandOpcode.SEND_PAY_CAN_MSG, arg1, arg2)
     
     # packet must be an RXPacket
     def run_rx(self, packet):
-        sys.exit(1)
-
-
-        print("Received CAN message from PAY")
-        print("Message =", bytes_to_string(data))
-
-        msg_type = data[2]
-        field_num = data[3]
-        rx_data = data[4:8]
-        print("Type =", msg_type, ", Field =", field_num, "Data = ", bytes_to_string(rx_data))
+        opcode = packet.data[2]
+        field_num = packet.data[3]
+        rx_data = packet.data[4:8]
+        print("Opcode =", opcode, ", Field =", field_num, "Data = ", bytes_to_string(rx_data))
         
         # PAY CTRL
-        if msg_type == 4:
+        if opcode == 4:
             if field_num == 0:
                 print("Ping")
             elif field_num == 1:
@@ -290,16 +270,15 @@ class ActuatePAYMotors(object):
         self.opcode = CommandOpcode.ACT_PAY_MOTORS
     
     def run_tx(self):
-        print("1. Move plate up")
-        print("2. Move plate down")
-        print("3. Run deployment sequence")
+        print("15. Move plate up")
+        print("16. Move plate down")
+        print("17. Run deployment sequence")
         arg1 = input_int("Enter command number: ")
-        arg1 += 14
-        send_and_receive_packet(CommandOpcode.ACT_PAY_MOTORS, arg1)
+        send_and_receive_packet(CommandOpcode.ACT_PAY_MOTORS, arg1, 0)
     
     # packet must be an RXPacket
     def run_rx(self, packet):
-        sys.exit(1)
+        pass
 
 class ResetSubsystem(object):
     def __init__(self):
@@ -310,7 +289,7 @@ class ResetSubsystem(object):
         arg1 = input_subsys()
         if arg1 == Subsystem.OBC:
             # don't wait for response if it's OBC
-            send_tx_packet(CommandOpcode.RESET_SUBSYS, arg1)
+            send_tx_packet(TXPacket(CommandOpcode.RESET_SUBSYS, arg1, 0))
         else:
             send_and_receive_packet(15, arg1)
     
@@ -354,7 +333,7 @@ class ReadDataBlock(object):
     
     # packet must be an RXPacket
     def run_rx(self, packet):
-        process_rx_block(arg1, arg2, data)
+        process_rx_block(packet.arg1, packet.arg2, packet.data)
 
         # if type == 0x01:
     #     print("Subsystem status (OBC)")
@@ -455,7 +434,7 @@ class ReadRecentLocalDataBlock(object):
     # packet must be an RXPacket
     def run_rx(self, packet):
         sys.exit(1)
-        process_rx_block(arg1, arg2, data)
+        process_rx_block(packet.arg1, packet.arg2, packet.data)
 
 class ReadPrimaryCommandBlocks(object):
     def __init__(self):
@@ -469,8 +448,7 @@ class ReadPrimaryCommandBlocks(object):
     
     # packet must be an RXPacket
     def run_rx(self, packet):
-        sys.exit(1)
-        process_cmd_block(arg1, arg2, data)
+        process_cmd_block(packet.arg1, packet.arg2, packet.data)
 
 class ReadSecondaryCommandBlocks(object):
     def __init__(self):
@@ -484,8 +462,7 @@ class ReadSecondaryCommandBlocks(object):
     
     # packet must be an RXPacket
     def run_rx(self, packet):
-        sys.exit(1)
-        process_cmd_block(arg1, arg2, data)
+        process_cmd_block(packet.arg1, packet.arg2, packet.data)
 
 class ReadRawMemoryBytes(object):
     def __init__(self):
@@ -499,8 +476,7 @@ class ReadRawMemoryBytes(object):
     
     # packet must be an RXPacket
     def run_rx(self, packet):
-        sys.exit(1)
-        print("Data = %s" % bytes_to_string(data))
+        print("Data = %s" % bytes_to_string(packet.data))
 
 class EraseMemoryPhysicalSector(object):
     def __init__(self):
@@ -513,7 +489,7 @@ class EraseMemoryPhysicalSector(object):
     
     # packet must be an RXPacket
     def run_rx(self, packet):
-        sys.exit(1)
+        pass
 
 
 class EraseMemoryPhysicalBlock(object):
@@ -559,8 +535,8 @@ class CollectDataBlock(object):
     
     # packet must be an RXPacket
     def run_rx(self, packet):
-        sys.exit(1)
-        print("Block number = %d" % bytes_to_uint32(data[0:4]))
+        # TODO - subtract one somewhere? probably on OBC?
+        print("Collected block number %d" % bytes_to_uint32(packet.data[0:4]))
 
 
 class GetCurrentBlockNumber(object):
@@ -574,20 +550,17 @@ class GetCurrentBlockNumber(object):
     
     # packet must be an RXPacket
     def run_rx(self, packet):
-        sys.exit(1)
-
-        print("Get current block number")
-        print(section_num_to_str(arg1))
-        block_num = bytes_to_uint32(data[0:4])
+        print(section_num_to_str(packet.arg1))
+        block_num = bytes_to_uint32(packet.data[0:4])
         print("Block number = %d" % block_num)
 
-        if arg1 == 0:
+        if packet.arg1 == 0:
             #global eps_hk_sat_block_num
             eps_hk_section.sat_block_num = block_num
-        if arg1 == 1:
+        if packet.arg1 == 1:
             #global pay_hk_sat_block_num
             pay_hk_section.sat_block_num = block_num
-        if arg1 == 2:
+        if packet.arg1 == 2:
             #global pay_opt_sat_block_num
             pay_opt_section.sat_block_num = block_num
 

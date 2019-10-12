@@ -5,9 +5,9 @@ from constants import *
 
 
 # Global Variables
-# UART serial port
-g_serial = None # One port is used
-g_password = "UTAT"   # To send to OBC, store as a string
+class Global(object):
+    serial = None       # UART serial port, one port is used
+    password = "UTAT"   # To send to OBC, store as a string
 
 
 def check_python3():
@@ -40,7 +40,7 @@ def bytes_to_uint24(bytes):
 
 # NOTE: this is in decimal, not hex
 def date_time_to_str(data):
-    return "%02d:%02d:%02d" % (data[0], data[1], data[2])
+    return "%02d.%02d.%02d" % (data[0], data[1], data[2])
 
 def file_value_to_str(value):
     if type(value) == float:

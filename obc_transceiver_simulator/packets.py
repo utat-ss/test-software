@@ -3,12 +3,11 @@ from encoding import *
 
 
 class TXPacket(object):
-    def __init__(self, opcode, arg1, arg2, password):
+    def __init__(self, opcode, arg1, arg2):
         self.opcode = opcode
         self.arg1 = arg1
         self.arg2 = arg2
-        self.password = password
-        assert len(self.password) == 4
+        self.password = Global.password
 
         self.dec_pkt = b''
         self.dec_pkt += bytes([self.opcode])
@@ -30,7 +29,7 @@ class RXPacket(object):
         self.data = self.dec_msg[9:]
 
 
-def receive_rx_packet(ser):
+def receive_rx_packet():
     print("Waiting for RX packet...")
 
     uart_rx_buf = bytes(0)
@@ -45,7 +44,7 @@ def receive_rx_packet(ser):
     # Make sure to delay for longer than 2 seconds
     # (OBC needs to clear its UART RX buffer after 2 seconds)
     for i in range(30):
-        new = ser.read(2 ** 16)
+        new = Global.serial.read(2 ** 16)
         # print("%d new bytes" % len(new))
         uart_rx_buf += new
 
@@ -84,14 +83,14 @@ def receive_rx_packet(ser):
 
 # string should look something like "00:ff:a3:49:de"
 # Use `bytearray` instead of `bytes`
-def send_raw_uart(ser, uart_bytes):
+def send_raw_uart(uart_bytes):
     print("Sending UART (%d bytes):" % len(uart_bytes), bytes_to_string(uart_bytes))
-    ser.write(uart_bytes)
+    Global.serial.write(uart_bytes)
 
 
 #Type and num_chars must be an integer
 #if string is true, s are string hexadecimal values
-def send_tx_packet(ser, packet):
+def send_tx_packet(packet):
     from commands import g_all_commands
     global g_all_commands
 
@@ -110,6 +109,6 @@ def send_tx_packet(ser, packet):
     print("Decoded (%d bytes):" % len(packet.dec_pkt), bytes_to_string(packet.dec_pkt))
     print("Encoded (%d bytes):" % len(packet.enc_pkt), bytes_to_string(packet.enc_pkt))
 
-    send_raw_uart(ser, packet.enc_pkt)
+    send_raw_uart(packet.enc_pkt)
 
     print_div()

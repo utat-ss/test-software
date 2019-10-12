@@ -5,10 +5,10 @@ from packets import *
 from sections import *
 
 def print_header(header):
-    print("Block number = %d" % bytes_to_uint24(header[0:3]))
+    print("Block number = 0x%x (%d)" % (bytes_to_uint24(header[0:3]), bytes_to_uint24(header[0:3])))
     print("Date = %s" % date_time_to_str(header[3:6]))
     print("Time = %s" % date_time_to_str(header[6:9]))
-    print("Success = %d" % header[9])
+    print("Status = 0x%x (%d)" % (header[9], header[9]))
 
 def process_cmd_block(arg1, arg2, data):
     print("Expected starting block number:", arg1)
@@ -27,9 +27,9 @@ def process_cmd_block(arg1, arg2, data):
 
         print_div()
         print_header(header)
-        print("Opcode = %d" % opcode)
-        print("Argument 1 = %d" % arg1)
-        print("Argument 2 = %d" % arg2)
+        print("Opcode = 0x%x (%d)" % (opcode, opcode))
+        print("Argument 1 = 0x%x (%d)" % (arg1, arg1))
+        print("Argument 2 = 0x%x (%d)" % (arg2, arg2))
 
 
 def process_rx_packet(packet):
@@ -77,11 +77,11 @@ def process_rx_packet(packet):
     print_div()
 
 
-def send_and_receive_eps_can(ser, msg_type, field_num, tx_data, password):
-    send_and_receive_packet(ser, 0x10, (msg_type << 8) | field_num, tx_data, password)
+def send_and_receive_eps_can(msg_type, field_num, tx_data=0):
+    send_and_receive_packet(CommandOpcode.SEND_EPS_CAN_MSG, (msg_type << 8) | field_num, tx_data)
 
-def send_and_receive_pay_can(ser, msg_type, field_num, tx_data, password):
-    send_and_receive_packet(ser, 0x11, (msg_type << 8) | field_num, tx_data, password)
+def send_and_receive_pay_can(msg_type, field_num, tx_data=0):
+    send_and_receive_packet(CommandOpcode.SEND_PAY_CAN_MSG, (msg_type << 8) | field_num, tx_data)
 
 
 
@@ -89,37 +89,39 @@ def print_sections():
     for section in g_all_sections:
         print(section)
 
-def get_sat_block_nums(ser, password):
+def get_sat_block_nums():
     print("Getting satellite block numbers...")
     for i in range(len(g_all_sections)):
-        send_and_receive_packet(ser, 19, i, 0, password)
+        send_and_receive_packet(19, i, 0)
     print_sections()
 
 
-def read_all_missing_blocks(ser, password):
-    get_sat_block_nums(ser, password)
+def read_all_missing_blocks(ser):
+    get_sat_block_nums()
     print_sections()
 
     print("Reading all missing blocks...")
     for i, section in enumerate(g_all_sections):
         for block_num in range(section.file_block_num, section.sat_block_num):
             print("Reading block #", block_num)
-            if not send_and_receive_packet(ser, 8, i, block_num, password):
+            if not send_and_receive_packet(ser, 8, i, block_num):
                 return
 
 
-def send_and_receive_packet(ser, opcode, arg1, arg2, password, attempts=10):
+def send_and_receive_packet(opcode, arg1=0, arg2=0, attempts=10):
     for i in range(attempts):
         # TODO - receive previous characters and discard before sending?
-        send_tx_packet(ser, TXPacket(opcode, arg1, arg2, password))
+        send_tx_packet(TXPacket(opcode, arg1, arg2))
 
-        ack_packet = receive_rx_packet(ser)
+        ack_packet = receive_rx_packet()
+        if ack_packet is None:
+            continue
         process_rx_packet(ack_packet)
 
-        resp_packet = receive_rx_packet(ser)
+        resp_packet = receive_rx_packet()
+        if resp_packet is None:
+            continue
         process_rx_packet(resp_packet)
 
-        if ack_packet is not None and resp_packet is not None:
-            return True
+        return True
     return False
-
