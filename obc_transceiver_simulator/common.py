@@ -34,6 +34,9 @@ def uint32_to_bytes(num):
 def bytes_to_uint32(bytes):
     return (bytes[0] << 24) | (bytes[1] << 16) | (bytes[2] << 8) | bytes[3]
 
+def uint24_to_bytes(num):
+    return bytes([(num >> 16) & 0xFF, (num >> 8) & 0xFF, num & 0xFF])
+
 # Only take 3 bytes
 def bytes_to_uint24(bytes):
     return (bytes[0] << 16) | (bytes[1] << 8) | bytes[2]

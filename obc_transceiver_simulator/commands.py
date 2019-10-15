@@ -346,7 +346,7 @@ class ReadDataBlock(object):
     def run_tx(self):
         arg1 = input_block_type()
         arg2 = input_int("Enter block number: ")
-        send_and_receive_packet(CommandOpcode.READ_DATA_BLOCK, arg1, arg2)
+        send_and_receive_packet(self.opcode, arg1, arg2)
     
     # packet must be an RXPacket
     def run_rx(self, packet):
@@ -362,10 +362,10 @@ def process_data_block(packet):
 
     if block_type == BlockType.OBC_HK:
         print("Subsystem status (OBC)")
-        print("Restart count =", bytes_to_uint32(fields[0]))
-        print("Restart date =", date_time_to_str(fields[1]))
-        print("Restart time =", date_time_to_str(fields[2]))
-        print("Uptime =", bytes_to_uint32(fields[3]))
+        print("Restart count =", fields[0])
+        print("Restart date =", date_time_to_str(uint24_to_bytes(fields[1])))
+        print("Restart time =", date_time_to_str(uint24_to_bytes(fields[2])))
+        print("Uptime =", fields[3])
 
     elif block_type == BlockType.EPS_HK:
         num_fields = len(EPS_HK_MAPPING)
@@ -751,37 +751,43 @@ g_all_commands = [
     ReadOBCEEPROM(),
     EraseOBCEEPROM(),
     ReadOBCRAMByte(),
-    SendEPSCANMessage(),
-    SendPAYCANMessage(),
-    ActuatePAYMotors(),
-    ResetSubsystem(),
-    SetIndefiniteLPMEnable(),
-    ReadRecentStatusInfo(),
+
     ReadDataBlock(),
-    ReadRecentLocalDataBlock(),
     ReadPrimaryCommandBlocks(),
     ReadSecondaryCommandBlocks(),
+    ReadRecentStatusInfo(),
+    ReadRecentLocalDataBlock(),
     ReadRawMemoryBytes(),
-    EraseMemoryPhysicalSector(),
-    EraseMemoryPhysicalBlock(),
-    EraseAllMemory(),
+
     CollectDataBlock(),
-    GetCurrentBlockNumber(),
-    SetCurrentBlockNumber(),
-    GetMemorySectionStartAddr(),
-    SetMemorySectionStartAddr(),
-    GetMemorySectionEndAddr(),
-    SetMemorySectionEndAddr(),
     GetAutoDataCollectionEnable(),
     SetAutoDataCollectionEnable(),
     GetAutoDataCollectionPeriod(),
     SetAutoDataCollectionPeriod(),
     GetAutoDataCollectionTimers(),
     ResyncAutoDataCollectionTimers(),
+
+    GetCurrentBlockNumber(),
+    SetCurrentBlockNumber(),
+    GetMemorySectionStartAddr(),
+    SetMemorySectionStartAddr(),
+    GetMemorySectionEndAddr(),
+    SetMemorySectionEndAddr(),
+    EraseMemoryPhysicalSector(),
+    EraseMemoryPhysicalBlock(),
+    EraseAllMemory(),
+
+    SendEPSCANMessage(),
+    SendPAYCANMessage(),
+    ActuatePAYMotors(),
+    ResetSubsystem(),
+    SetIndefiniteLPMEnable(),
 ]
 
 g_command_groups = [
-    (0, "General"),
+    (0, "General OBC Functions"),
     (1, "Read Data"),
-    (2, "Memory and Data Collection"),
+    (2, "Data Collection"),
+    (3, "Memory Management"),
+    (4, "Inter-Subsystem Commands"),
 ]
