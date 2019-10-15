@@ -47,26 +47,10 @@ def process_rx_packet(packet):
     print("Opcode = 0x%x (%d)" % (packet.opcode, packet.opcode))
     print("Argument 1 = 0x%x (%d)" % (packet.arg1, packet.arg1))
     print("Argument 2 = 0x%x (%d)" % (packet.arg2, packet.arg2))
+    print("Status = 0x%x (%d) - %s" % (packet.status, packet.status, packet_to_status_str(packet)))
     print("Data (%d bytes) = %s" % (len(packet.data), bytes_to_string(packet.data)))
 
-    if packet.is_ack:
-        # TODO - status variable/byte?
-        if packet.data[0] == 0:
-            print("OK")
-        elif packet.data[0] == 1:
-            print("Invalid packet")
-        elif packet.data[0] == 2:
-            print("Invalid decoded format")
-        elif packet.data[0] == 3:
-            print("Invalid opcode")
-        elif packet.data[0] == 4:
-            print("Invalid password")
-        else:
-            sys.exit(1)
-
-    else:
-        # from commands import g_all_commands
-        # global g_all_commands
+    if not packet.is_ack:
         for command in g_all_commands:
             if command.opcode == packet.opcode:
                 command.run_rx(packet)

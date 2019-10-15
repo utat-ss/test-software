@@ -26,7 +26,9 @@ class RXPacket(object):
         self.opcode = self.dec_msg[0] & 0x7F
         self.arg1 = bytes_to_uint32(self.dec_msg[1:5])
         self.arg2 = bytes_to_uint32(self.dec_msg[5:9])
-        self.data = self.dec_msg[9:]
+        self.status = int(self.dec_msg[9])
+        self.data = self.dec_msg[10:]
+        # TODO - status bytes, 10 bytes minimum
 
 
 def receive_rx_packet():

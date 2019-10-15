@@ -4,13 +4,11 @@ from command_utilities import *
 from command_utilities import send_and_receive_packet   # TODO - figure out why this needs to be done separately
 from common import *
 from constants import *
+from conversions import *
 from packets import *
 
 
 class Command(object):
-    # TODO - better way?
-    serial = None
-
     def __init__(self):
         self.name = "UNKNOWN"
         self.opcode = 0xFF
@@ -82,7 +80,7 @@ class ReadOBCEEPROM(object):
 
     # packet must be an RXPacket
     def run_rx(self, packet):
-        pass
+        print("Value is 0x%.8x" % packet.data[0:4])
 
 class EraseOBCEEPROM(object):
     def __init__(self):
@@ -108,7 +106,7 @@ class ReadOBCRAMByte(object):
     
     # packet must be an RXPacket
     def run_rx(self, packet):
-        pass
+        print("Value is 0x%.2x" % packet.data[0])
 
 class SendEPSCANMessage(object):
     def __init__(self):
@@ -116,10 +114,26 @@ class SendEPSCANMessage(object):
         self.opcode = CommandOpcode.SEND_EPS_CAN_MSG
     
     def run_tx(self):
+        print("a. Arbitraray bytes")
+        print("b. Arbitrary values")
         print("0. Ping")
         print("14. Read EEPROM")
         print("15. Erase EEPROM")
-        cmd = input_int("Enter command number: ")
+        cmd = input("Enter command number: ")
+
+        if cmd == "a":
+            b = string_to_bytes(input("Enter 8 bytes: "))
+            send_and_receive_packet(CommandOpcode.SEND_EPS_CAN_MSG, bytes_to_uint32(b[0:4]), bytes_to_uint32(b[4:8]))
+            return
+        
+        if cmd == "b":
+            opcode = input_int("Enter opcode: ")
+            field_num = input_int("Enter field number: ")
+            tx_data = input_int("Enter data: ")
+            send_and_receive_eps_can(opcode, field_num, tx_data)
+            return
+
+        cmd = str_to_int(cmd)
         
         if cmd == 0:
             send_and_receive_eps_can(CAN.EPS_CTRL, EPS_CTRL.PING)
@@ -295,7 +309,7 @@ class ResetSubsystem(object):
     
     # packet must be an RXPacket
     def run_rx(self, packet):
-        sys.exit(1)
+        pass
 
 class SetIndefiniteLPMEnable(object):
     def __init__(self):
@@ -303,11 +317,12 @@ class SetIndefiniteLPMEnable(object):
         self.opcode = CommandOpcode.SET_INDEF_LPM_ENABLE
     
     def run_tx(self):
-        sys.exit(1)
-    
+        arg1 = input_int("Enter 0 (disable) or 1 (enable): ")
+        send_and_receive_packet(CommandOpcode.SET_INDEF_LPM_ENABLE, arg1)
+
     # packet must be an RXPacket
     def run_rx(self, packet):
-        sys.exit(1)
+        pass
 
 class ReadRecentStatusInfo(object):
     def __init__(self):
@@ -315,11 +330,13 @@ class ReadRecentStatusInfo(object):
         self.opcode = CommandOpcode.READ_REC_STATUS_INFO
     
     def run_tx(self):
-        sys.exit(1)
+        send_and_receive_packet(CommandOpcode.READ_REC_STATUS_INFO)
     
     # packet must be an RXPacket
     def run_rx(self, packet):
-        sys.exit(1)
+        print("OBC data: ", bytes_to_string(packet.data[0:13]))
+        print("EPS data: ", bytes_to_string(packet.data[13:20]))
+        print("PAY data: ", bytes_to_string(packet.data[20:27]))
 
 class ReadDataBlock(object):
     def __init__(self):
@@ -333,91 +350,88 @@ class ReadDataBlock(object):
     
     # packet must be an RXPacket
     def run_rx(self, packet):
-        process_rx_block(packet.arg1, packet.arg2, packet.data)
-
-        # if type == 0x01:
-    #     print("Subsystem status (OBC)")
-    #     print("Restart count =", bytes_to_uint32(data[0:4]))
-    #     print("Restart date =", date_time_to_str(data[4:7]))
-    #     print("Restart time =", date_time_to_str(data[7:10]))
-    #     print("Uptime =", bytes_to_uint32(data[10:14]))
+        process_data_block(packet)
 
 
-def process_rx_block(arg1, arg2, data):
-    (header, fields) = parse_data(data)
-    print("Expected block number:", arg2)
+def process_data_block(packet):
+    (header, fields) = parse_data(packet.data)
+    block_type = packet.arg1
+    block_num = packet.arg2
+    print("Expected block number:", block_num)
     print_header(header)
 
-    # if arg1 == 0:
-    #     num_fields = len(EPS_HK_MAPPING)
-    #     converted = [0 for i in range(num_fields)]
-    #     converted[0]    = adc_raw_data_to_eps_vol(fields[0])
-    #     converted[1]    = adc_raw_data_to_eps_cur(fields[1])
-    #     converted[2]    = adc_raw_data_to_eps_cur(fields[2])
-    #     converted[3]    = adc_raw_data_to_eps_cur(fields[3])
-    #     converted[4]    = adc_raw_data_to_eps_cur(fields[4])
-    #     converted[5]    = adc_raw_data_to_eps_cur(fields[5])
-    #     converted[6]    = adc_raw_data_to_therm_temp(fields[6])
-    #     converted[7]    = adc_raw_data_to_therm_temp(fields[7])
-    #     converted[8]    = adc_raw_data_to_eps_vol(fields[8])
-    #     converted[9]    = adc_raw_data_to_bat_cur(fields[9])
-    #     converted[10]   = adc_raw_data_to_eps_cur(fields[10])
-    #     converted[11]   = adc_raw_data_to_eps_vol(fields[11])
-    #     converted[12]   = therm_res_to_temp(therm_vol_to_res(dac_raw_data_to_vol(fields[12])))
-    #     converted[13]   = therm_res_to_temp(therm_vol_to_res(dac_raw_data_to_vol(fields[13])))
-    #     converted[14]   = imu_raw_data_to_gyro(fields[14])
-    #     converted[15]   = imu_raw_data_to_gyro(fields[15])
-    #     converted[16]   = imu_raw_data_to_gyro(fields[16])
-    #     converted[17]   = imu_raw_data_to_gyro(fields[17])
-    #     converted[18]   = imu_raw_data_to_gyro(fields[18])
-    #     converted[19]   = imu_raw_data_to_gyro(fields[19])
+    if block_type == BlockType.OBC_HK:
+        print("Subsystem status (OBC)")
+        print("Restart count =", bytes_to_uint32(fields[0]))
+        print("Restart date =", date_time_to_str(fields[1]))
+        print("Restart time =", date_time_to_str(fields[2]))
+        print("Uptime =", bytes_to_uint32(fields[3]))
 
-    #     # Print to screen
-    #     eps_hk_section.print_fields(fields, converted)
-    #     # Write to file
-    #     eps_hk_section.write_block_to_file(arg2, header, converted)
+    elif block_type == BlockType.EPS_HK:
+        num_fields = len(EPS_HK_MAPPING)
+        converted = [0 for i in range(num_fields)]
+        converted[0]    = adc_raw_data_to_eps_vol(fields[0])
+        converted[1]    = adc_raw_data_to_eps_cur(fields[1])
+        converted[2]    = adc_raw_data_to_eps_cur(fields[2])
+        converted[3]    = adc_raw_data_to_eps_cur(fields[3])
+        converted[4]    = adc_raw_data_to_eps_cur(fields[4])
+        converted[5]    = adc_raw_data_to_eps_cur(fields[5])
+        converted[6]    = adc_raw_data_to_therm_temp(fields[6])
+        converted[7]    = adc_raw_data_to_therm_temp(fields[7])
+        converted[8]    = adc_raw_data_to_eps_vol(fields[8])
+        converted[9]    = adc_raw_data_to_bat_cur(fields[9])
+        converted[10]   = adc_raw_data_to_eps_cur(fields[10])
+        converted[11]   = adc_raw_data_to_eps_vol(fields[11])
+        converted[12]   = therm_res_to_temp(therm_vol_to_res(dac_raw_data_to_vol(fields[12])))
+        converted[13]   = therm_res_to_temp(therm_vol_to_res(dac_raw_data_to_vol(fields[13])))
+        converted[14]   = imu_raw_data_to_gyro(fields[14])
+        converted[15]   = imu_raw_data_to_gyro(fields[15])
+        converted[16]   = imu_raw_data_to_gyro(fields[16])
+        converted[17]   = imu_raw_data_to_gyro(fields[17])
+        converted[18]   = imu_raw_data_to_gyro(fields[18])
+        converted[19]   = imu_raw_data_to_gyro(fields[19])
+
+        # Print to screen
+        eps_hk_section.print_fields(fields, converted)
+        # Write to file
+        eps_hk_section.write_block_to_file(block_num, header, converted)
         
+    elif block_type == BlockType.PAY_HK:
+        num_fields = len(PAY_HK_MAPPING)
+        converted = [0 for i in range(num_fields)]
+        converted[0]    = temp_raw_data_to_temperature(fields[0])
+        converted[1]    = hum_raw_data_to_humidity(fields[1])
+        converted[2]    = pres_raw_data_to_pressure(fields[2])
+        converted[3]    = adc_raw_data_to_therm_temp(fields[3])
+        converted[4]    = adc_raw_data_to_therm_temp(fields[4])
+        converted[5]    = adc_raw_data_to_therm_temp(fields[5])
+        converted[6]    = adc_raw_data_to_therm_temp(fields[6])
+        converted[7]    = adc_raw_data_to_therm_temp(fields[7])
+        converted[8]    = adc_raw_data_to_therm_temp(fields[8])
+        converted[9]    = adc_raw_data_to_therm_temp(fields[9])
+        converted[10]   = adc_raw_data_to_therm_temp(fields[10])
+        converted[11]   = adc_raw_data_to_therm_temp(fields[11])
+        converted[12]   = adc_raw_data_to_therm_temp(fields[12])
+        converted[13]   = therm_res_to_temp(therm_vol_to_res(dac_raw_data_to_vol(fields[13])))
+        converted[14]   = therm_res_to_temp(therm_vol_to_res(dac_raw_data_to_vol(fields[14])))
+        converted[15]   = 0
+        converted[16]   = 0
 
-    # if arg1 == 1:
-    #     num_fields = len(PAY_HK_MAPPING)
-    #     converted = [0 for i in range(num_fields)]
-    #     converted[0]    = temp_raw_data_to_temperature(fields[0])
-    #     converted[1]    = hum_raw_data_to_humidity(fields[1])
-    #     converted[2]    = pres_raw_data_to_pressure(fields[2])
-    #     converted[3]    = adc_raw_data_to_therm_temp(fields[3])
-    #     converted[4]    = adc_raw_data_to_therm_temp(fields[4])
-    #     converted[5]    = adc_raw_data_to_therm_temp(fields[5])
-    #     converted[6]    = adc_raw_data_to_therm_temp(fields[6])
-    #     converted[7]    = adc_raw_data_to_therm_temp(fields[7])
-    #     converted[8]    = adc_raw_data_to_therm_temp(fields[8])
-    #     converted[9]    = adc_raw_data_to_therm_temp(fields[9])
-    #     converted[10]   = adc_raw_data_to_therm_temp(fields[10])
-    #     converted[11]   = adc_raw_data_to_therm_temp(fields[11])
-    #     converted[12]   = adc_raw_data_to_therm_temp(fields[12])
-    #     converted[13]   = therm_res_to_temp(therm_vol_to_res(dac_raw_data_to_vol(fields[13])))
-    #     converted[14]   = therm_res_to_temp(therm_vol_to_res(dac_raw_data_to_vol(fields[14])))
-    #     converted[15]   = 0
-    #     converted[16]   = 0
+        # Print to screen
+        pay_hk_section.print_fields(fields, converted)
+        # Write to file
+        pay_hk_section.write_block_to_file(block_num, header, converted)
 
-    #     # Print to screen
-    #     pay_hk_section.print_fields(fields, converted)
-    #     # Write to file
-    #     pay_hk_section.write_block_to_file(arg2, header, converted)
-
-    # if arg1 == 2:
-    #     num_fields = len(PAY_OPT_MAPPING)
-    #     converted = [0 for i in range(num_fields)]
-    #     for i in range(num_fields):
-    #         converted[i] = opt_adc_raw_data_to_vol(fields[i], 1)
+    elif block_type == BlockType.PAY_OPT:
+        num_fields = len(PAY_OPT_MAPPING)
+        converted = [0 for i in range(num_fields)]
+        for i in range(num_fields):
+            converted[i] = opt_adc_raw_data_to_vol(fields[i], 1)
         
-    #     # Print to screen
-    #     pay_opt_section.print_fields(fields, converted)
-    #     # Write to file
-    #     pay_opt_section.write_block_to_file(arg2, header, converted)
-
-
-    
-
+        # Print to screen
+        pay_opt_section.print_fields(fields, converted)
+        # Write to file
+        pay_opt_section.write_block_to_file(block_num, header, converted)
 
 
 
@@ -433,8 +447,8 @@ class ReadRecentLocalDataBlock(object):
     
     # packet must be an RXPacket
     def run_rx(self, packet):
-        sys.exit(1)
-        process_rx_block(packet.arg1, packet.arg2, packet.data)
+        # TODO
+        process_data_block(packet)
 
 class ReadPrimaryCommandBlocks(object):
     def __init__(self):
@@ -503,7 +517,7 @@ class EraseMemoryPhysicalBlock(object):
     
     # packet must be an RXPacket
     def run_rx(self, packet):
-        sys.exit(1)
+        pass
 
 
 class EraseAllMemory(object):
@@ -521,7 +535,7 @@ class EraseAllMemory(object):
     
     # packet must be an RXPacket
     def run_rx(self, packet):
-        sys.exit(1)
+        pass
 
 
 class CollectDataBlock(object):
@@ -554,13 +568,13 @@ class GetCurrentBlockNumber(object):
         block_num = bytes_to_uint32(packet.data[0:4])
         print("Block number = %d" % block_num)
 
-        if packet.arg1 == 0:
+        if packet.arg1 == BlockType.EPS_HK:
             #global eps_hk_sat_block_num
             eps_hk_section.sat_block_num = block_num
-        if packet.arg1 == 1:
+        if packet.arg1 == BlockType.PAY_HK:
             #global pay_hk_sat_block_num
             pay_hk_section.sat_block_num = block_num
-        if packet.arg1 == 2:
+        if packet.arg1 == BlockType.PAY_OPT:
             #global pay_opt_sat_block_num
             pay_opt_section.sat_block_num = block_num
 
@@ -577,7 +591,7 @@ class SetCurrentBlockNumber(object):
     
     # packet must be an RXPacket
     def run_rx(self, packet):
-        sys.exit(1)
+        pass
 
 
 class GetMemorySectionStartAddr(object):
@@ -586,11 +600,12 @@ class GetMemorySectionStartAddr(object):
         self.opcode = CommandOpcode.GET_MEM_SEC_START_ADDR
     
     def run_tx(self):
-        sys.exit(1)
+        arg1 = input_block_type()
+        send_and_receive_packet(CommandOpcode.GET_CUR_BLOCK_NUM, arg1)
     
     # packet must be an RXPacket
     def run_rx(self, packet):
-        sys.exit(1)
+        pass
 
 
 class SetMemorySectionStartAddr(object):
@@ -605,7 +620,7 @@ class SetMemorySectionStartAddr(object):
     
     # packet must be an RXPacket
     def run_rx(self, packet):
-        sys.exit(1)
+        pass
 
 
 class GetMemorySectionEndAddr(object):
@@ -614,11 +629,12 @@ class GetMemorySectionEndAddr(object):
         self.opcode = CommandOpcode.GET_MEM_SEC_END_ADDR
     
     def run_tx(self):
-        sys.exit(1)
+        arg1 = input_block_type()
+        send_and_receive_packet(CommandOpcode.GET_CUR_BLOCK_NUM, arg1)
     
     # packet must be an RXPacket
     def run_rx(self, packet):
-        sys.exit(1)
+        pass
 
 
 class SetMemorySectionEndAddr(object):
@@ -633,7 +649,7 @@ class SetMemorySectionEndAddr(object):
     
     # packet must be an RXPacket
     def run_rx(self, packet):
-        sys.exit(1)
+        pass
 
 
 class GetAutoDataCollectionEnable(object):
@@ -642,11 +658,12 @@ class GetAutoDataCollectionEnable(object):
         self.opcode = CommandOpcode.GET_AUTO_DATA_COL_ENABLE
     
     def run_tx(self):
-        sys.exit(1)
+        arg1 = input_block_type()
+        send_and_receive_packet(CommandOpcode.GET_CUR_BLOCK_NUM, arg1)
     
     # packet must be an RXPacket
     def run_rx(self, packet):
-        sys.exit(1)
+        pass
 
 
 
@@ -672,11 +689,12 @@ class GetAutoDataCollectionPeriod(object):
         self.opcode = CommandOpcode.GET_AUTO_DATA_COL_PERIOD
     
     def run_tx(self):
-        sys.exit(1)
+        arg1 = input_block_type()
+        send_and_receive_packet(CommandOpcode.GET_CUR_BLOCK_NUM, arg1)
     
     # packet must be an RXPacket
     def run_rx(self, packet):
-        sys.exit(1)
+        pass
 
 
 
@@ -702,11 +720,12 @@ class GetAutoDataCollectionTimers(object):
         self.opcode = CommandOpcode.GET_AUTO_DATA_COL_TIMERS
     
     def run_tx(self):
-        sys.exit(1)
+        arg1 = input_block_type()
+        send_and_receive_packet(CommandOpcode.GET_CUR_BLOCK_NUM, arg1)
     
     # packet must be an RXPacket
     def run_rx(self, packet):
-        sys.exit(1)
+        pass
 
 
 
@@ -720,7 +739,7 @@ class ResyncAutoDataCollectionTimers(object):
     
     # packet must be an RXPacket
     def run_rx(self, packet):
-        sys.exit(1)
+        pass
 
 
 

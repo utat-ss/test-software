@@ -98,6 +98,30 @@ def section_num_to_str(num):
     else:
         sys.exit(1)
 
+def packet_to_status_str(packet):
+    if packet.is_ack:
+        if packet.status == 0:
+            return "OK"
+        elif packet.status == 1:
+            return "Invalid packet"
+        elif packet.status == 2:
+            return "Invalid decoded format"
+        elif packet.status == 3:
+            return "Invalid opcode"
+        elif packet.status == 4:
+            return "Invalid password"
+        else:
+            sys.exit(1)
+
+    else:
+        if packet.status == 0:
+            return "OK"
+        elif packet.status == 1:
+            return "Invalid arguments"
+        elif packet.status == 2:
+            return "Timed out"
+        else:
+            sys.exit(1)
 
 def parse_data(data):
     header = data[0:10]
