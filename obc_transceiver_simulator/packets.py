@@ -75,9 +75,6 @@ def receive_rx_packet():
                     enc_msg[len(enc_msg) - 1] == 0x00:
                 print("Successfully received RX packet")
                 return RXPacket(enc_msg)
-            else:
-                print("Invalid RX packet")
-                return None
 
     # print("Received UART (raw):", bytes_to_string(uart_rx_buf))
     print("No RX packet found")

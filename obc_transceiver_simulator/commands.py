@@ -113,6 +113,20 @@ class ReadOBCRAMByte(object):
         print("Value is 0x%.2x" % packet.data[0])
 
 
+class SetBeaconInhibitEnable(object):
+    def __init__(self):
+        self.name = "Set Beacon Inhibit Enable"
+        self.opcode = CommandOpcode.SET_BEACON_INHIBIT_ENABLE
+    
+    def run_tx(self):
+        setting = input_int("Enter setting (0 = disable inhibit, 1 = enable inhibit): ")
+        send_and_receive_packet(self.opcode, setting, 0)
+    
+    # packet must be an RXPacket
+    def run_rx(self, packet):
+        print("%s beacon inhibit" % ("Enabled" if packet.arg1 else "Disabled"))
+
+
 class ReadDataBlock(object):
     def __init__(self):
         self.name = "Read Data Block"
@@ -645,6 +659,7 @@ g_all_commands = [
     ReadOBCEEPROM(),
     EraseOBCEEPROM(),
     ReadOBCRAMByte(),
+    SetBeaconInhibitEnable(),
 
     ReadDataBlock(),
     ReadPrimaryCommandBlocks(),
