@@ -41,7 +41,16 @@ EPS_HK_MAPPING = [
     ("IMU Gyroscope (Uncal) Z", "rad/s",    16  ),
     ("IMU Gyroscope (Cal) X",   "rad/s",    17  ),
     ("IMU Gyroscope (Cal) Y",   "rad/s",    18  ),
-    ("IMU Gyroscope (Cal) Z",   "rad/s",    19  )
+    ("IMU Gyroscope (Cal) Z",   "rad/s",    19  ),
+    # TODO
+    ("TODO",                    "rad/s",    20  ),
+    ("TODO",                    "rad/s",    21  ),
+    ("TODO",                    "rad/s",    22  ),
+    ("TODO",                    "rad/s",    23  ),
+    ("TODO",                    "rad/s",    24  ),
+    ("TODO",                    "rad/s",    25  ),
+    ("TODO",                    "rad/s",    26  ),
+    ("TODO",                    "rad/s",    27  ),
 ]
 
 PAY_HK_MAPPING = [
@@ -61,7 +70,15 @@ PAY_HK_MAPPING = [
     ("Heater Setpoint 1",    "C",   13  ),
     ("Heater Setpoint 2",    "C",   14  ),
     ("Left Proximity",       "",    15  ),
-    ("Right Proximity",      "",    16  )
+    ("Right Proximity",      "",    16  ),
+    # TODO
+    ("TODO",                 "",    17  ),
+    ("TODO",                 "",    18  ),
+    ("TODO",                 "",    19  ),
+    ("TODO",                 "",    20  ),
+    ("TODO",                 "",    21  ),
+    ("TODO",                 "",    22  ),
+    ("TODO",                 "",    23  ),
 ]
 
 PAY_OPT_MAPPING = [("Well #%d" % (i + 1), "V", i) for i in range(32)]
