@@ -34,6 +34,7 @@ class PingOBC(Command):
     def run_rx(self, packet):
         pass
 
+
 class GetRTC(Command):
     def __init__(self):
         self.name = "Get RTC"
@@ -69,6 +70,7 @@ class SetRTC(object):
     def run_rx(self, packet):
         pass
 
+
 class ReadOBCEEPROM(object):
     def __init__(self):
         self.name = "Read OBC EEPROM"
@@ -81,6 +83,7 @@ class ReadOBCEEPROM(object):
     # packet must be an RXPacket
     def run_rx(self, packet):
         print("Value is 0x%.8x" % packet.data[0:4])
+
 
 class EraseOBCEEPROM(object):
     def __init__(self):
@@ -95,6 +98,7 @@ class EraseOBCEEPROM(object):
     def run_rx(self, packet):
         pass
 
+
 class ReadOBCRAMByte(object):
     def __init__(self):
         self.name = "Read OBC RAM Byte"
@@ -107,6 +111,315 @@ class ReadOBCRAMByte(object):
     # packet must be an RXPacket
     def run_rx(self, packet):
         print("Value is 0x%.2x" % packet.data[0])
+
+
+class ReadDataBlock(object):
+    def __init__(self):
+        self.name = "Read Data Block"
+        self.opcode = CommandOpcode.READ_DATA_BLOCK
+    
+    def run_tx(self):
+        arg1 = input_block_type()
+        arg2 = input_int("Enter block number: ")
+        send_and_receive_packet(self.opcode, arg1, arg2)
+    
+    # packet must be an RXPacket
+    def run_rx(self, packet):
+        process_data_block(packet)
+
+
+class ReadPrimaryCommandBlocks(object):
+    def __init__(self):
+        self.name = "Read Primary Command Blocks"
+        self.opcode = CommandOpcode.READ_PRIM_CMD_BLOCKS
+    
+    def run_tx(self):
+        arg1 = input_int("Enter starting block number: ")
+        arg2 = input_int("Enter number of blocks: ")
+        send_and_receive_packet(CommandOpcode.READ_PRIM_CMD_BLOCKS, arg1, arg2)
+    
+    # packet must be an RXPacket
+    def run_rx(self, packet):
+        process_cmd_block(packet.arg1, packet.arg2, packet.data)
+
+
+class ReadSecondaryCommandBlocks(object):
+    def __init__(self):
+        self.name = "Read Secondary Command Blocks"
+        self.opcode = CommandOpcode.READ_SEC_CMD_BLOCKS
+    
+    def run_tx(self):
+        arg1 = input_int("Enter starting block number: ")
+        arg2 = input_int("Enter number of blocks: ")
+        send_and_receive_packet(CommandOpcode.READ_SEC_CMD_BLOCKS, arg1, arg2)
+    
+    # packet must be an RXPacket
+    def run_rx(self, packet):
+        process_cmd_block(packet.arg1, packet.arg2, packet.data)
+
+
+class ReadRecentStatusInfo(object):
+    def __init__(self):
+        self.name = "Read Recent Status Info"
+        self.opcode = CommandOpcode.READ_REC_STATUS_INFO
+    
+    def run_tx(self):
+        send_and_receive_packet(CommandOpcode.READ_REC_STATUS_INFO)
+    
+    # packet must be an RXPacket
+    def run_rx(self, packet):
+        print("OBC data: ", bytes_to_string(packet.data[0:13]))
+        print("EPS data: ", bytes_to_string(packet.data[13:20]))
+        print("PAY data: ", bytes_to_string(packet.data[20:27]))
+
+
+class ReadRecentLocalDataBlock(object):
+    def __init__(self):
+        self.name = "Read Recent Local Data Block"
+        self.opcode = CommandOpcode.READ_REC_LOC_DATA_BLOCK
+    
+    def run_tx(self):
+        arg1 = input_block_type()
+        send_and_receive_packet(CommandOpcode.READ_REC_LOC_DATA_BLOCK, arg1)
+    
+    # packet must be an RXPacket
+    def run_rx(self, packet):
+        process_data_block(packet)
+
+
+class ReadRawMemoryBytes(object):
+    def __init__(self):
+        self.name = "Read Raw Memory Bytes"
+        self.opcode = CommandOpcode.READ_RAW_MEM_BYTES
+    
+    def run_tx(self):
+        arg1 = input_int("Enter starting address: ")
+        arg2 = input_int("Enter number of bytes: ")
+        send_and_receive_packet(CommandOpcode.READ_RAW_MEM_BYTES, arg1, arg2)
+    
+    # packet must be an RXPacket
+    def run_rx(self, packet):
+        print("Data = %s" % bytes_to_string(packet.data))
+
+
+class CollectDataBlock(object):
+    def __init__(self):
+        self.name = "Collect Data Block"
+        self.opcode = CommandOpcode.COL_DATA_BLOCK
+    
+    def run_tx(self):
+        arg1 = input_block_type()
+        send_and_receive_packet(CommandOpcode.COL_DATA_BLOCK, arg1)
+    
+    # packet must be an RXPacket
+    def run_rx(self, packet):
+        # TODO - subtract one somewhere? probably on OBC?
+        print("Collected block number %d" % bytes_to_uint32(packet.data[0:4]))
+
+
+class GetAutoDataCollectionSettings(object):
+    def __init__(self):
+        self.name = "Get Auto Data Collection Settings"
+        self.opcode = CommandOpcode.GET_AUTO_DATA_COL_SETTINGS
+    
+    def run_tx(self):
+        send_and_receive_packet(self.opcode)
+    
+    # packet must be an RXPacket
+    def run_rx(self, packet):
+        assert len(packet.data) == 36
+
+        for i, section in enumerate(g_all_data_sections):
+            data = packet.data[i * 9 : (i+1) * 9]
+            enabled_str = "enabled" if data[0] else "disabled"
+            period = bytes_to_uint32(data[1:5])
+            count = bytes_to_uint32(data[5:9])
+            print("%s: %s, period = %ds, count = %ds" % (section.name, enabled_str, period, count))
+
+
+class SetAutoDataCollectionEnable(object):
+    def __init__(self):
+        self.name = "Set Auto Data Collection Enable"
+        self.opcode = CommandOpcode.SET_AUTO_DATA_COL_ENABLE
+    
+    def run_tx(self):
+        arg1 = input_block_type()
+        arg2 = input_int("Disable (0) or Enable (1): ")
+        send_and_receive_packet(CommandOpcode.SET_AUTO_DATA_COL_ENABLE, arg1, arg2)
+    
+    # packet must be an RXPacket
+    def run_rx(self, packet):
+        print("%s - %s" % (section_num_to_str(packet.arg1), "enabled" if packet.arg2 else "disabled"))
+
+
+class SetAutoDataCollectionPeriod(object):
+    def __init__(self):
+        self.name = "Set Auto Data Collection Period"
+        self.opcode = CommandOpcode.SET_AUTO_DATA_COL_PERIOD
+    
+    def run_tx(self):
+        arg1 = input_block_type()
+        arg2 = input_int("Enter period in seconds: ")
+        send_and_receive_packet(CommandOpcode.SET_AUTO_DATA_COL_PERIOD, arg1, arg2)
+    
+    # packet must be an RXPacket
+    def run_rx(self, packet):
+        print("%s - %d seconds" % (section_num_to_str(packet.arg1), packet.arg2))
+
+
+class ResyncAutoDataCollectionTimers(object):
+    def __init__(self):
+        self.name = "Resync Auto Data Collection Timers"
+        self.opcode = CommandOpcode.RESYNC_AUTO_DATA_COL_TIMERS
+    
+    def run_tx(self):
+        send_and_receive_packet(CommandOpcode.RESYNC_AUTO_DATA_COL_TIMERS)
+    
+    # packet must be an RXPacket
+    def run_rx(self, packet):
+        pass
+
+
+class GetCurrentBlockNumbers(object):
+    def __init__(self):
+        self.name = "Get Current Block Numbers"
+        self.opcode = CommandOpcode.GET_CUR_BLOCK_NUMS
+    
+    def run_tx(self):
+        send_and_receive_packet(self.opcode)
+    
+    # packet must be an RXPacket
+    def run_rx(self, packet):
+        obc_hk   = bytes_to_uint32(packet.data[0:4])
+        eps_hk   = bytes_to_uint32(packet.data[4:8])
+        pay_hk   = bytes_to_uint32(packet.data[8:12])
+        pay_opt  = bytes_to_uint32(packet.data[12:16])
+        prim_cmd = bytes_to_uint32(packet.data[16:20])
+        sec_cmd  = bytes_to_uint32(packet.data[20:24])
+
+        print("Current block numbers:")
+        print("OBC_HK: 0x%x (%d)" % (obc_hk, obc_hk))
+        print("EPS_HK: 0x%x (%d)" % (eps_hk, eps_hk))
+        print("PAY_HK: 0x%x (%d)" % (pay_hk, pay_hk))
+        print("PAY_OPT: 0x%x (%d)" % (pay_opt, pay_opt))
+        print("PRIM_CMD_LOG: 0x%x (%d)" % (prim_cmd, prim_cmd))
+        print("SEC_CMD_LOG: 0x%x (%d)" % (sec_cmd, sec_cmd))
+
+        obc_hk_section.sat_block_num = obc_hk
+        eps_hk_section.sat_block_num = eps_hk
+        pay_hk_section.sat_block_num = pay_hk
+        pay_opt_section.sat_block_num = pay_opt
+        prim_cmd_log_section.sat_block_num = prim_cmd
+        sec_cmd_log_section.sat_block_num = sec_cmd
+
+
+class SetCurrentBlockNumber(object):
+    def __init__(self):
+        self.name = "Set Current Block Number"
+        self.opcode = CommandOpcode.SET_CUR_BLOCK_NUM
+    
+    def run_tx(self):
+        arg1 = input_block_type()
+        arg2 = input_int("Enter block number: ")
+        send_and_receive_packet(CommandOpcode.SET_CUR_BLOCK_NUM, arg1, arg2)
+    
+    # packet must be an RXPacket
+    def run_rx(self, packet):
+        pass
+
+
+class GetMemorySectionAddrs(object):
+    def __init__(self):
+        self.name = "Get Memory Section Addresses"
+        self.opcode = CommandOpcode.GET_MEM_SEC_ADDRS
+    
+    def run_tx(self):
+        send_and_receive_packet(self.opcode)
+    
+    # packet must be an RXPacket
+    def run_rx(self, packet):
+        for i, section in enumerate(g_all_sections):
+            data = packet.data[i * 8 : (i+1) * 8]
+            start = bytes_to_uint32(data[0:4])
+            end = bytes_to_uint32(data[4:8])
+            print("%s: start = 0x%x, end = 0x%x" % (section.name, start, end))
+
+
+class SetMemorySectionStartAddr(object):
+    def __init__(self):
+        self.name = "Set Memory Section Start Address"
+        self.opcode = CommandOpcode.SET_MEM_SEC_START_ADDR
+    
+    def run_tx(self):
+        arg1 = input_block_type()
+        arg2 = input_int("Enter start address: ")
+        send_and_receive_packet(CommandOpcode.SET_MEM_SEC_START_ADDR, arg1, arg2)
+    
+    # packet must be an RXPacket
+    def run_rx(self, packet):
+        pass
+
+
+class SetMemorySectionEndAddr(object):
+    def __init__(self):
+        self.name = "Set Memory Section End Address"
+        self.opcode = CommandOpcode.SET_MEM_SEC_END_ADDR
+    
+    def run_tx(self):
+        arg1 = input_block_type()
+        arg2 = input_int("Enter end address: ")
+        send_and_receive_packet(CommandOpcode.SET_MEM_SEC_END_ADDR, arg1, arg2)
+    
+    # packet must be an RXPacket
+    def run_rx(self, packet):
+        pass
+
+
+class EraseMemoryPhysicalSector(object):
+    def __init__(self):
+        self.name = "Erase Memory Physical Sector"
+        self.opcode = CommandOpcode.ERASE_MEM_PHY_SECTOR
+    
+    def run_tx(self):
+        arg1 = input_int("Enter address: ")
+        send_and_receive_packet(CommandOpcode.ERASE_MEM_PHY_SECTOR, arg1)
+    
+    # packet must be an RXPacket
+    def run_rx(self, packet):
+        pass
+
+
+class EraseMemoryPhysicalBlock(object):
+    def __init__(self):
+        self.name = "Erase Memory Physical Block"
+        self.opcode = CommandOpcode.ERASE_MEM_PHY_BLOCK
+    
+    def run_tx(self):
+        arg1 = input_int("Enter address: ")
+        send_and_receive_packet(CommandOpcode.ERASE_MEM_PHY_BLOCK, arg1)
+    
+    # packet must be an RXPacket
+    def run_rx(self, packet):
+        pass
+
+
+class EraseAllMemory(object):
+    def __init__(self):
+        self.name = "Erase All Memory"
+        self.opcode = CommandOpcode.ERASE_ALL_MEM
+    
+    def run_tx(self):
+        resp = input("ARE YOU SURE? Type 'yes' to confirm, or Enter to cancel: ")
+        if resp == "yes":
+            send_and_receive_packet(CommandOpcode.ERASE_ALL_MEM)
+            print("Confirmed")
+        else:
+            print("Cancelled")
+    
+    # packet must be an RXPacket
+    def run_rx(self, packet):
+        pass
+
 
 class SendEPSCANMessage(object):
     def __init__(self):
@@ -227,8 +540,6 @@ class SendEPSCANMessage(object):
                 print("Start temporary low-power mode")
 
 
-
-
 class SendPAYCANMessage(object):
     def __init__(self):
         self.name = "Send PAY CAN Message"
@@ -246,7 +557,7 @@ class SendPAYCANMessage(object):
         opcode = packet.data[2]
         field_num = packet.data[3]
         rx_data = packet.data[4:8]
-        print("Opcode =", opcode, ", Field =", field_num, "Data = ", bytes_to_string(rx_data))
+        print("Opcode =", opcode, ", Field =", field_num, ", Data = ", bytes_to_string(rx_data))
         
         # PAY CTRL
         if opcode == 4:
@@ -276,8 +587,6 @@ class SendPAYCANMessage(object):
                 print("Start temporary low-power mode")
 
 
-
-
 class ActuatePAYMotors(object):
     def __init__(self):
         self.name = "Actuate PAY Motors"
@@ -294,6 +603,7 @@ class ActuatePAYMotors(object):
     def run_rx(self, packet):
         pass
 
+
 class ResetSubsystem(object):
     def __init__(self):
         self.name = "Reset Subsystem"
@@ -303,13 +613,14 @@ class ResetSubsystem(object):
         arg1 = input_subsys()
         if arg1 == Subsystem.OBC:
             # don't wait for response if it's OBC
-            send_tx_packet(TXPacket(CommandOpcode.RESET_SUBSYS, arg1, 0))
+            send_tx_packet(TXPacket(self.opcode, arg1, 0))
         else:
-            send_and_receive_packet(15, arg1)
+            send_and_receive_packet(self.opcode, arg1)
     
     # packet must be an RXPacket
     def run_rx(self, packet):
         pass
+
 
 class SetIndefiniteLPMEnable(object):
     def __init__(self):
@@ -320,423 +631,6 @@ class SetIndefiniteLPMEnable(object):
         arg1 = input_int("Enter 0 (disable) or 1 (enable): ")
         send_and_receive_packet(CommandOpcode.SET_INDEF_LPM_ENABLE, arg1)
 
-    # packet must be an RXPacket
-    def run_rx(self, packet):
-        pass
-
-class ReadRecentStatusInfo(object):
-    def __init__(self):
-        self.name = "Read Recent Status Info"
-        self.opcode = CommandOpcode.READ_REC_STATUS_INFO
-    
-    def run_tx(self):
-        send_and_receive_packet(CommandOpcode.READ_REC_STATUS_INFO)
-    
-    # packet must be an RXPacket
-    def run_rx(self, packet):
-        print("OBC data: ", bytes_to_string(packet.data[0:13]))
-        print("EPS data: ", bytes_to_string(packet.data[13:20]))
-        print("PAY data: ", bytes_to_string(packet.data[20:27]))
-
-class ReadDataBlock(object):
-    def __init__(self):
-        self.name = "Read Data Block"
-        self.opcode = CommandOpcode.READ_DATA_BLOCK
-    
-    def run_tx(self):
-        arg1 = input_block_type()
-        arg2 = input_int("Enter block number: ")
-        send_and_receive_packet(self.opcode, arg1, arg2)
-    
-    # packet must be an RXPacket
-    def run_rx(self, packet):
-        process_data_block(packet)
-
-
-def process_data_block(packet):
-    (header, fields) = parse_data(packet.data)
-    block_type = packet.arg1
-    block_num = packet.arg2
-    print("Expected block number:", block_num)
-    print_header(header)
-
-    if block_type == BlockType.OBC_HK:
-        print("Subsystem status (OBC)")
-        print("Restart count =", fields[0])
-        print("Restart date =", date_time_to_str(uint24_to_bytes(fields[1])))
-        print("Restart time =", date_time_to_str(uint24_to_bytes(fields[2])))
-        print("Uptime =", fields[3])
-
-    elif block_type == BlockType.EPS_HK:
-        num_fields = len(EPS_HK_MAPPING)
-        converted = [0 for i in range(num_fields)]
-        converted[0]    = adc_raw_data_to_eps_vol(fields[0])
-        converted[1]    = adc_raw_data_to_eps_cur(fields[1])
-        converted[2]    = adc_raw_data_to_eps_cur(fields[2])
-        converted[3]    = adc_raw_data_to_eps_cur(fields[3])
-        converted[4]    = adc_raw_data_to_eps_cur(fields[4])
-        converted[5]    = adc_raw_data_to_eps_cur(fields[5])
-        converted[6]    = adc_raw_data_to_therm_temp(fields[6])
-        converted[7]    = adc_raw_data_to_therm_temp(fields[7])
-        converted[8]    = adc_raw_data_to_eps_vol(fields[8])
-        converted[9]    = adc_raw_data_to_bat_cur(fields[9])
-        converted[10]   = adc_raw_data_to_eps_cur(fields[10])
-        converted[11]   = adc_raw_data_to_eps_vol(fields[11])
-        converted[12]   = therm_res_to_temp(therm_vol_to_res(dac_raw_data_to_vol(fields[12])))
-        converted[13]   = therm_res_to_temp(therm_vol_to_res(dac_raw_data_to_vol(fields[13])))
-        converted[14]   = imu_raw_data_to_gyro(fields[14])
-        converted[15]   = imu_raw_data_to_gyro(fields[15])
-        converted[16]   = imu_raw_data_to_gyro(fields[16])
-        converted[17]   = imu_raw_data_to_gyro(fields[17])
-        converted[18]   = imu_raw_data_to_gyro(fields[18])
-        converted[19]   = imu_raw_data_to_gyro(fields[19])
-
-        # Print to screen
-        eps_hk_section.print_fields(fields, converted)
-        # Write to file
-        eps_hk_section.write_block_to_file(block_num, header, converted)
-        
-    elif block_type == BlockType.PAY_HK:
-        num_fields = len(PAY_HK_MAPPING)
-        converted = [0 for i in range(num_fields)]
-        converted[0]    = temp_raw_data_to_temperature(fields[0])
-        converted[1]    = hum_raw_data_to_humidity(fields[1])
-        converted[2]    = pres_raw_data_to_pressure(fields[2])
-        converted[3]    = adc_raw_data_to_therm_temp(fields[3])
-        converted[4]    = adc_raw_data_to_therm_temp(fields[4])
-        converted[5]    = adc_raw_data_to_therm_temp(fields[5])
-        converted[6]    = adc_raw_data_to_therm_temp(fields[6])
-        converted[7]    = adc_raw_data_to_therm_temp(fields[7])
-        converted[8]    = adc_raw_data_to_therm_temp(fields[8])
-        converted[9]    = adc_raw_data_to_therm_temp(fields[9])
-        converted[10]   = adc_raw_data_to_therm_temp(fields[10])
-        converted[11]   = adc_raw_data_to_therm_temp(fields[11])
-        converted[12]   = adc_raw_data_to_therm_temp(fields[12])
-        converted[13]   = therm_res_to_temp(therm_vol_to_res(dac_raw_data_to_vol(fields[13])))
-        converted[14]   = therm_res_to_temp(therm_vol_to_res(dac_raw_data_to_vol(fields[14])))
-        converted[15]   = 0
-        converted[16]   = 0
-
-        # Print to screen
-        pay_hk_section.print_fields(fields, converted)
-        # Write to file
-        pay_hk_section.write_block_to_file(block_num, header, converted)
-
-    elif block_type == BlockType.PAY_OPT:
-        num_fields = len(PAY_OPT_MAPPING)
-        converted = [0 for i in range(num_fields)]
-        for i in range(num_fields):
-            converted[i] = opt_adc_raw_data_to_vol(fields[i], 1)
-        
-        # Print to screen
-        pay_opt_section.print_fields(fields, converted)
-        # Write to file
-        pay_opt_section.write_block_to_file(block_num, header, converted)
-
-
-
-
-class ReadRecentLocalDataBlock(object):
-    def __init__(self):
-        self.name = "Read Recent Local Data Block"
-        self.opcode = CommandOpcode.READ_REC_LOC_DATA_BLOCK
-    
-    def run_tx(self):
-        arg1 = input_block_type()
-        send_and_receive_packet(CommandOpcode.READ_REC_LOC_DATA_BLOCK, arg1)
-    
-    # packet must be an RXPacket
-    def run_rx(self, packet):
-        # TODO
-        process_data_block(packet)
-
-class ReadPrimaryCommandBlocks(object):
-    def __init__(self):
-        self.name = "Read Primary Command Blocks"
-        self.opcode = CommandOpcode.READ_PRIM_CMD_BLOCKS
-    
-    def run_tx(self):
-        arg1 = input_int("Enter starting block number: ")
-        arg2 = input_int("Enter number of blocks: ")
-        send_and_receive_packet(CommandOpcode.READ_PRIM_CMD_BLOCKS, arg1, arg2)
-    
-    # packet must be an RXPacket
-    def run_rx(self, packet):
-        process_cmd_block(packet.arg1, packet.arg2, packet.data)
-
-class ReadSecondaryCommandBlocks(object):
-    def __init__(self):
-        self.name = "Read Secondary Command Blocks"
-        self.opcode = CommandOpcode.READ_SEC_CMD_BLOCKS
-    
-    def run_tx(self):
-        arg1 = input_int("Enter starting block number: ")
-        arg2 = input_int("Enter number of blocks: ")
-        send_and_receive_packet(CommandOpcode.READ_SEC_CMD_BLOCKS, arg1, arg2)
-    
-    # packet must be an RXPacket
-    def run_rx(self, packet):
-        process_cmd_block(packet.arg1, packet.arg2, packet.data)
-
-class ReadRawMemoryBytes(object):
-    def __init__(self):
-        self.name = "Read Raw Memory Bytes"
-        self.opcode = CommandOpcode.READ_RAW_MEM_BYTES
-    
-    def run_tx(self):
-        arg1 = input_int("Enter starting address: ")
-        arg2 = input_int("Enter number of bytes: ")
-        send_and_receive_packet(CommandOpcode.READ_RAW_MEM_BYTES, arg1, arg2)
-    
-    # packet must be an RXPacket
-    def run_rx(self, packet):
-        print("Data = %s" % bytes_to_string(packet.data))
-
-class EraseMemoryPhysicalSector(object):
-    def __init__(self):
-        self.name = "Erase Memory Physical Sector"
-        self.opcode = CommandOpcode.ERASE_MEM_PHY_SECTOR
-    
-    def run_tx(self):
-        arg1 = input_int("Enter address: ")
-        send_and_receive_packet(CommandOpcode.ERASE_MEM_PHY_SECTOR, arg1)
-    
-    # packet must be an RXPacket
-    def run_rx(self, packet):
-        pass
-
-
-class EraseMemoryPhysicalBlock(object):
-    def __init__(self):
-        self.name = "Erase Memory Physical Block"
-        self.opcode = CommandOpcode.ERASE_MEM_PHY_BLOCK
-    
-    def run_tx(self):
-        arg1 = input_int("Enter address: ")
-        send_and_receive_packet(CommandOpcode.ERASE_MEM_PHY_BLOCK, arg1)
-    
-    # packet must be an RXPacket
-    def run_rx(self, packet):
-        pass
-
-
-class EraseAllMemory(object):
-    def __init__(self):
-        self.name = "Erase All Memory"
-        self.opcode = CommandOpcode.ERASE_ALL_MEM
-    
-    def run_tx(self):
-        resp = input("ARE YOU SURE? Type 'yes' to confirm, or Enter to cancel: ")
-        if resp == "yes":
-            send_and_receive_packet(CommandOpcode.ERASE_ALL_MEM)
-            print("Confirmed")
-        else:
-            print("Cancelled")
-    
-    # packet must be an RXPacket
-    def run_rx(self, packet):
-        pass
-
-
-class CollectDataBlock(object):
-    def __init__(self):
-        self.name = "Collect Data Block"
-        self.opcode = CommandOpcode.COL_DATA_BLOCK
-    
-    def run_tx(self):
-        arg1 = input_block_type()
-        send_and_receive_packet(CommandOpcode.COL_DATA_BLOCK, arg1)
-    
-    # packet must be an RXPacket
-    def run_rx(self, packet):
-        # TODO - subtract one somewhere? probably on OBC?
-        print("Collected block number %d" % bytes_to_uint32(packet.data[0:4]))
-
-
-class GetCurrentBlockNumber(object):
-    def __init__(self):
-        self.name = "Get Current Block Number"
-        self.opcode = CommandOpcode.GET_CUR_BLOCK_NUM
-    
-    def run_tx(self):
-        arg1 = input_block_type()
-        send_and_receive_packet(CommandOpcode.GET_CUR_BLOCK_NUM, arg1)
-    
-    # packet must be an RXPacket
-    def run_rx(self, packet):
-        print(section_num_to_str(packet.arg1))
-        block_num = bytes_to_uint32(packet.data[0:4])
-        print("Block number = %d" % block_num)
-
-        if packet.arg1 == BlockType.EPS_HK:
-            #global eps_hk_sat_block_num
-            eps_hk_section.sat_block_num = block_num
-        if packet.arg1 == BlockType.PAY_HK:
-            #global pay_hk_sat_block_num
-            pay_hk_section.sat_block_num = block_num
-        if packet.arg1 == BlockType.PAY_OPT:
-            #global pay_opt_sat_block_num
-            pay_opt_section.sat_block_num = block_num
-
-
-class SetCurrentBlockNumber(object):
-    def __init__(self):
-        self.name = "Set Current Block Number"
-        self.opcode = CommandOpcode.SET_CUR_BLOCK_NUM
-    
-    def run_tx(self):
-        arg1 = input_block_type()
-        arg2 = input_int("Enter block number: ")
-        send_and_receive_packet(CommandOpcode.SET_CUR_BLOCK_NUM, arg1, arg2)
-    
-    # packet must be an RXPacket
-    def run_rx(self, packet):
-        pass
-
-
-class GetMemorySectionStartAddr(object):
-    def __init__(self):
-        self.name = "Get Memory Section Start Address"
-        self.opcode = CommandOpcode.GET_MEM_SEC_START_ADDR
-    
-    def run_tx(self):
-        arg1 = input_block_type()
-        send_and_receive_packet(CommandOpcode.GET_CUR_BLOCK_NUM, arg1)
-    
-    # packet must be an RXPacket
-    def run_rx(self, packet):
-        pass
-
-
-class SetMemorySectionStartAddr(object):
-    def __init__(self):
-        self.name = "Set Memory Section Start Address"
-        self.opcode = CommandOpcode.SET_MEM_SEC_START_ADDR
-    
-    def run_tx(self):
-        arg1 = input_block_type()
-        arg2 = input_int("Enter start address: ")
-        send_and_receive_packet(CommandOpcode.SET_MEM_SEC_START_ADDR, arg1, arg2)
-    
-    # packet must be an RXPacket
-    def run_rx(self, packet):
-        pass
-
-
-class GetMemorySectionEndAddr(object):
-    def __init__(self):
-        self.name = "Get Memory Section End Address"
-        self.opcode = CommandOpcode.GET_MEM_SEC_END_ADDR
-    
-    def run_tx(self):
-        arg1 = input_block_type()
-        send_and_receive_packet(CommandOpcode.GET_CUR_BLOCK_NUM, arg1)
-    
-    # packet must be an RXPacket
-    def run_rx(self, packet):
-        pass
-
-
-class SetMemorySectionEndAddr(object):
-    def __init__(self):
-        self.name = "Set Memory Section End Address"
-        self.opcode = CommandOpcode.SET_MEM_SEC_END_ADDR
-    
-    def run_tx(self):
-        arg1 = input_block_type()
-        arg2 = input_int("Enter end address: ")
-        send_and_receive_packet(CommandOpcode.SET_MEM_SEC_END_ADDR, arg1, arg2)
-    
-    # packet must be an RXPacket
-    def run_rx(self, packet):
-        pass
-
-
-class GetAutoDataCollectionEnable(object):
-    def __init__(self):
-        self.name = "Get Auto Data Collection Enable"
-        self.opcode = CommandOpcode.GET_AUTO_DATA_COL_ENABLE
-    
-    def run_tx(self):
-        arg1 = input_block_type()
-        send_and_receive_packet(CommandOpcode.GET_CUR_BLOCK_NUM, arg1)
-    
-    # packet must be an RXPacket
-    def run_rx(self, packet):
-        pass
-
-
-
-class SetAutoDataCollectionEnable(object):
-    def __init__(self):
-        self.name = "Set Auto Data Collection Enable"
-        self.opcode = CommandOpcode.SET_AUTO_DATA_COL_ENABLE
-    
-    def run_tx(self):
-        arg1 = input_block_type()
-        arg2 = input_int("Disable (0) or Enable (1): ")
-        send_and_receive_packet(CommandOpcode.SET_AUTO_DATA_COL_ENABLE, arg1, arg2)
-    
-    # packet must be an RXPacket
-    def run_rx(self, packet):
-        print("%s - %s" % (section_num_to_str(packet.arg1), "enabled" if packet.arg2 else "disabled"))
-
-
-
-class GetAutoDataCollectionPeriod(object):
-    def __init__(self):
-        self.name = "Get Auto Data Collection Period"
-        self.opcode = CommandOpcode.GET_AUTO_DATA_COL_PERIOD
-    
-    def run_tx(self):
-        arg1 = input_block_type()
-        send_and_receive_packet(CommandOpcode.GET_CUR_BLOCK_NUM, arg1)
-    
-    # packet must be an RXPacket
-    def run_rx(self, packet):
-        pass
-
-
-
-class SetAutoDataCollectionPeriod(object):
-    def __init__(self):
-        self.name = "Set Auto Data Collection Period"
-        self.opcode = CommandOpcode.SET_AUTO_DATA_COL_PERIOD
-    
-    def run_tx(self):
-        arg1 = input_block_type()
-        arg2 = input_int("Enter period in seconds: ")
-        send_and_receive_packet(CommandOpcode.SET_AUTO_DATA_COL_PERIOD, arg1, arg2)
-    
-    # packet must be an RXPacket
-    def run_rx(self, packet):
-        print("%s - %d seconds" % (section_num_to_str(packet.arg1), packet.arg2))
-
-
-
-class GetAutoDataCollectionTimers(object):
-    def __init__(self):
-        self.name = "Get Auto Data Collection Timers"
-        self.opcode = CommandOpcode.GET_AUTO_DATA_COL_TIMERS
-    
-    def run_tx(self):
-        arg1 = input_block_type()
-        send_and_receive_packet(CommandOpcode.GET_CUR_BLOCK_NUM, arg1)
-    
-    # packet must be an RXPacket
-    def run_rx(self, packet):
-        pass
-
-
-
-class ResyncAutoDataCollectionTimers(object):
-    def __init__(self):
-        self.name = "Resync Auto Data Collection Timers"
-        self.opcode = CommandOpcode.RESYNC_AUTO_DATA_COL_TIMERS
-    
-    def run_tx(self):
-        send_and_receive_packet(CommandOpcode.RESYNC_AUTO_DATA_COL_TIMERS)
-    
     # packet must be an RXPacket
     def run_rx(self, packet):
         pass
@@ -760,18 +654,15 @@ g_all_commands = [
     ReadRawMemoryBytes(),
 
     CollectDataBlock(),
-    GetAutoDataCollectionEnable(),
+    GetAutoDataCollectionSettings(),
     SetAutoDataCollectionEnable(),
-    GetAutoDataCollectionPeriod(),
     SetAutoDataCollectionPeriod(),
-    GetAutoDataCollectionTimers(),
     ResyncAutoDataCollectionTimers(),
 
-    GetCurrentBlockNumber(),
+    GetCurrentBlockNumbers(),
     SetCurrentBlockNumber(),
-    GetMemorySectionStartAddr(),
+    GetMemorySectionAddrs(),
     SetMemorySectionStartAddr(),
-    GetMemorySectionEndAddr(),
     SetMemorySectionEndAddr(),
     EraseMemoryPhysicalSector(),
     EraseMemoryPhysicalBlock(),

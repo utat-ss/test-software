@@ -7,9 +7,9 @@ OUT_FOLDER = "out"
 COMMON_HEADER = [
     "Expected Block Number",
     "Actual Block Number",
-    "Error",
     "Date",
-    "Time"
+    "Time",
+    "Status",
 ]
 
 # Name, unit, mapping for reordering measurements
@@ -65,6 +65,10 @@ PAY_HK_MAPPING = [
 ]
 
 PAY_OPT_MAPPING = [("Well #%d" % (i + 1), "V", i) for i in range(32)]
+
+# TODO
+PRIM_CMD_LOG_MAPPING = []
+SEC_CMD_LOG_MAPPING = []
 
 
 # Represents one section in flash memory
@@ -129,15 +133,21 @@ class Section(object):
     
     def print_fields(self, fields, converted):
         print(self.name)
+        # Each value in converted can be float, int, or str
         for i in range(len(self.mapping)):
-            print("Field #%d (%s): 0x%.6x = %.6f %s" % (i, self.mapping[i], fields[i], converted[i], self.mapping[i][1]))
+            conv_str = conv_value_to_str(converted[i])
+            out_str = "Field #%d (%s): 0x%.6x = %s" % (i, self.mapping[i], fields[i], conv_str)
+            # Add unit if it has one
+            if len(self.mapping[i][1]) > 0:
+                out_str += " " + self.mapping[i][1]
+            print(out_str)
     
     def write_block_to_file(self, expected_block_num, header, converted):
         # Write row
         values = []
-        values.extend([expected_block_num, bytes_to_uint24(header[0:3]), header[3], date_time_to_str(header[4:7]), date_time_to_str(header[7:10])])
-        values.extend(map(float, converted))
-        self.data_file.write(", ".join(map(file_value_to_str, values)) + "\n")
+        values.extend(map(str, [expected_block_num, bytes_to_uint24(header[0:3]), header[3], date_time_to_str(header[4:7]), date_time_to_str(header[7:10])]))
+        values.extend(map(conv_value_to_str, converted))
+        self.data_file.write(", ".join(values) + "\n")
         self.data_file.flush()
         print("Added block row to file", self.file_name)
 
@@ -146,10 +156,32 @@ class Section(object):
         print(self)
 
 
-# Memory sections
+# Data sections
 obc_hk_section = Section("OBC_HK", "obc_hk.csv", OBC_HK_MAPPING)
 eps_hk_section = Section("EPS_HK", "eps_hk.csv", EPS_HK_MAPPING)
 pay_hk_section = Section("PAY_HK", "pay_hk.csv", PAY_HK_MAPPING)
 pay_opt_section = Section("PAY_OPT", "pay_opt.csv", PAY_OPT_MAPPING)
 
-g_all_sections = [obc_hk_section, eps_hk_section, pay_hk_section, pay_opt_section]
+# Command log sections
+# TODO - fix issues with file writing?
+prim_cmd_log_section = Section("PRIM_CMD_LOG", "prim_cmd_log.csv", PRIM_CMD_LOG_MAPPING)
+sec_cmd_log_section = Section("SEC_CMD_LOG", "sec_cmd_log.csv", SEC_CMD_LOG_MAPPING)
+
+g_all_data_sections = [
+    obc_hk_section,
+    eps_hk_section,
+    pay_hk_section,
+    pay_opt_section,
+]
+g_all_cmd_log_sections = [
+    prim_cmd_log_section,
+    sec_cmd_log_section,
+]
+g_all_sections = [
+    obc_hk_section,
+    eps_hk_section,
+    pay_hk_section,
+    pay_opt_section,
+    prim_cmd_log_section,
+    sec_cmd_log_section,
+]

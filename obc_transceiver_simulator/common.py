@@ -45,11 +45,15 @@ def bytes_to_uint24(bytes):
 def date_time_to_str(data):
     return "%02d.%02d.%02d" % (data[0], data[1], data[2])
 
-def file_value_to_str(value):
+def conv_value_to_str(value):    
     if type(value) == float:
         return "%.6f" % value
+    elif type(value) == int:
+        return "%d" % value
+    elif type(value) == str:
+        return value
     else:
-        return str(value)
+        sys.exit(1)
 
 def str_to_int(string):
     try: #Check to see if input is an integer
