@@ -208,11 +208,22 @@ def read_all_missing_blocks():
     print_sections()
 
     print("Reading all missing blocks...")
-    for i, section in enumerate(g_all_sections):
+    for i, section in enumerate(g_all_data_sections):
         for block_num in range(section.file_block_num, section.sat_block_num):
             print("Reading block #", block_num)
             if not send_and_receive_packet(CommandOpcode.READ_DATA_BLOCK, i + 1, block_num):
                 return
+    
+    # TODO - read 5 at a time
+    for block_num in range(prim_cmd_log_section.file_block_num, prim_cmd_log_section.sat_block_num):
+        print("Reading block #", block_num)
+        if not send_and_receive_packet(CommandOpcode.READ_PRIM_CMD_BLOCKS, BlockType.PRIM_CMD_LOG, 1):
+            return
+    
+    for block_num in range(sec_cmd_log_section.file_block_num, sec_cmd_log_section.sat_block_num):
+        print("Reading block #", block_num)
+        if not send_and_receive_packet(CommandOpcode.READ_SEC_CMD_BLOCKS, BlockType.SEC_CMD_LOG, 1):
+            return
 
 
 def send_and_receive_packet(opcode, arg1=0, arg2=0, attempts=10):

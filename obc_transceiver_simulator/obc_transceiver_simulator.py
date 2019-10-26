@@ -78,12 +78,20 @@ def run_sim_cmd():
     elif cmd == "e":
         arg1 = input_block_type()
         num = input_int("Enter block number: ")
-        if arg1 == BlockType.EPS_HK:
+
+        if arg1 == BlockType.OBC_HK:
+            obc_hk_section.file_block_num = num
+        elif arg1 == BlockType.EPS_HK:
             eps_hk_section.file_block_num = num
         elif arg1 == BlockType.PAY_HK:
             pay_hk_section.file_block_num = num
         elif arg1 == BlockType.PAY_OPT:
             pay_opt_section.file_block_num = num
+        elif arg1 == BlockType.PRIM_CMD_LOG:
+            prim_cmd_log_section.file_block_num = num
+        elif arg1 == BlockType.SEC_CMD_LOG:
+            sec_cmd_log_section.file_block_num = num
+            
         print_sections()
     
     elif cmd == "f":  # Change password
