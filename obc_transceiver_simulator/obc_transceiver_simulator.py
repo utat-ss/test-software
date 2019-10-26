@@ -35,16 +35,10 @@ except ImportError:
     sys.exit(1)
 
 
-
-def run_sim_cmd():
-    print("a. Print Section File Info")
-    print("b. Read All Missing Blocks")
-    print("c. Set Standard Auto Data Collection Parameters")
-    print("d. Disable All Auto Data Collection")
-    print("e. Set Ground Station File Block Number")
-    print("f. Set Ground Station Password")
-    print("g. Send Arbitrary Command")
-    print("h. Send Raw UART")
+def sim_data_col():
+    print("a. Print File Info")
+    print("b. Read Missing Blocks")
+    print("c. Read Missing Secondary Command Log Blocks")
     
     cmd = input("Enter command: ")
 
@@ -53,75 +47,91 @@ def run_sim_cmd():
             print(section)
     
     elif cmd == "b":  # Read missing blocks
-        read_all_missing_blocks()
+        read_missing_blocks()
+    
+    elif cmd == "c":  # Read missing secondary command log blocks
+        read_missing_sec_cmd_log_blocks()
 
-    elif cmd == "c": #Auto-Data Collection
-        # Periods
+
+def sim_actions():
+    print("a. Set File Block Number")
+    print("b. Set Standard Auto Data Collection Parameters")
+    print("c. Disable All Auto Data Collection")
+    print("d. Set Ground Station Password")
+    print("e. Send Arbitrary Command")
+    print("f. Send Raw UART")
+
+    cmd = input("Enter command: ")
+
+    if cmd == "a":
+        arg1 = input_block_type()
+        num = input_int("Enter block number: ")
+
+        if arg1 == BlockType.OBC_HK:
+            obc_hk_section.set_file_block_num(num)
+        elif arg1 == BlockType.EPS_HK:
+            eps_hk_section.set_file_block_num(num)
+        elif arg1 == BlockType.PAY_HK:
+            pay_hk_section.set_file_block_num(num)
+        elif arg1 == BlockType.PAY_OPT:
+            pay_opt_section.set_file_block_num(num)
+        elif arg1 == BlockType.PRIM_CMD_LOG:
+            prim_cmd_log_section.set_file_block_num(num)
+        elif arg1 == BlockType.SEC_CMD_LOG:
+            sec_cmd_log_section.set_file_block_num(num)
+
+    elif cmd == "b": #Auto-Data Collection
+        # Set periods
         send_and_receive_packet(CommandOpcode.SET_AUTO_DATA_COL_PERIOD, BlockType.OBC_HK, 60)
         send_and_receive_packet(CommandOpcode.SET_AUTO_DATA_COL_PERIOD, BlockType.EPS_HK, 60)
         send_and_receive_packet(CommandOpcode.SET_AUTO_DATA_COL_PERIOD, BlockType.PAY_HK, 120)
         send_and_receive_packet(CommandOpcode.SET_AUTO_DATA_COL_PERIOD, BlockType.PAY_OPT, 300)
 
-        # Enables
+        # Enable all
         send_and_receive_packet(CommandOpcode.SET_AUTO_DATA_COL_ENABLE, BlockType.OBC_HK, 1)
         send_and_receive_packet(CommandOpcode.SET_AUTO_DATA_COL_ENABLE, BlockType.EPS_HK, 1)
         send_and_receive_packet(CommandOpcode.SET_AUTO_DATA_COL_ENABLE, BlockType.PAY_HK, 1)
         send_and_receive_packet(CommandOpcode.SET_AUTO_DATA_COL_ENABLE, BlockType.PAY_OPT, 1)
     
-    elif cmd == "d": #Auto-Data Collection
-        # Enables
+    elif cmd == "c": #Auto-Data Collection
+        # Disable all
         send_and_receive_packet(CommandOpcode.SET_AUTO_DATA_COL_ENABLE, BlockType.OBC_HK, 0)
         send_and_receive_packet(CommandOpcode.SET_AUTO_DATA_COL_ENABLE, BlockType.EPS_HK, 0)
         send_and_receive_packet(CommandOpcode.SET_AUTO_DATA_COL_ENABLE, BlockType.PAY_HK, 0)
         send_and_receive_packet(CommandOpcode.SET_AUTO_DATA_COL_ENABLE, BlockType.PAY_OPT, 0)
-
-    elif cmd == "e":
-        arg1 = input_block_type()
-        num = input_int("Enter block number: ")
-
-        if arg1 == BlockType.OBC_HK:
-            obc_hk_section.file_block_num = num
-        elif arg1 == BlockType.EPS_HK:
-            eps_hk_section.file_block_num = num
-        elif arg1 == BlockType.PAY_HK:
-            pay_hk_section.file_block_num = num
-        elif arg1 == BlockType.PAY_OPT:
-            pay_opt_section.file_block_num = num
-        elif arg1 == BlockType.PRIM_CMD_LOG:
-            prim_cmd_log_section.file_block_num = num
-        elif arg1 == BlockType.SEC_CMD_LOG:
-            sec_cmd_log_section.file_block_num = num
-            
-        print_sections()
     
-    elif cmd == "f":  # Change password
+    elif cmd == "d":  # Change password
         Global.password = input("Enter new password: ")
         assert len(Global.password) == 4
 
-    elif cmd == "g":  # Arbitrary command
+    elif cmd == "e":  # Arbitrary command
         opcode = input_int("Enter opcode: ")
         arg1 = input_int("Enter argument 1: ")
         arg2 = input_int("Enter argument 2: ")
         send_and_receive_packet(opcode, arg1, arg2)
 
-    elif cmd == "h":  # Raw UART
+    elif cmd == "f":  # Raw UART
         send_raw_uart(string_to_bytes(input("Enter raw hex for UART: ")))
         rx_packet = receive_rx_packet()
         process_rx_packet(rx_packet)
     
 
-
 def main_loop():
     while True:
         # Print top-level command groups
-        print("a. Simulator Options")
+        print("a. Simulator Data Collection")
+        print("b. Simulator Actions")
         print("q. Quit Simulator")
         for (num, desc) in g_command_groups:
             print("%d. %s" % (num, desc))
         
         cmd = input("Enter command group: ") # User input typed through terminal console
+
         if cmd == "a":
-            run_sim_cmd()
+            sim_data_col()
+        
+        elif cmd == "b":
+            sim_actions()
             
         elif cmd == "q":
             Global.serial.close() # Close serial port when program done

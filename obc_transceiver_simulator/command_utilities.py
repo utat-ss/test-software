@@ -198,31 +198,35 @@ def print_sections():
 
 def get_sat_block_nums():
     print("Getting satellite block numbers...")
-    for i in range(len(g_all_sections)):
-        send_and_receive_packet(19, i, 0)
+    send_and_receive_packet(CommandOpcode.GET_CUR_BLOCK_NUMS)
     print_sections()
 
 
-def read_all_missing_blocks():
+def read_missing_blocks():
     get_sat_block_nums()
-    print_sections()
 
     print("Reading all missing blocks...")
+    
     for i, section in enumerate(g_all_data_sections):
         for block_num in range(section.file_block_num, section.sat_block_num):
-            print("Reading block #", block_num)
             if not send_and_receive_packet(CommandOpcode.READ_DATA_BLOCK, i + 1, block_num):
                 return
     
-    # TODO - read 5 at a time
-    for block_num in range(prim_cmd_log_section.file_block_num, prim_cmd_log_section.sat_block_num):
-        print("Reading block #", block_num)
-        if not send_and_receive_packet(CommandOpcode.READ_PRIM_CMD_BLOCKS, BlockType.PRIM_CMD_LOG, 1):
+    # Can read up to 5 at a time
+    for block_num in range(prim_cmd_log_section.file_block_num, prim_cmd_log_section.sat_block_num, 5):
+        if not send_and_receive_packet(CommandOpcode.READ_PRIM_CMD_BLOCKS, block_num,
+                min(prim_cmd_log_section.sat_block_num - prim_cmd_log_section.file_block_num, 5)):
             return
     
-    for block_num in range(sec_cmd_log_section.file_block_num, sec_cmd_log_section.sat_block_num):
-        print("Reading block #", block_num)
-        if not send_and_receive_packet(CommandOpcode.READ_SEC_CMD_BLOCKS, BlockType.SEC_CMD_LOG, 1):
+
+def read_missing_sec_cmd_log_blocks():
+    get_sat_block_nums()
+    print_sections()
+
+    # Can read up to 5 at a time
+    for block_num in range(sec_cmd_log_section.file_block_num, sec_cmd_log_section.sat_block_num, 5):
+        if not send_and_receive_packet(CommandOpcode.READ_SEC_CMD_BLOCKS, block_num,
+                min(sec_cmd_log_section.sat_block_num - sec_cmd_log_section.file_block_num, 5)):
             return
 
 

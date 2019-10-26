@@ -171,6 +171,14 @@ class Section(object):
         # Update file_block_num
         self.file_block_num = expected_block_num + 1
         print(self)
+    
+    # Just writes a single number to keep track of manually changing the expected block number in the file
+    def set_file_block_num(self, block_num):
+        self.file_block_num = block_num
+        self.data_file.write("%d\n" % (self.file_block_num - 1))
+        self.data_file.flush()
+        print("Wrote block number to file:", self.file_block_num - 1)
+        print(self)
 
 
 # Data sections
