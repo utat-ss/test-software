@@ -93,9 +93,10 @@ CMD_LOG_MAPPING = [
 # Represents one section in flash memory
 # Mostly used to track and update the data output files
 class Section(object):
-    def __init__(self, name, file_name, mapping):
+    def __init__(self, number, name, mapping):
+        self.number = number
         self.name = name
-        self.file_name = file_name
+        self.file_name = "%d_%s.csv" % (self.number, self.name.lower())
         self.mapping = mapping
         self.data_file = None
         self.file_block_num = 0
@@ -182,16 +183,13 @@ class Section(object):
 
 
 # Data sections
-# TODO - number sections
-obc_hk_section = Section("OBC_HK", "obc_hk.csv", OBC_HK_MAPPING)
-eps_hk_section = Section("EPS_HK", "eps_hk.csv", EPS_HK_MAPPING)
-pay_hk_section = Section("PAY_HK", "pay_hk.csv", PAY_HK_MAPPING)
-pay_opt_section = Section("PAY_OPT", "pay_opt.csv", PAY_OPT_MAPPING)
-
+obc_hk_section          = Section(BlockType.OBC_HK,         "OBC_HK",       OBC_HK_MAPPING)
+eps_hk_section          = Section(BlockType.EPS_HK,         "EPS_HK",       EPS_HK_MAPPING)
+pay_hk_section          = Section(BlockType.PAY_HK,         "PAY_HK",       PAY_HK_MAPPING)
+pay_opt_section         = Section(BlockType.PAY_OPT,        "PAY_OPT",      PAY_OPT_MAPPING)
 # Command log sections
-# TODO - fix issues with file writing?
-prim_cmd_log_section = Section("PRIM_CMD_LOG", "prim_cmd_log.csv", CMD_LOG_MAPPING)
-sec_cmd_log_section = Section("SEC_CMD_LOG", "sec_cmd_log.csv", CMD_LOG_MAPPING)
+prim_cmd_log_section    = Section(BlockType.PRIM_CMD_LOG,   "PRIM_CMD_LOG", CMD_LOG_MAPPING)
+sec_cmd_log_section     = Section(BlockType.SEC_CMD_LOG,    "SEC_CMD_LOG",  CMD_LOG_MAPPING)
 
 g_all_data_sections = [
     obc_hk_section,
