@@ -37,26 +37,23 @@ except ImportError:
 
 
 def run_sim_cmd():
-    print("a. Send Arbitrary Command")
-    print("b. Send Raw UART")
+    print("a. Print Section File Info")
+    print("b. Read All Missing Blocks")
     print("c. Set Standard Auto Data Collection Parameters")
     print("d. Disable All Auto Data Collection")
-    print("e. Read All Missing Blocks")
-    print("f. Set Ground Station File Block Number")
-    print("g. Set Ground Station Password")
-
+    print("e. Set Ground Station File Block Number")
+    print("f. Set Ground Station Password")
+    print("g. Send Arbitrary Command")
+    print("h. Send Raw UART")
+    
     cmd = input("Enter command: ")
 
-    if cmd == "a":  # Arbitrary command
-        opcode = input_int("Enter opcode: ")
-        arg1 = input_int("Enter argument 1: ")
-        arg2 = input_int("Enter argument 2: ")
-        send_and_receive_packet(opcode, arg1, arg2)
-
-    elif cmd == "b":  # Raw UART
-        send_raw_uart(string_to_bytes(input("Enter raw hex for UART: ")))
-        rx_packet = receive_rx_packet()
-        process_rx_packet(rx_packet)
+    if cmd == "a":
+        for section in g_all_sections:
+            print(section)
+    
+    elif cmd == "b":  # Read missing blocks
+        read_all_missing_blocks()
 
     elif cmd == "c": #Auto-Data Collection
         # Periods
@@ -78,10 +75,7 @@ def run_sim_cmd():
         send_and_receive_packet(CommandOpcode.SET_AUTO_DATA_COL_ENABLE, BlockType.PAY_HK, 0)
         send_and_receive_packet(CommandOpcode.SET_AUTO_DATA_COL_ENABLE, BlockType.PAY_OPT, 0)
 
-    elif cmd == "e":  # Read missing blocks
-        read_all_missing_blocks()
-
-    elif cmd == "f":
+    elif cmd == "e":
         arg1 = input_block_type()
         num = input_int("Enter block number: ")
         if arg1 == BlockType.EPS_HK:
@@ -92,14 +86,25 @@ def run_sim_cmd():
             pay_opt_section.file_block_num = num
         print_sections()
     
-    elif cmd == "g":  # Change password
+    elif cmd == "f":  # Change password
         Global.password = input("Enter new password: ")
         assert len(Global.password) == 4
 
+    elif cmd == "g":  # Arbitrary command
+        opcode = input_int("Enter opcode: ")
+        arg1 = input_int("Enter argument 1: ")
+        arg2 = input_int("Enter argument 2: ")
+        send_and_receive_packet(opcode, arg1, arg2)
+
+    elif cmd == "h":  # Raw UART
+        send_raw_uart(string_to_bytes(input("Enter raw hex for UART: ")))
+        rx_packet = receive_rx_packet()
+        process_rx_packet(rx_packet)
+    
+
+
 def main_loop():
     while True:
-        # TODO - command to disable all auto data collection
-
         # Print top-level command groups
         print("a. Simulator Options")
         print("q. Quit Simulator")

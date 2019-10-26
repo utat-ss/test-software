@@ -154,7 +154,7 @@ class ReadPrimaryCommandBlocks(object):
     
     # packet must be an RXPacket
     def run_rx(self, packet):
-        process_cmd_block(packet.arg1, packet.arg2, packet.data)
+        process_cmd_block(packet)
 
 
 class ReadSecondaryCommandBlocks(object):
@@ -169,7 +169,7 @@ class ReadSecondaryCommandBlocks(object):
     
     # packet must be an RXPacket
     def run_rx(self, packet):
-        process_cmd_block(packet.arg1, packet.arg2, packet.data)
+        process_cmd_block(packet)
 
 
 class ReadRecentStatusInfo(object):

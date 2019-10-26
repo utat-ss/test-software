@@ -14,78 +14,80 @@ COMMON_HEADER = [
 
 # Name, unit, mapping for reordering measurements
 OBC_HK_MAPPING = [
-    ("Uptime",          "s",    0   ),
-    ("Restart count",   "",     1   ),
-    ("Restart reason",  "",     2   ),
-    ("Restart date",    "",     3   ),
-    ("Restart time",    "",     4   )
+    ("Uptime",                  "s",        0   ),
+    ("Restart count",           "",         1   ),
+    ("Restart reason",          "",         2   ),
+    ("Restart date",            "",         3   ),
+    ("Restart time",            "",         4   )
 ]
 
 EPS_HK_MAPPING = [
-    ("BB Vol",                  "V",        6   ),
-    ("BB Cur",                  "A",        7   ),
-    ("-Y Cur",                  "A",        5   ),
-    ("+X Cur",                  "A",        2   ),
-    ("+Y Cur",                  "A",        3   ),
-    ("-X Cur",                  "A",        4   ),
-    ("Bat Temp 1",              "C",        10  ),
-    ("Bat Temp 2",              "C",        11  ),
     ("Bat Vol",                 "V",        0   ),
     ("Bat Cur",                 "A",        1   ),
-    ("BT Cur",                  "A",        8   ),
-    ("BT Vol",                  "V",        9   ),
-    ("Heater Setpoint 1",       "C",        12  ),
-    ("Heater Setpoint 2",       "C",        13  ),
-    ("IMU Gyroscope (Uncal) X", "rad/s",    14  ),
-    ("IMU Gyroscope (Uncal) Y", "rad/s",    15  ),
-    ("IMU Gyroscope (Uncal) Z", "rad/s",    16  ),
-    ("IMU Gyroscope (Cal) X",   "rad/s",    17  ),
-    ("IMU Gyroscope (Cal) Y",   "rad/s",    18  ),
-    ("IMU Gyroscope (Cal) Z",   "rad/s",    19  ),
-    # TODO
-    ("TODO",                    "rad/s",    20  ),
-    ("TODO",                    "rad/s",    21  ),
-    ("TODO",                    "rad/s",    22  ),
-    ("TODO",                    "rad/s",    23  ),
-    ("TODO",                    "rad/s",    24  ),
-    ("TODO",                    "rad/s",    25  ),
-    ("TODO",                    "rad/s",    26  ),
-    ("TODO",                    "rad/s",    27  ),
+    ("X+ Cur",                  "A",        2   ),
+    ("X- Cur",                  "A",        3   ),
+    ("Y+ Cur",                  "A",        4   ),
+    ("Y- Cur",                  "A",        5   ),
+    ("3V3 Vol",                 "V",        6   ),
+    ("3V3 Cur",                 "A",        7   ),
+    ("5V Vol",                  "V",        8   ),
+    ("5V Cur",                  "A",        9   ),
+    ("PAY Cur",                 "A",        10  ),
+    ("Bat Temp 1",              "C",        11  ),
+    ("Bat Temp 2",              "C",        12  ),
+    ("3V3 Temp",                "C",        13  ),
+    ("5V Temp",                 "C",        14  ),
+    ("PAY Conn Temp",           "C",        15  ),
+    ("Solar shunt states",      "",         16  ),
+    ("Heater Setpoint 1",       "C",        17  ),
+    ("Heater Setpoint 2",       "C",        18  ),
+    ("Gyroscope (Uncal) X",     "rad/s",    19  ),
+    ("Gyroscope (Uncal) Y",     "rad/s",    20  ),
+    ("Gyroscope (Uncal) Z",     "rad/s",    21  ),
+    ("Gyroscope (Cal) X",       "rad/s",    22  ),
+    ("Gyroscope (Cal) Y",       "rad/s",    23  ),
+    ("Gyroscope (Cal) Z",       "rad/s",    24  ),
+    ("Uptime",                  "s",        25  ),
+    ("Restart count",           "",         26  ),
+    ("Restart reason",          "",         27  ),
 ]
 
 PAY_HK_MAPPING = [
-    ("Temperature",          "C",   0   ),
-    ("Humidity",             "%RH", 1   ),
-    ("Pressure",             "kPa", 2   ),
-    ("MF Temp 0",            "C",   3   ),
-    ("MF Temp 1",            "C",   4   ),
-    ("MF Temp 2",            "C",   5   ),
-    ("MF Temp 3",            "C",   6   ),
-    ("MF Temp 4",            "C",   7   ),
-    ("MF Temp 5",            "C",   8   ),
-    ("MF Temp 6",            "C",   9   ),
-    ("MF Temp 7",            "C",   10  ),
-    ("MF Temp 8",            "C",   11  ),
-    ("MF Temp 9",            "C",   12  ),
-    ("Heater Setpoint 1",    "C",   13  ),
-    ("Heater Setpoint 2",    "C",   14  ),
-    ("Left Proximity",       "",    15  ),
-    ("Right Proximity",      "",    16  ),
-    # TODO
-    ("TODO",                 "",    17  ),
-    ("TODO",                 "",    18  ),
-    ("TODO",                 "",    19  ),
-    ("TODO",                 "",    20  ),
-    ("TODO",                 "",    21  ),
-    ("TODO",                 "",    22  ),
-    ("TODO",                 "",    23  ),
+    ("Humidity",                "%RH",  0   ),
+    ("Pressure",                "kPa",  1   ),
+    ("Ambient Temp",            "C",    2   ),
+    ("Motor Driver 1 Temp",     "C",    3   ),
+    ("Motor Driver 2 Temp",     "C",    4   ),
+    ("10V Temp",                "C",    5   ),
+    ("6V Temp",                 "C",    6   ),
+    ("MF Temp 1",               "C",    7   ),
+    ("MF Temp 2",               "C",    8   ),
+    ("MF Temp 3",               "C",    9   ),
+    ("MF Temp 4",               "C",    10   ),
+    ("MF Temp 5",               "C",    11  ),
+    ("MF Temp 6",               "C",    12   ),
+    ("MF Temp 7",               "C",    13  ),
+    ("MF Temp 8",               "C",    14  ),
+    ("MF Temp 9",               "C",    15  ),
+    ("MF Temp 10",              "C",    16  ),
+    ("MF Temp 11",              "C",    17  ),
+    ("MF Temp 12",              "C",    18  ),
+    ("Heater Enabled States",   "",     19  ),
+    ("Limit Switch States",     "",     20  ),
+    ("Uptime",                  "s",    21  ),
+    ("Restart count",           "",     22  ),
+    ("Restart reason",          "",     23  ),
 ]
 
 PAY_OPT_MAPPING = [("Well #%d" % (i + 1), "V", i) for i in range(32)]
 
-# TODO
-PRIM_CMD_LOG_MAPPING = []
-SEC_CMD_LOG_MAPPING = []
+# The command log mappings have a different format
+# Same for primary and secondary
+CMD_LOG_MAPPING = [
+    ("Opcode",                  "",     0),
+    ("Argument 1",              "",     1),
+    ("Argument 2",              "",     2),
+]
 
 
 # Represents one section in flash memory
@@ -115,8 +117,7 @@ class Section(object):
         file_path = OUT_FOLDER + "/" + self.file_name
 
         if os.path.exists(file_path):
-            print("Found existing file", file_path)
-            print("Appending to file")
+            print("Found existing file %s, appending to file" % file_path)
 
             # https://stackoverflow.com/questions/2757887/file-mode-for-creatingreadingappendingbinary
             self.data_file = open(file_path, 'a+')
@@ -134,15 +135,14 @@ class Section(object):
             self.data_file.seek(0, 2)
 
         else:
-            print("Did not find existing file", file_path)
-            print("Creating new file")
+            print("Did not find existing file %s, creating new file" % file_path)
 
             print("Writing header")
             self.data_file = open(file_path, 'a+')
             # Write header
             values = []
             values.extend(COMMON_HEADER)
-            values.extend(map(lambda x : x[0] + " (" + x[1] + ")", self.mapping))
+            values.extend(map(lambda x : x[0] + (" (" + x[1] + ")" if len(x[1]) > 0 else ""), self.mapping))
             self.data_file.write(", ".join(values) + "\n")
             self.data_file.flush()
         
@@ -153,7 +153,7 @@ class Section(object):
         # Each value in converted can be float, int, or str
         for i in range(len(self.mapping)):
             conv_str = conv_value_to_str(converted[i])
-            out_str = "Field #%d (%s): 0x%.6x = %s" % (i, self.mapping[i], fields[i], conv_str)
+            out_str = "Field #%d (%s): 0x%.6x = %s" % (self.mapping[i][2], self.mapping[i][0], fields[i], conv_str)
             # Add unit if it has one
             if len(self.mapping[i][1]) > 0:
                 out_str += " " + self.mapping[i][1]
@@ -162,7 +162,7 @@ class Section(object):
     def write_block_to_file(self, expected_block_num, header, converted):
         # Write row
         values = []
-        values.extend(map(str, [expected_block_num, bytes_to_uint24(header[0:3]), header[3], date_time_to_str(header[4:7]), date_time_to_str(header[7:10])]))
+        values.extend(map(str, [expected_block_num, bytes_to_uint24(header[0:3]),  date_time_to_str(header[3:6]), date_time_to_str(header[6:9]), "0x%.2x (%s)" % (header[9], packet_resp_status_to_str(header[9]))]))
         values.extend(map(conv_value_to_str, converted))
         self.data_file.write(", ".join(values) + "\n")
         self.data_file.flush()
@@ -174,6 +174,7 @@ class Section(object):
 
 
 # Data sections
+# TODO - number sections
 obc_hk_section = Section("OBC_HK", "obc_hk.csv", OBC_HK_MAPPING)
 eps_hk_section = Section("EPS_HK", "eps_hk.csv", EPS_HK_MAPPING)
 pay_hk_section = Section("PAY_HK", "pay_hk.csv", PAY_HK_MAPPING)
@@ -181,8 +182,8 @@ pay_opt_section = Section("PAY_OPT", "pay_opt.csv", PAY_OPT_MAPPING)
 
 # Command log sections
 # TODO - fix issues with file writing?
-prim_cmd_log_section = Section("PRIM_CMD_LOG", "prim_cmd_log.csv", PRIM_CMD_LOG_MAPPING)
-sec_cmd_log_section = Section("SEC_CMD_LOG", "sec_cmd_log.csv", SEC_CMD_LOG_MAPPING)
+prim_cmd_log_section = Section("PRIM_CMD_LOG", "prim_cmd_log.csv", CMD_LOG_MAPPING)
+sec_cmd_log_section = Section("SEC_CMD_LOG", "sec_cmd_log.csv", CMD_LOG_MAPPING)
 
 g_all_data_sections = [
     obc_hk_section,

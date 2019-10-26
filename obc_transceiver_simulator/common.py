@@ -49,7 +49,7 @@ def conv_value_to_str(value):
     if type(value) == float:
         return "%.6f" % value
     elif type(value) == int:
-        return "%d" % value
+        return "0x%x (%d)" % (value, value)
     elif type(value) == str:
         return value
     else:
@@ -105,30 +105,63 @@ def section_num_to_str(num):
     else:
         sys.exit(1)
 
+def packet_ack_status_to_str(status):
+    if status == 0:
+        return "OK"
+    elif status == 1:
+        return "Invalid packet"
+    elif status == 2:
+        return "Invalid decoded format"
+    elif status == 3:
+        return "Invalid opcode"
+    elif status == 4:
+        return "Invalid password"
+    else:
+        return "UNKNOWN"
+
+def packet_resp_status_to_str(status):
+    if status == 0:
+        return "OK"
+    elif status == 1:
+        return "Invalid arguments"
+    elif status == 2:
+        return "Timed out"
+    else:
+        return "UNKNOWN"
+
 def packet_to_status_str(packet):
     if packet.is_ack:
-        if packet.status == 0:
-            return "OK"
-        elif packet.status == 1:
-            return "Invalid packet"
-        elif packet.status == 2:
-            return "Invalid decoded format"
-        elif packet.status == 3:
-            return "Invalid opcode"
-        elif packet.status == 4:
-            return "Invalid password"
-        else:
-            sys.exit(1)
-
+        return packet_ack_status_to_str(packet.status)
     else:
-        if packet.status == 0:
-            return "OK"
-        elif packet.status == 1:
-            return "Invalid arguments"
-        elif packet.status == 2:
-            return "Timed out"
+        return packet_resp_status_to_str(packet.status)
+
+def restart_reason_to_str(reason):
+    if reason == 0x01:
+        return "Unintentional watchdog timeout (hang)"
+    elif reason == 0x02:
+        return "Intentional reset command"
+    elif reason == 0x03:
+        return "Communication timeout"
+    elif reason == 0x04:
+        return "Watchdog system reset"
+    elif reason == 0x05:
+        return "Brown-out reset"
+    elif reason == 0x06:
+        return "External reset"
+    elif reason == 0x07:
+        return "Power-on reset"
+    else:
+        return "UNKNOWN"
+
+def enable_states_to_str(states, num_bits):
+    str_list = []
+    for i in range(num_bits - 1, -1, -1):
+        if (states >> i) & 0x01:
+            str_list.append("%d ON" % i)
         else:
-            sys.exit(1)
+            str_list.append("%d OFF" % i)
+    # Can't use comma separators for CSV
+    return " ".join(str_list)
 
 def parse_data(data):
     header = data[0:10]
