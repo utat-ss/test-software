@@ -98,7 +98,11 @@ def send_tx_packet(packet):
 
     print("TX packet - sending request")
 
-    print([command.name for command in g_all_commands if command.opcode == packet.opcode][0])
+    matched_cmds = [command.name for command in g_all_commands if command.opcode == packet.opcode]
+    if len(matched_cmds) > 0:
+        print(matched_cmds[0])
+    else:
+        print("UNKNOWN OPCODE")
 
     print("Opcode = 0x%x (%d)" % (packet.opcode, packet.opcode))
     print("Argument 1 = 0x%x (%d)" % (packet.arg1, packet.arg1))

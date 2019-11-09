@@ -12,7 +12,11 @@ def process_rx_packet(packet):
     print_div()
     print("RX packet - received %s" % ("ACK" if packet.is_ack else "response"))
 
-    print([command.name for command in g_all_commands if command.opcode == packet.opcode][0])
+    matched_cmds = [command.name for command in g_all_commands if command.opcode == packet.opcode]
+    if len(matched_cmds) > 0:
+        print(matched_cmds[0])
+    else:
+        print("UNKNOWN OPCODE")
 
     print("Encoded (%d bytes):" % len(packet.enc_msg), bytes_to_string(packet.enc_msg))
     print("Decoded (%d bytes):" % len(packet.dec_msg), bytes_to_string(packet.dec_msg))
