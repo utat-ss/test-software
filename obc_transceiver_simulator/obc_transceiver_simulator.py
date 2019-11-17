@@ -2,7 +2,7 @@
 # Input: String from serial.read()
 # Output to microcontroller: hex/bytes using serial.write()
 #
-# By: Brytni Richards
+# By: Bruno Almeida, Brytni Richards
 
 # Note: This program IS NOT completely error-proof. Incorrect messages may be
 # sent to the microcontroller if the user enters wrong values
@@ -167,11 +167,17 @@ if __name__ == "__main__":
             metavar=('uart'), help='UART port on programmer')
     parser.add_argument('-b', '--baud', required=False, default=9600,
             metavar=('baud'), help='Baud rate (e.g. 1200, 9600, 19200, 115200')
+    parser.add_argument('-ul', '--uplink-drop', required=False, default=0,
+            metavar=('uplink'), help='Package drop rate from ground to satellite (0-1)')
+    parser.add_argument('-dl', '--downlink-drop', required=False, default=0,
+            metavar=('downlink'), help='Package drop rate from satellite to ground (0-1)')
 
     # Converts strings to objects, which are then assigned to variables below
     args = parser.parse_args()
     uart = args.uart
     baud = args.baud
+    Global.uplink_drop = float(args.uplink_drop)
+    Global.downlink_drop = float(args.downlink_drop)
     
     try:
         # TODO - figure out inter_byte_timeout
