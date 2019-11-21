@@ -58,10 +58,6 @@ def receive_rx_packet():
 
         # Need 2 <CR> bytes to start/end message
         if len(cr_indices) >= 2:
-            # Drop packet?
-            if (random.uniform(0,1) < Global.downlink_drop):
-                print("Downlink Packet Dropped")
-                return None
             # Get first 2 CR characters
             start_index = cr_indices[0]
             end_index = cr_indices[1]
@@ -79,6 +75,11 @@ def receive_rx_packet():
                     enc_msg[1] - 0x10 == len(enc_msg) - 4 and \
                     enc_msg[2] == 0x00 and \
                     enc_msg[len(enc_msg) - 1] == 0x00:
+                # Drop packet?
+                if (random.uniform(0,1) < Global.downlink_drop):
+                    print("Downlink Packet Dropped")
+                    return None
+                    
                 print("Successfully received RX packet")
                 return RXPacket(enc_msg)
 
@@ -90,11 +91,7 @@ def receive_rx_packet():
 # Use `bytearray` instead of `bytes`
 def send_raw_uart(uart_bytes):
     print("Sending UART (%d bytes):" % len(uart_bytes), bytes_to_string(uart_bytes))
-    # Drop packets?
-    if (random.uniform(0,1) < Global.uplink_drop):
-        print("Uplink Packet Dropped")
-    else:
-        Global.serial.write(uart_bytes)
+    Global.serial.write(uart_bytes)
 
 
 #Type and num_chars must be an integer
@@ -122,6 +119,10 @@ def send_tx_packet(packet):
     print("Decoded (%d bytes):" % len(packet.dec_pkt), bytes_to_string(packet.dec_pkt))
     print("Encoded (%d bytes):" % len(packet.enc_pkt), bytes_to_string(packet.enc_pkt))
 
-    send_raw_uart(packet.enc_pkt)
+    # Drop packets?
+    if (random.uniform(0,1) < Global.uplink_drop):
+        print("Uplink Packet Dropped")
+    else:
+        send_raw_uart(packet.enc_pkt)
 
     print_div()

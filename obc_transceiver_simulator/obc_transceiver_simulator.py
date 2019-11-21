@@ -167,9 +167,9 @@ if __name__ == "__main__":
             metavar=('uart'), help='UART port on programmer')
     parser.add_argument('-b', '--baud', required=False, default=9600,
             metavar=('baud'), help='Baud rate (e.g. 1200, 9600, 19200, 115200')
-    parser.add_argument('-ul', '--uplink-drop', required=False, default=0,
+    parser.add_argument('-ud', '--uplink-drop', required=False, default=0,
             metavar=('uplink'), help='Package drop rate from ground to satellite (0-1)')
-    parser.add_argument('-dl', '--downlink-drop', required=False, default=0,
+    parser.add_argument('-dd', '--downlink-drop', required=False, default=0,
             metavar=('downlink'), help='Package drop rate from satellite to ground (0-1)')
 
     # Converts strings to objects, which are then assigned to variables below
