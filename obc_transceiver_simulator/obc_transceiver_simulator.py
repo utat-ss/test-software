@@ -57,9 +57,10 @@ def sim_actions():
     print("a. Set File Block Number")
     print("b. Set Standard Auto Data Collection Parameters")
     print("c. Disable All Auto Data Collection")
-    print("d. Set Ground Station Password")
-    print("e. Send Arbitrary Command")
-    print("f. Send Raw UART")
+    print("d. Print Dropped Packet Statistics")
+    print("e. Set Ground Station Password")
+    print("f. Send Arbitrary Command")
+    print("g. Send Raw UART")
 
     cmd = input("Enter command: ")
 
@@ -100,17 +101,29 @@ def sim_actions():
         send_and_receive_packet(CommandOpcode.SET_AUTO_DATA_COL_ENABLE, BlockType.PAY_HK, 0)
         send_and_receive_packet(CommandOpcode.SET_AUTO_DATA_COL_ENABLE, BlockType.PAY_OPT, 0)
     
-    elif cmd == "d":  # Change password
+    elif cmd == "d":
+        uplink_pct = 0.0 if Global.total_uplink_packets == 0 else Global.dropped_uplink_packets / Global.total_uplink_packets * 100.0
+        downlink_pct = 0.0 if Global.total_downlink_packets == 0 else Global.dropped_downlink_packets / Global.total_downlink_packets * 100.0
+
+        print_div()
+        print("Dropped packets:")
+        print("Uplink: %d/%d (%.1f%%)" % (
+            Global.dropped_uplink_packets, Global.total_uplink_packets, uplink_pct))
+        print("Downlink: %d/%d (%.1f%%)" % (
+            Global.dropped_downlink_packets, Global.total_downlink_packets, downlink_pct))
+        print_div()
+
+    elif cmd == "e":  # Change password
         Global.password = input("Enter new password: ")
         assert len(Global.password) == 4
 
-    elif cmd == "e":  # Arbitrary command
+    elif cmd == "f":  # Arbitrary command
         opcode = input_int("Enter opcode: ")
         arg1 = input_int("Enter argument 1: ")
         arg2 = input_int("Enter argument 2: ")
         send_and_receive_packet(opcode, arg1, arg2)
 
-    elif cmd == "f":  # Raw UART
+    elif cmd == "g":  # Raw UART
         send_raw_uart(string_to_bytes(input("Enter raw hex for UART: ")))
         rx_packet = receive_rx_packet()
         process_rx_packet(rx_packet)
@@ -177,7 +190,9 @@ if __name__ == "__main__":
     uart = args.uart
     baud = args.baud
     Global.uplink_drop = float(args.uplink_drop)
+    print("Uplink packet drop rate: %.1f%%" % (Global.uplink_drop * 100.0))
     Global.downlink_drop = float(args.downlink_drop)
+    print("Downlink packet drop rate: %.1f%%" % (Global.downlink_drop * 100.0))
     
     try:
         # TODO - figure out inter_byte_timeout

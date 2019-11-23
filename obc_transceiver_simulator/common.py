@@ -11,6 +11,12 @@ class Global(object):
     uplink_drop = 0     # Ratio of packets to drop from ground to satellite
     downlink_drop = 0   # Ratio of packets to drop from satellite to ground
 
+    dropped_uplink_packets = 0
+    total_uplink_packets = 0
+    
+    dropped_downlink_packets = 0
+    total_downlink_packets = 0
+
 
 def check_python3():
     # Detects if correct python version is being run

@@ -77,10 +77,14 @@ def receive_rx_packet():
                     enc_msg[len(enc_msg) - 1] == 0x00:
                 # Drop packet?
                 if (random.uniform(0,1) < Global.downlink_drop):
+                    print_div()
                     print("Downlink Packet Dropped")
+                    Global.dropped_downlink_packets += 1
+                    Global.total_downlink_packets += 1
                     return None
                     
                 print("Successfully received RX packet")
+                Global.total_downlink_packets += 1
                 return RXPacket(enc_msg)
 
     # print("Received UART (raw):", bytes_to_string(uart_rx_buf))
@@ -121,8 +125,12 @@ def send_tx_packet(packet):
 
     # Drop packets?
     if (random.uniform(0,1) < Global.uplink_drop):
+        print_div()
         print("Uplink Packet Dropped")
+        Global.dropped_uplink_packets += 1
     else:
         send_raw_uart(packet.enc_pkt)
+    
+    Global.total_uplink_packets += 1
 
     print_div()
