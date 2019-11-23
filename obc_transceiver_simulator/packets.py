@@ -1,3 +1,5 @@
+import random
+
 from common import *
 from encoding import *
 
@@ -73,6 +75,11 @@ def receive_rx_packet():
                     enc_msg[1] - 0x10 == len(enc_msg) - 4 and \
                     enc_msg[2] == 0x00 and \
                     enc_msg[len(enc_msg) - 1] == 0x00:
+                # Drop packet?
+                if (random.uniform(0,1) < Global.downlink_drop):
+                    print("Downlink Packet Dropped")
+                    return None
+                    
                 print("Successfully received RX packet")
                 return RXPacket(enc_msg)
 
@@ -112,6 +119,10 @@ def send_tx_packet(packet):
     print("Decoded (%d bytes):" % len(packet.dec_pkt), bytes_to_string(packet.dec_pkt))
     print("Encoded (%d bytes):" % len(packet.enc_pkt), bytes_to_string(packet.enc_pkt))
 
-    send_raw_uart(packet.enc_pkt)
+    # Drop packets?
+    if (random.uniform(0,1) < Global.uplink_drop):
+        print("Uplink Packet Dropped")
+    else:
+        send_raw_uart(packet.enc_pkt)
 
     print_div()
