@@ -17,6 +17,9 @@ class Global(object):
     dropped_downlink_packets = 0
     total_downlink_packets = 0
 
+    serial_write_file = None
+    serial_read_file = None
+
 
 def check_python3():
     # Detects if correct python version is being run
@@ -183,3 +186,15 @@ def parse_data(data):
 
 def print_div():
     print("-" * 80)
+
+
+def write_serial(data):
+    Global.serial.write(data)
+    Global.serial_write_file.write(str(data))
+    Global.serial_write_file.flush()
+
+def read_serial():
+    data = Global.serial.read(2 ** 16)
+    Global.serial_read_file.write(str(data))
+    Global.serial_read_file.flush()
+    return data

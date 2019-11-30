@@ -193,7 +193,7 @@ if __name__ == "__main__":
     print("Uplink packet drop rate: %.1f%%" % (Global.uplink_drop * 100.0))
     Global.downlink_drop = float(args.downlink_drop)
     print("Downlink packet drop rate: %.1f%%" % (Global.downlink_drop * 100.0))
-    
+
     try:
         # TODO - figure out inter_byte_timeout
         Global.serial = serial.Serial(uart, baud, timeout=0.1)
@@ -205,6 +205,25 @@ if __name__ == "__main__":
     for section in g_all_sections:
         section.load_file()
     
+    # TODO - refactor checking for out folder?
+    # https://stackoverflow.com/questions/2757887/file-mode-for-creatingreadingappendingbinary
+
+    write_path = OUT_FOLDER + "/" + "serial_write.log"
+    if os.path.exists(write_path):
+        print("Found existing file %s, appending to file" % write_path)
+    else:
+        print("Did not find existing file %s, creating new file" % write_path)
+    Global.serial_write_file = open(write_path, 'a+')
+    
+    read_path = OUT_FOLDER + "/" + "serial_read.log"
+    if os.path.exists(read_path):
+        print("Found existing file %s, appending to file" % read_path)
+    else:
+        print("Did not find existing file %s, creating new file" % read_path)
+    Global.serial_read_file = open(read_path, 'a+')
+
+    print("To view these files live, run `tail -f out/serial*.log`")
+
     main_loop()
     
     for section in g_all_sections:

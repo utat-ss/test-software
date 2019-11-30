@@ -48,7 +48,8 @@ def receive_rx_packet():
     # Make sure to delay for longer than 2 seconds
     # (OBC needs to clear its UART RX buffer after 2 seconds)
     for i in range(50):
-        new = Global.serial.read(2 ** 16)
+        new = read_serial()
+        
         # print("%d new bytes" % len(new))
         uart_rx_buf += new
 
@@ -95,7 +96,7 @@ def receive_rx_packet():
 # Use `bytearray` instead of `bytes`
 def send_raw_uart(uart_bytes):
     print("Sending UART (%d bytes):" % len(uart_bytes), bytes_to_string(uart_bytes))
-    Global.serial.write(uart_bytes)
+    write_serial(uart_bytes)
 
 
 #Type and num_chars must be an integer
