@@ -6,12 +6,14 @@ from encoding import *
 
 class TXPacket(object):
     def __init__(self, opcode, arg1, arg2):
+        self.command_id = Global.command_id
         self.opcode = opcode
         self.arg1 = arg1
         self.arg2 = arg2
         self.password = Global.password
 
         self.dec_pkt = b''
+        self.dec_pkt += uint15_to_bytes(self.command_id)
         self.dec_pkt += bytes([self.opcode])
         self.dec_pkt += uint32_to_bytes(self.arg1)
         self.dec_pkt += uint32_to_bytes(self.arg2)
@@ -24,13 +26,10 @@ class RXPacket(object):
     def __init__(self, enc_msg):
         self.enc_msg = enc_msg
         self.dec_msg = decode_packet(self.enc_msg)
-        self.is_ack = bool((self.dec_msg[0] >> 7) & 0x1)
-        self.opcode = self.dec_msg[0] & 0x7F
-        self.arg1 = bytes_to_uint32(self.dec_msg[1:5])
-        self.arg2 = bytes_to_uint32(self.dec_msg[5:9])
-        self.status = int(self.dec_msg[9])
-        self.data = self.dec_msg[10:]
-        # TODO - status bytes, 10 bytes minimum
+        self.command_id = bytes_to_uint15(self.dec_msg[0:2])
+        self.status = int(self.dec_msg[2])
+        self.is_ack = bool(~((self.dec_msg[0] >> 7) & 0x1))
+        self.data = self.dec_msg[3:]
 
 
 def receive_rx_packet():
@@ -71,11 +70,13 @@ def receive_rx_packet():
             # print("Received encoded packet (%d bytes):" % len(enc_msg), bytes_to_string(enc_msg))
 
             # TODO - rename packet
-            if len(enc_msg) >= 5 and \
-                    enc_msg[0] == 0x00 and \
-                    enc_msg[1] - 0x10 == len(enc_msg) - 4 and \
-                    enc_msg[2] == 0x00 and \
-                    enc_msg[len(enc_msg) - 1] == 0x00:
+            # TODO - change this if statement for the new packet format
+            # if len(enc_msg) >= 5 and \
+            #         enc_msg[0] == 0x00 and \
+            #         enc_msg[1] - 0x10 == len(enc_msg) - 4 and \
+            #         enc_msg[2] == 0x00 and \
+            #         enc_msg[len(enc_msg) - 1] == 0x00:
+            if 1 == 1:
                 # Drop packet?
                 if (random.uniform(0,1) < Global.downlink_drop):
                     print_div()
@@ -116,6 +117,7 @@ def send_tx_packet(packet):
     else:
         print("UNKNOWN OPCODE")
 
+    print("Command Id = 0x%x (%d)" % (packet.command_id, packet.command_id))
     print("Opcode = 0x%x (%d)" % (packet.opcode, packet.opcode))
     print("Argument 1 = 0x%x (%d)" % (packet.arg1, packet.arg1))
     print("Argument 2 = 0x%x (%d)" % (packet.arg2, packet.arg2))

@@ -20,6 +20,7 @@ class Global(object):
     serial_write_file = None
     serial_read_file = None
 
+    command_id = 1 # Note that id will be incremented after it is sent
 
 def check_python3():
     # Detects if correct python version is being run
@@ -51,6 +52,13 @@ def uint24_to_bytes(num):
 # Only take 3 bytes
 def bytes_to_uint24(bytes):
     return (bytes[0] << 16) | (bytes[1] << 8) | bytes[2]
+
+def uint15_to_bytes(num):
+    return bytes([(num >> 8) & 0x7F, num & 0xFF])
+    
+# Only take 2 bytes
+def bytes_to_uint15(bytes):
+    return ((bytes[0] & 0x7F) << 8) | bytes[1]
 
 # NOTE: this is in decimal, not hex
 def date_time_to_str(data):
@@ -120,13 +128,25 @@ def packet_ack_status_to_str(status):
     if status == 0:
         return "OK"
     elif status == 1:
-        return "Invalid packet"
+        return "Successfully Reset Expected Command ID"
     elif status == 2:
-        return "Invalid decoded format"
+        return "Invalid Encoded Format"
     elif status == 3:
-        return "Invalid opcode"
+        return "Invalid Length"
     elif status == 4:
-        return "Invalid password"
+        return "Invalid Checksum"
+    elif status == 5:
+        return "Invalid Decoded Format"
+    elif status == 6:
+        return "Invalid Command ID"
+    elif status == 7:
+        return "Decremented Command ID"
+    elif status == 8:
+        return "Repeated Command ID"
+    elif status == 9:
+        return "Invalid Opcode"
+    elif status == 10:
+        return "Invalid Password"
     else:
         return "UNKNOWN"
 
@@ -134,9 +154,11 @@ def packet_resp_status_to_str(status):
     if status == 0:
         return "OK"
     elif status == 1:
-        return "Invalid arguments"
+        return "Invalid Arguments"
     elif status == 2:
-        return "Timed out"
+        return "Timed Out"
+    elif status == 0xFF:
+        return "Unknown Failure"
     else:
         return "UNKNOWN"
 

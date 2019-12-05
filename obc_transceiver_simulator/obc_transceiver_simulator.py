@@ -61,6 +61,7 @@ def sim_actions():
     print("e. Set Ground Station Password")
     print("f. Send Arbitrary Command")
     print("g. Send Raw UART")
+    print("h. Reset Command Id")
 
     cmd = input("Enter command: ")
 
@@ -127,6 +128,14 @@ def sim_actions():
         send_raw_uart(string_to_bytes(input("Enter raw hex for UART: ")))
         rx_packet = receive_rx_packet()
         process_rx_packet(rx_packet)
+
+    elif cmd == "h": # Reset Command Id
+        Global.command_id = 0
+        # TODO - figure out a better way to do this
+        opcode = 0
+        arg1 = 0
+        arg2 = 0
+        send_and_receive_packet(opcode, arg1, arg2)
     
 
 def main_loop():

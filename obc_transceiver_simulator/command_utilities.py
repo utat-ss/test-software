@@ -6,34 +6,18 @@ from sections import *
 
 
 def process_rx_packet(packet):
-    from commands import g_all_commands
-    global g_all_commands
-
     print_div()
     print("RX packet - received %s" % ("ACK" if packet.is_ack else "response"))
-
-    matched_cmds = [command.name for command in g_all_commands if command.opcode == packet.opcode]
-    if len(matched_cmds) > 0:
-        print(matched_cmds[0])
-    else:
-        print("UNKNOWN OPCODE")
 
     print("Encoded (%d bytes):" % len(packet.enc_msg), bytes_to_string(packet.enc_msg))
     print("Decoded (%d bytes):" % len(packet.dec_msg), bytes_to_string(packet.dec_msg))
 
-    print("Opcode = 0x%x (%d)" % (packet.opcode, packet.opcode))
-    print("Argument 1 = 0x%x (%d)" % (packet.arg1, packet.arg1))
-    print("Argument 2 = 0x%x (%d)" % (packet.arg2, packet.arg2))
+    print("Command Id = 0x%x (%d)" % (packet.command_id, packet.command_id))
     print("Status = 0x%x (%d) - %s" % (packet.status, packet.status, packet_to_status_str(packet)))
-    print("Data (%d bytes) = %s" % (len(packet.data), bytes_to_string(packet.data)))
+    if (len(packet.data) > 0):
+        print("Data (%d bytes) = %s" % (len(packet.data), bytes_to_string(packet.data)))
 
-    if not packet.is_ack:
-        for command in g_all_commands:
-            if command.opcode == packet.opcode:
-                command.run_rx(packet)
-                break
-        else:
-            sys.exit(1)
+    #TODO - How to tell if packet is ack
 
     print_div()
 
@@ -244,10 +228,13 @@ def send_and_receive_packet(opcode, arg1=0, arg2=0, attempts=10):
             continue
         process_rx_packet(ack_packet)
 
+        # TODO - Test if this works
         resp_packet = receive_rx_packet()
-        if resp_packet is None:
-            continue
-        process_rx_packet(resp_packet)
+        if resp_packet is not None:
+            process_rx_packet(resp_packet)
 
+        Global.command_id += 1
         return True
+
+    Global.command_id += 1
     return False
