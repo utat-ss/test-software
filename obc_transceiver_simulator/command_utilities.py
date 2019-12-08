@@ -7,17 +7,47 @@ from sections import *
 
 def process_rx_packet(packet):
     print_div()
-    print("RX packet - received %s" % ("ACK" if packet.is_ack else "response"))
+    print("RX packet - received %s" % ("ACK" if not packet.is_resp else "response"))
 
     print("Encoded (%d bytes):" % len(packet.enc_msg), bytes_to_string(packet.enc_msg))
     print("Decoded (%d bytes):" % len(packet.dec_msg), bytes_to_string(packet.dec_msg))
 
-    print("Command Id = 0x%x (%d)" % (packet.command_id, packet.command_id))
+    print("Command ID = 0x%x (%d)" % (packet.command_id, packet.command_id))
     print("Status = 0x%x (%d) - %s" % (packet.status, packet.status, packet_to_status_str(packet)))
     if (len(packet.data) > 0):
         print("Data (%d bytes) = %s" % (len(packet.data), bytes_to_string(packet.data)))
+    
+    # Look in our history of sent packets to get the TXPacket we had previously
+    # sent corresponding to this RXPacket we got back
+    if packet.command_id in Global.sent_packets.keys():
+        tx_packet = Global.sent_packets[packet.command_id]
+        opcode = tx_packet.opcode
+        arg1 = tx_packet.arg1
+        arg2 = tx_packet.arg2
 
-    #TODO - How to tell if packet is ack
+        # The RXPacket doesn't contain opcode information, so we can only
+        # retrieve it by inspecting the previously send packet for that command ID
+
+        # TODO
+        from commands import g_all_commands
+        global g_all_commands
+        matched_cmds = [command for command in g_all_commands if command.opcode == tx_packet.opcode]
+        assert len(matched_cmds) <= 1
+
+        if len(matched_cmds) > 0:
+            print(matched_cmds[0].name)
+        else:		
+            print("UNKNOWN OPCODE")
+
+        print("Opcode = 0x%x (%d)" % (opcode, opcode))
+        print("Argument 1 = 0x%x (%d)" % (arg1, arg1))		
+        print("Argument 2 = 0x%x (%d)" % (arg2, arg2))
+
+        if packet.is_resp and len(matched_cmds) > 0:
+            matched_cmds[0].run_rx(packet)		
+
+    else:
+        print("UNRECOGNIZED COMMAND ID")    
 
     print_div()
 
@@ -217,24 +247,42 @@ def read_missing_sec_cmd_log_blocks():
                 min(sec_cmd_log_section.sat_block_num - sec_cmd_log_section.file_block_num, 5)):
             return
 
-
-def send_and_receive_packet(opcode, arg1=0, arg2=0, attempts=10):
+# Can't use cmd_id=Global.cmd_id directly in the function signature, because the
+# default value is bound when the method is created
+# https://stackoverflow.com/questions/6689652/using-global-variable-as-default-parameter
+def send_and_receive_packet(opcode, arg1=0, arg2=0, cmd_id=None, attempts=10):
+    if cmd_id is None:
+        cmd_id = Global.cmd_id
     for i in range(attempts):
         # TODO - receive previous characters and discard before sending?
-        send_tx_packet(TXPacket(opcode, arg1, arg2))
+        send_tx_packet(TXPacket(cmd_id, opcode, arg1, arg2))
 
         ack_packet = receive_rx_packet()
+    
+        # If we didn't receive an ACK packet, send the request again
         if ack_packet is None:
             continue
+        
+        # Still make sure to process/print it first to see the result
         process_rx_packet(ack_packet)
+        # If the ACK packet has a failed status code, it's an invalid packet and
+        # sending it again would produce the same result, so stop attempting
+        # TODO constants
+        # TODO - maybe an exception for full command queue?
+        if ack_packet.status > 0x01:
+            break
+        
+        # If we are not requesting OBC to reset its command ID, check for a
+        # response packet
+        if cmd_id > 0:
+            # Try to receive the response packet if we can, but this might fail
+            resp_packet = receive_rx_packet()
+            if resp_packet is not None:
+                process_rx_packet(resp_packet)
 
-        # TODO - Test if this works
-        resp_packet = receive_rx_packet()
-        if resp_packet is not None:
-            process_rx_packet(resp_packet)
-
-        Global.command_id += 1
+        # At least got a successful ACK, so consider that a success
+        Global.cmd_id += 1
         return True
 
-    Global.command_id += 1
+    Global.cmd_id += 1
     return False

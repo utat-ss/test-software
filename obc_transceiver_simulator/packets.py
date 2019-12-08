@@ -5,15 +5,15 @@ from encoding import *
 
 
 class TXPacket(object):
-    def __init__(self, opcode, arg1, arg2):
-        self.command_id = Global.command_id
+    def __init__(self, cmd_id, opcode, arg1, arg2, password=Global.password):
+        self.cmd_id = cmd_id
         self.opcode = opcode
         self.arg1 = arg1
         self.arg2 = arg2
-        self.password = Global.password
+        self.password = password
 
         self.dec_pkt = b''
-        self.dec_pkt += uint15_to_bytes(self.command_id)
+        self.dec_pkt += uint15_to_bytes(self.cmd_id)
         self.dec_pkt += bytes([self.opcode])
         self.dec_pkt += uint32_to_bytes(self.arg1)
         self.dec_pkt += uint32_to_bytes(self.arg2)
@@ -28,7 +28,8 @@ class RXPacket(object):
         self.dec_msg = decode_packet(self.enc_msg)
         self.command_id = bytes_to_uint15(self.dec_msg[0:2])
         self.status = int(self.dec_msg[2])
-        self.is_ack = bool(~((self.dec_msg[0] >> 7) & 0x1))
+        # False for ACK, True for response
+        self.is_resp = bool((self.dec_msg[0] >> 7) & 0x1)
         self.data = self.dec_msg[3:]
 
 
@@ -117,7 +118,7 @@ def send_tx_packet(packet):
     else:
         print("UNKNOWN OPCODE")
 
-    print("Command Id = 0x%x (%d)" % (packet.command_id, packet.command_id))
+    print("Command Id = 0x%x (%d)" % (packet.cmd_id, packet.cmd_id))
     print("Opcode = 0x%x (%d)" % (packet.opcode, packet.opcode))
     print("Argument 1 = 0x%x (%d)" % (packet.arg1, packet.arg1))
     print("Argument 2 = 0x%x (%d)" % (packet.arg2, packet.arg2))
@@ -133,6 +134,10 @@ def send_tx_packet(packet):
         Global.dropped_uplink_packets += 1
     else:
         send_raw_uart(packet.enc_pkt)
+    
+    # Whether the send actually worked or dropped, we still think we sent it so
+    # add it to our dictionary mapping command IDs to send packets
+    Global.sent_packets[packet.cmd_id] = packet
     
     Global.total_uplink_packets += 1
 

@@ -20,7 +20,10 @@ class Global(object):
     serial_write_file = None
     serial_read_file = None
 
-    command_id = 1 # Note that id will be incremented after it is sent
+    cmd_id = 1 # Note that id will be incremented after it is sent
+
+    # Maps command ID to TXPacket
+    sent_packets = {}
 
 def check_python3():
     # Detects if correct python version is being run
@@ -163,7 +166,7 @@ def packet_resp_status_to_str(status):
         return "UNKNOWN"
 
 def packet_to_status_str(packet):
-    if packet.is_ack:
+    if not packet.is_resp:
         return packet_ack_status_to_str(packet.status)
     else:
         return packet_resp_status_to_str(packet.status)
