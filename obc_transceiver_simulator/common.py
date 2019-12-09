@@ -223,3 +223,10 @@ def read_serial():
     Global.serial_read_file.write(str(data))
     Global.serial_read_file.flush()
     return data
+
+
+def tx_packet_for_rx_packet(rx_packet):
+    if rx_packet.command_id in Global.sent_packets.keys():
+        return Global.sent_packets[rx_packet.command_id]
+    else:
+        return None

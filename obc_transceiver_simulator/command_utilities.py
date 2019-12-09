@@ -5,22 +5,22 @@ from packets import *
 from sections import *
 
 
-def process_rx_packet(packet):
+def process_rx_packet(rx_packet):
     print_div()
-    print("RX packet - received %s" % ("ACK" if not packet.is_resp else "response"))
+    print("RX packet - received %s" % ("ACK" if not rx_packet.is_resp else "response"))
 
-    print("Encoded (%d bytes):" % len(packet.enc_msg), bytes_to_string(packet.enc_msg))
-    print("Decoded (%d bytes):" % len(packet.dec_msg), bytes_to_string(packet.dec_msg))
+    print("Encoded (%d bytes):" % len(rx_packet.enc_msg), bytes_to_string(rx_packet.enc_msg))
+    print("Decoded (%d bytes):" % len(rx_packet.dec_msg), bytes_to_string(rx_packet.dec_msg))
 
-    print("Command ID = 0x%x (%d)" % (packet.command_id, packet.command_id))
-    print("Status = 0x%x (%d) - %s" % (packet.status, packet.status, packet_to_status_str(packet)))
-    if (len(packet.data) > 0):
-        print("Data (%d bytes) = %s" % (len(packet.data), bytes_to_string(packet.data)))
+    print("Command ID = 0x%x (%d)" % (rx_packet.command_id, rx_packet.command_id))
+    print("Status = 0x%x (%d) - %s" % (rx_packet.status, rx_packet.status, packet_to_status_str(rx_packet)))
+    if (len(rx_packet.data) > 0):
+        print("Data (%d bytes) = %s" % (len(rx_packet.data), bytes_to_string(rx_packet.data)))
     
     # Look in our history of sent packets to get the TXPacket we had previously
     # sent corresponding to this RXPacket we got back
-    if packet.command_id in Global.sent_packets.keys():
-        tx_packet = Global.sent_packets[packet.command_id]
+    tx_packet = tx_packet_for_rx_packet(rx_packet)
+    if tx_packet is not None:
         opcode = tx_packet.opcode
         arg1 = tx_packet.arg1
         arg2 = tx_packet.arg2
@@ -43,8 +43,8 @@ def process_rx_packet(packet):
         print("Argument 1 = 0x%x (%d)" % (arg1, arg1))		
         print("Argument 2 = 0x%x (%d)" % (arg2, arg2))
 
-        if packet.is_resp and len(matched_cmds) > 0:
-            matched_cmds[0].run_rx(packet)		
+        if rx_packet.is_resp and len(matched_cmds) > 0:
+            matched_cmds[0].run_rx(rx_packet)
 
     else:
         print("UNRECOGNIZED COMMAND ID")    
@@ -57,10 +57,12 @@ def print_header(header):
     print("Time = %s" % date_time_to_str(header[6:9]))
     print("Status = 0x%x (%d)" % (header[9], header[9]))
 
-def process_data_block(packet):
-    (header, fields) = parse_data(packet.data)
-    block_type = packet.arg1
-    block_num = packet.arg2
+def process_data_block(rx_packet):
+    tx_packet = tx_packet_for_rx_packet(rx_packet)
+
+    (header, fields) = parse_data(rx_packet.data)
+    block_type = tx_packet.arg1
+    block_num = tx_packet.arg2
     print("Expected block number:", block_num)
     print_header(header)
 
