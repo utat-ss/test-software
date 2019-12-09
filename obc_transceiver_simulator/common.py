@@ -222,12 +222,19 @@ def print_div():
 
 def write_serial(data):
     Global.serial.write(data)
-    Global.serial_write_file.write(str(data))
+
+    # Calling str(data) will give a string like: "b'U\\x0fU\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00UTATUB\\xbd\\xf2\\x1cU'"
+    # Want to remove b' at the beginning and ' at the end so they don't appear in the output
+    # Can't decide to utf-8 because bytes > 127 will give an error
+    data_str = str(data)[2:-1]
+    Global.serial_write_file.write(data_str)
     Global.serial_write_file.flush()
 
 def read_serial():
     data = Global.serial.read(2 ** 16)
-    Global.serial_read_file.write(str(data))
+
+    data_str = str(data)[2:-1]
+    Global.serial_read_file.write(data_str)
     Global.serial_read_file.flush()
     return data
 
