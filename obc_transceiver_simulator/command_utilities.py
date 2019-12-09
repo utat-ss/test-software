@@ -164,20 +164,25 @@ def process_data_block(rx_packet):
         # Write to file
         pay_opt_section.write_block_to_file(block_num, header, converted)
 
-def process_cmd_block(packet):
-    print("Expected starting block number:", packet.arg1)
-    print("Expected block count:", packet.arg2)
-    assert len(packet.data) % 19 == 0
+def process_cmd_block(rx_packet):
+    tx_packet = tx_packet_for_rx_packet(rx_packet)
 
-    count = len(packet.data) // 19
+    print("Expected starting block number:", tx_packet.arg1)
+    print("Expected block count:", tx_packet.arg2)
+
+    CMD_BLOCK_LEN = 21  # 10 byte header + 11 byte data
+    assert len(rx_packet.data) % CMD_BLOCK_LEN == 0
+
+    count = len(rx_packet.data) // CMD_BLOCK_LEN
     print("%d blocks" % count)
     for i in range(count):
-        block_data = packet.data[i * 19 : (i + 1) * 19]
+        block_data = rx_packet.data[i * CMD_BLOCK_LEN : (i + 1) * CMD_BLOCK_LEN]
 
         header = block_data[0:10]
-        opcode = block_data[10]
-        arg1 = bytes_to_uint32(block_data[11:15])
-        arg2 = bytes_to_uint32(block_data[15:19])
+        cmd_id = bytes_to_uint16(block_data[10:12])
+        opcode = block_data[12]
+        arg1 = bytes_to_uint32(block_data[13:17])
+        arg2 = bytes_to_uint32(block_data[17:21])
 
         # Get command name string for opcode
         matches = [command for command in g_all_commands if command.opcode == opcode]
@@ -189,14 +194,15 @@ def process_cmd_block(packet):
 
         print_div()
         print_header(header)
+        print("Command ID = 0x%x (%d)" % (cmd_id, cmd_id))
         print("Opcode = 0x%x (%d)" % (opcode, opcode))
         print("Argument 1 = 0x%x (%d)" % (arg1, arg1))
         print("Argument 2 = 0x%x (%d)" % (arg2, arg2))
 
-        if packet.opcode == CommandOpcode.READ_PRIM_CMD_BLOCKS:
-            prim_cmd_log_section.write_block_to_file(packet.arg1 + i, header, converted)
-        elif packet.opcode == CommandOpcode.READ_SEC_CMD_BLOCKS:
-            sec_cmd_log_section.write_block_to_file(packet.arg1 + i, header, converted)
+        if tx_packet.opcode == CommandOpcode.READ_PRIM_CMD_BLOCKS:
+            prim_cmd_log_section.write_block_to_file(tx_packet.arg1 + i, header, converted)
+        elif tx_packet.opcode == CommandOpcode.READ_SEC_CMD_BLOCKS:
+            sec_cmd_log_section.write_block_to_file(tx_packet.arg1 + i, header, converted)
         else:
             sys.exit(1)
 

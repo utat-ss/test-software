@@ -56,10 +56,17 @@ def uint24_to_bytes(num):
 def bytes_to_uint24(bytes):
     return (bytes[0] << 16) | (bytes[1] << 8) | bytes[2]
 
+def uint16_to_bytes(num):
+    return bytes([(num >> 8) & 0xFF, num & 0xFF])
+
+# Only take 2 bytes
+def bytes_to_uint16(bytes):
+    return ((bytes[0] & 0xFF) << 8) | bytes[1]
+
 def uint15_to_bytes(num):
     return bytes([(num >> 8) & 0x7F, num & 0xFF])
     
-# Only take 2 bytes
+# Only take 2 bytes minus 1 bit
 def bytes_to_uint15(bytes):
     return ((bytes[0] & 0x7F) << 8) | bytes[1]
 
