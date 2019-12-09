@@ -19,7 +19,14 @@ def crc32(message, len):
          crc = (crc >> 1) ^ (0xEDB88320 & mask)
       i = i + 1
    
-   return ~crc
+   crc = ~crc
+
+   # Python might treat this as a negative number, so make it the positive
+   # 32-bit equivalent if necessary
+   if crc < 0:
+       crc += (1 << 32)
+    
+   return crc
 
 
 def encode_packet(dec_msg):
