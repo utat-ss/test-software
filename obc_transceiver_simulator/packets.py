@@ -5,13 +5,15 @@ from encoding import *
 
 
 class TXPacket(object):
-    def __init__(self, opcode, arg1, arg2):
+    def __init__(self, cmd_id, opcode, arg1, arg2, password=Global.password):
+        self.cmd_id = cmd_id
         self.opcode = opcode
         self.arg1 = arg1
         self.arg2 = arg2
-        self.password = Global.password
+        self.password = password
 
         self.dec_pkt = b''
+        self.dec_pkt += uint15_to_bytes(self.cmd_id)
         self.dec_pkt += bytes([self.opcode])
         self.dec_pkt += uint32_to_bytes(self.arg1)
         self.dec_pkt += uint32_to_bytes(self.arg2)
@@ -24,13 +26,11 @@ class RXPacket(object):
     def __init__(self, enc_msg):
         self.enc_msg = enc_msg
         self.dec_msg = decode_packet(self.enc_msg)
-        self.is_ack = bool((self.dec_msg[0] >> 7) & 0x1)
-        self.opcode = self.dec_msg[0] & 0x7F
-        self.arg1 = bytes_to_uint32(self.dec_msg[1:5])
-        self.arg2 = bytes_to_uint32(self.dec_msg[5:9])
-        self.status = int(self.dec_msg[9])
-        self.data = self.dec_msg[10:]
-        # TODO - status bytes, 10 bytes minimum
+        self.command_id = bytes_to_uint15(self.dec_msg[0:2])
+        self.status = int(self.dec_msg[2])
+        # False for ACK, True for response
+        self.is_resp = bool((self.dec_msg[0] >> 7) & 0x1)
+        self.data = self.dec_msg[3:]
 
 
 def receive_rx_packet():
@@ -43,50 +43,76 @@ def receive_rx_packet():
     # See https://www.avrfreaks.net/forum/serial-port-data-corrupted-when-sending-specific-pattern-bytes
     # See https://stackoverflow.com/questions/14454957/pyserial-formatting-bytes-over-127-return-as-2-bytes-rather-then-one
     
-    enc_msg = bytes(0)
-
     # Make sure to delay for longer than 2 seconds
     # (OBC needs to clear its UART RX buffer after 2 seconds)
     for i in range(50):
         new = read_serial()
-        
         # print("%d new bytes" % len(new))
         uart_rx_buf += new
 
-        # Get indices of all '\r' (<CR>) bytes
-        cr_indices = [i for i in range(len(uart_rx_buf)) if uart_rx_buf[i] == ord('\r')]
+        # Get indices of all delimiter (0x55) bytes
+        delim_indices = [i for i in range(len(uart_rx_buf)) if uart_rx_buf[i] == 0x55]
         # print("cr_indices =", cr_indices)
 
-        # Need 2 <CR> bytes to start/end message
-        if len(cr_indices) >= 2:
-            # Get first 2 CR characters
-            start_index = cr_indices[0]
-            end_index = cr_indices[1]
-            # print("Detected two <CR> characters")
+        # Note that there might be 0x55 bytes in the decoded message data, so this can be tricky to detect
+
+        # Need at least 4 delimiter bytes to form packet, but note this might include 0x55 data bytes
+        if len(delim_indices) >= 4:
+            # print("Detected 4 delim characters")
             # print("Received UART (raw):", bytes_to_string(uart_rx_buf))
 
-            enc_msg = uart_rx_buf[start_index + 1 : end_index]
-            uart_rx_buf = uart_rx_buf[end_index + 1 : ]
+            start = delim_indices[0]
+            dec_len = uart_rx_buf[start + 1]
+            end = start + dec_len + 9 - 1   # should be index of ending 0x55 if it's a valid packet
 
-            # print("Received encoded packet (%d bytes):" % len(enc_msg), bytes_to_string(enc_msg))
+            # If the delimiters are in the right places and the length byte
+            # matches the number of bytes in the decoded section
+            # Also need to have enough bytes in the buffer
+            if uart_rx_buf[start] == 0x55 and \
+                    uart_rx_buf[start + 2] == 0x55 and \
+                    end < len(uart_rx_buf):
 
-            # TODO - rename packet
-            if len(enc_msg) >= 5 and \
-                    enc_msg[0] == 0x00 and \
-                    enc_msg[1] - 0x10 == len(enc_msg) - 4 and \
-                    enc_msg[2] == 0x00 and \
-                    enc_msg[len(enc_msg) - 1] == 0x00:
-                # Drop packet?
-                if (random.uniform(0,1) < Global.downlink_drop):
-                    print_div()
-                    print("Downlink Packet Dropped")
-                    Global.dropped_downlink_packets += 1
-                    Global.total_downlink_packets += 1
-                    return None
+                if uart_rx_buf[end + 1 - 6] == 0x55 and \
+                        uart_rx_buf[end + 1 - 1] == 0x55:
                     
-                print("Successfully received RX packet")
-                Global.total_downlink_packets += 1
-                return RXPacket(enc_msg)
+                    enc_pkt = uart_rx_buf[start : end + 1]
+                    enc_len = len(enc_pkt)
+
+                    # print("Received encoded packet (%d bytes):" % len(enc_pkt), bytes_to_string(enc_pkt))
+
+                    # Bytes to calculate the checksum on
+                    csum_bytes = bytes([enc_pkt[1]]) + enc_pkt[3 : enc_len - 6]
+                    # Calculate expected checksum
+                    calc_csum = crc32(csum_bytes, len(csum_bytes))
+                    # print("Calculated checksum is 0x%x" % calc_csum)
+
+                    rcvd_csum = bytes_to_uint32(enc_pkt[enc_len - 5 : enc_len - 1])
+                    # print("Received checksum is 0x%x" % rcvd_csum)
+
+                    # See if checksum is correct
+                    if rcvd_csum == calc_csum:
+                        print("Correct checksum")
+                    else:
+                        print("WRONG CHECKSUM")
+                        sys.exit(1)
+
+                    # Drop packet?
+                    if (random.uniform(0,1) < Global.downlink_drop):
+                        print_div()
+                        print("Downlink Packet Dropped")
+                        Global.dropped_downlink_packets += 1
+                        Global.total_downlink_packets += 1
+                        return None
+
+                    # If did not drop packet
+                    print("Successfully received RX packet")
+                    Global.total_downlink_packets += 1
+                    return RXPacket(enc_pkt)
+
+                # If we received enough bytes but it is not in packet format,
+                # discard some bytes so it will check again on the next loop iteration
+                else:
+                    uart_rx_buf = uart_rx_buf[delim_indices[1] : ]
 
     # print("Received UART (raw):", bytes_to_string(uart_rx_buf))
     print("No RX packet found")
@@ -116,6 +142,7 @@ def send_tx_packet(packet):
     else:
         print("UNKNOWN OPCODE")
 
+    print("Command Id = 0x%x (%d)" % (packet.cmd_id, packet.cmd_id))
     print("Opcode = 0x%x (%d)" % (packet.opcode, packet.opcode))
     print("Argument 1 = 0x%x (%d)" % (packet.arg1, packet.arg1))
     print("Argument 2 = 0x%x (%d)" % (packet.arg2, packet.arg2))
@@ -131,6 +158,10 @@ def send_tx_packet(packet):
         Global.dropped_uplink_packets += 1
     else:
         send_raw_uart(packet.enc_pkt)
+    
+    # Whether the send actually worked or dropped, we still think we sent it so
+    # add it to our dictionary mapping command IDs to send packets
+    Global.sent_packets[packet.cmd_id] = packet
     
     Global.total_uplink_packets += 1
 

@@ -35,6 +35,16 @@ except ImportError:
     sys.exit(1)
 
 
+# Resets for both the satellite and the simulator
+def reset_cmd_id():
+    opcode = 0
+    arg1 = 0
+    arg2 = 0
+    cmd_id = 0
+    send_and_receive_packet(opcode, arg1, arg2, cmd_id)
+    
+    Global.cmd_id = 1
+
 def sim_data_col():
     print("a. Print File Info")
     print("b. Read Missing Blocks")
@@ -61,6 +71,7 @@ def sim_actions():
     print("e. Set Ground Station Password")
     print("f. Send Arbitrary Command")
     print("g. Send Raw UART")
+    print("h. Reset Satellite Command Id")
 
     cmd = input("Enter command: ")
 
@@ -118,15 +129,19 @@ def sim_actions():
         assert len(Global.password) == 4
 
     elif cmd == "f":  # Arbitrary command
+        cmd_id = input_int("Enter command ID: ")
         opcode = input_int("Enter opcode: ")
         arg1 = input_int("Enter argument 1: ")
         arg2 = input_int("Enter argument 2: ")
-        send_and_receive_packet(opcode, arg1, arg2)
+        send_and_receive_packet(opcode, arg1, arg2, cmd_id=cmd_id)
 
     elif cmd == "g":  # Raw UART
         send_raw_uart(string_to_bytes(input("Enter raw hex for UART: ")))
         rx_packet = receive_rx_packet()
         process_rx_packet(rx_packet)
+
+    elif cmd == "h": # Reset Command Id
+        reset_cmd_id()
     
 
 def main_loop():
@@ -223,6 +238,10 @@ if __name__ == "__main__":
     Global.serial_read_file = open(read_path, 'a+')
 
     print("To view these files live, run `tail -f out/serial*.log`")
+
+    # Just do this at the beginning
+    # If we restart the simulator it won't restart OBC, so just sync them up
+    reset_cmd_id()
 
     main_loop()
     

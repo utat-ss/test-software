@@ -5,35 +5,49 @@ from packets import *
 from sections import *
 
 
-def process_rx_packet(packet):
-    from commands import g_all_commands
-    global g_all_commands
-
+def process_rx_packet(rx_packet):
     print_div()
-    print("RX packet - received %s" % ("ACK" if packet.is_ack else "response"))
+    print("RX packet - received %s" % ("ACK" if not rx_packet.is_resp else "response"))
 
-    matched_cmds = [command.name for command in g_all_commands if command.opcode == packet.opcode]
-    if len(matched_cmds) > 0:
-        print(matched_cmds[0])
+    print("Encoded (%d bytes):" % len(rx_packet.enc_msg), bytes_to_string(rx_packet.enc_msg))
+    print("Decoded (%d bytes):" % len(rx_packet.dec_msg), bytes_to_string(rx_packet.dec_msg))
+
+    print("Command ID = 0x%x (%d)" % (rx_packet.command_id, rx_packet.command_id))
+    print("Status = 0x%x (%d) - %s" % (rx_packet.status, rx_packet.status, packet_to_status_str(rx_packet)))
+    if (len(rx_packet.data) > 0):
+        print("Data (%d bytes) = %s" % (len(rx_packet.data), bytes_to_string(rx_packet.data)))
+    
+    # Look in our history of sent packets to get the TXPacket we had previously
+    # sent corresponding to this RXPacket we got back
+    tx_packet = tx_packet_for_rx_packet(rx_packet)
+    if tx_packet is not None:
+        opcode = tx_packet.opcode
+        arg1 = tx_packet.arg1
+        arg2 = tx_packet.arg2
+
+        # The RXPacket doesn't contain opcode information, so we can only
+        # retrieve it by inspecting the previously send packet for that command ID
+
+        # TODO
+        from commands import g_all_commands
+        global g_all_commands
+        matched_cmds = [command for command in g_all_commands if command.opcode == tx_packet.opcode]
+        assert len(matched_cmds) <= 1
+
+        if len(matched_cmds) > 0:
+            print(matched_cmds[0].name)
+        else:		
+            print("UNKNOWN OPCODE")
+
+        print("Opcode = 0x%x (%d)" % (opcode, opcode))
+        print("Argument 1 = 0x%x (%d)" % (arg1, arg1))		
+        print("Argument 2 = 0x%x (%d)" % (arg2, arg2))
+
+        if rx_packet.is_resp and len(matched_cmds) > 0:
+            matched_cmds[0].run_rx(rx_packet)
+
     else:
-        print("UNKNOWN OPCODE")
-
-    print("Encoded (%d bytes):" % len(packet.enc_msg), bytes_to_string(packet.enc_msg))
-    print("Decoded (%d bytes):" % len(packet.dec_msg), bytes_to_string(packet.dec_msg))
-
-    print("Opcode = 0x%x (%d)" % (packet.opcode, packet.opcode))
-    print("Argument 1 = 0x%x (%d)" % (packet.arg1, packet.arg1))
-    print("Argument 2 = 0x%x (%d)" % (packet.arg2, packet.arg2))
-    print("Status = 0x%x (%d) - %s" % (packet.status, packet.status, packet_to_status_str(packet)))
-    print("Data (%d bytes) = %s" % (len(packet.data), bytes_to_string(packet.data)))
-
-    if not packet.is_ack:
-        for command in g_all_commands:
-            if command.opcode == packet.opcode:
-                command.run_rx(packet)
-                break
-        else:
-            sys.exit(1)
+        print("UNRECOGNIZED COMMAND ID")    
 
     print_div()
 
@@ -43,10 +57,12 @@ def print_header(header):
     print("Time = %s" % date_time_to_str(header[6:9]))
     print("Status = 0x%x (%d)" % (header[9], header[9]))
 
-def process_data_block(packet):
-    (header, fields) = parse_data(packet.data)
-    block_type = packet.arg1
-    block_num = packet.arg2
+def process_data_block(rx_packet):
+    tx_packet = tx_packet_for_rx_packet(rx_packet)
+
+    (header, fields) = parse_data(rx_packet.data)
+    block_type = tx_packet.arg1
+    block_num = tx_packet.arg2
     print("Expected block number:", block_num)
     print_header(header)
 
@@ -148,20 +164,25 @@ def process_data_block(packet):
         # Write to file
         pay_opt_section.write_block_to_file(block_num, header, converted)
 
-def process_cmd_block(packet):
-    print("Expected starting block number:", packet.arg1)
-    print("Expected block count:", packet.arg2)
-    assert len(packet.data) % 19 == 0
+def process_cmd_block(rx_packet):
+    tx_packet = tx_packet_for_rx_packet(rx_packet)
 
-    count = len(packet.data) // 19
+    print("Expected starting block number:", tx_packet.arg1)
+    print("Expected block count:", tx_packet.arg2)
+
+    CMD_BLOCK_LEN = 21  # 10 byte header + 11 byte data
+    assert len(rx_packet.data) % CMD_BLOCK_LEN == 0
+
+    count = len(rx_packet.data) // CMD_BLOCK_LEN
     print("%d blocks" % count)
     for i in range(count):
-        block_data = packet.data[i * 19 : (i + 1) * 19]
+        block_data = rx_packet.data[i * CMD_BLOCK_LEN : (i + 1) * CMD_BLOCK_LEN]
 
         header = block_data[0:10]
-        opcode = block_data[10]
-        arg1 = bytes_to_uint32(block_data[11:15])
-        arg2 = bytes_to_uint32(block_data[15:19])
+        cmd_id = bytes_to_uint16(block_data[10:12])
+        opcode = block_data[12]
+        arg1 = bytes_to_uint32(block_data[13:17])
+        arg2 = bytes_to_uint32(block_data[17:21])
 
         # Get command name string for opcode
         matches = [command for command in g_all_commands if command.opcode == opcode]
@@ -173,14 +194,15 @@ def process_cmd_block(packet):
 
         print_div()
         print_header(header)
+        print("Command ID = 0x%x (%d)" % (cmd_id, cmd_id))
         print("Opcode = 0x%x (%d)" % (opcode, opcode))
         print("Argument 1 = 0x%x (%d)" % (arg1, arg1))
         print("Argument 2 = 0x%x (%d)" % (arg2, arg2))
 
-        if packet.opcode == CommandOpcode.READ_PRIM_CMD_BLOCKS:
-            prim_cmd_log_section.write_block_to_file(packet.arg1 + i, header, converted)
-        elif packet.opcode == CommandOpcode.READ_SEC_CMD_BLOCKS:
-            sec_cmd_log_section.write_block_to_file(packet.arg1 + i, header, converted)
+        if tx_packet.opcode == CommandOpcode.READ_PRIM_CMD_BLOCKS:
+            prim_cmd_log_section.write_block_to_file(tx_packet.arg1 + i, header, converted)
+        elif tx_packet.opcode == CommandOpcode.READ_SEC_CMD_BLOCKS:
+            sec_cmd_log_section.write_block_to_file(tx_packet.arg1 + i, header, converted)
         else:
             sys.exit(1)
 
@@ -233,21 +255,42 @@ def read_missing_sec_cmd_log_blocks():
                 min(sec_cmd_log_section.sat_block_num - sec_cmd_log_section.file_block_num, 5)):
             return
 
-
-def send_and_receive_packet(opcode, arg1=0, arg2=0, attempts=10):
+# Can't use cmd_id=Global.cmd_id directly in the function signature, because the
+# default value is bound when the method is created
+# https://stackoverflow.com/questions/6689652/using-global-variable-as-default-parameter
+def send_and_receive_packet(opcode, arg1=0, arg2=0, cmd_id=None, attempts=10):
+    if cmd_id is None:
+        cmd_id = Global.cmd_id
     for i in range(attempts):
         # TODO - receive previous characters and discard before sending?
-        send_tx_packet(TXPacket(opcode, arg1, arg2))
+        send_tx_packet(TXPacket(cmd_id, opcode, arg1, arg2))
 
         ack_packet = receive_rx_packet()
+    
+        # If we didn't receive an ACK packet, send the request again
         if ack_packet is None:
             continue
+        
+        # Still make sure to process/print it first to see the result
         process_rx_packet(ack_packet)
+        # If the ACK packet has a failed status code, it's an invalid packet and
+        # sending it again would produce the same result, so stop attempting
+        # TODO constants
+        # TODO - maybe an exception for full command queue?
+        if ack_packet.status > 0x01:
+            break
+        
+        # If we are not requesting OBC to reset its command ID, check for a
+        # response packet
+        if cmd_id > 0:
+            # Try to receive the response packet if we can, but this might fail
+            resp_packet = receive_rx_packet()
+            if resp_packet is not None:
+                process_rx_packet(resp_packet)
 
-        resp_packet = receive_rx_packet()
-        if resp_packet is None:
-            continue
-        process_rx_packet(resp_packet)
-
+        # At least got a successful ACK, so consider that a success
+        Global.cmd_id += 1
         return True
+
+    Global.cmd_id += 1
     return False

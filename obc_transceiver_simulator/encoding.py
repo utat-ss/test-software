@@ -3,117 +3,106 @@ Encoding and decoding operations for transceiver messages.
 This attempts to follow obc/src/transceiver.c as closely as possible.
 """
 
+# Calculates the checksum for the string message.
+# Algorithm modified for python from:
+# https://stackoverflow.com/questions/21001659/crc32-algorithm-implementation-in-c-without-a-look-up-table-and-with-a-public-li
+
+def crc32(message, len):
+   crc = 0xFFFFFFFF
+
+   i = 0
+   while message[i] != 0 and i < len:
+      byte = message[i]
+      crc = crc ^ byte
+      for j in range (0, 8):
+         mask = -(crc & 1)
+         crc = (crc >> 1) ^ (0xEDB88320 & mask)
+      i = i + 1
+   
+   crc = ~crc
+
+   # Python might treat this as a negative number, so make it the positive
+   # 32-bit equivalent if necessary
+   if crc < 0:
+       crc += (1 << 32)
+    
+   return crc
 
 
 def encode_packet(dec_msg):
-    enc_msg = []    # Convert to bytes later
+    TRANS_RX_DEC_MSG_MAX_SIZE = 15 #make this some kind of constant later
+    TRANS_PKT_DELIMITER = 0x55
 
-    # 64 bit integer that will hold the 56 bit values from the byte groups
-    base_conversion_buff = 0
-    # Number of 7 byte groups in the decoded message
-    num_byte_groups = len(dec_msg) // 7
-    # Number of bytes leftover
-    num_remainder_bytes = len(dec_msg) % 7
-    # Encoded length
-    enc_len = (num_byte_groups * 8 + num_remainder_bytes + 1) if (num_remainder_bytes > 0) else (num_byte_groups * 8)
+    # Decoded length
+    dec_len = len(dec_msg)
+    enc_len = dec_len + 9
+
+    enc_msg = [0x00] * enc_len    # Convert to bytes later
+
+    checksum_buf = [0x00] * (TRANS_RX_DEC_MSG_MAX_SIZE + 1)
+    checksum_buf[0] = dec_len
+    i = 0
+    while i < dec_len and 1 + i < len(checksum_buf):
+        checksum_buf[1 + i] = dec_msg[i]
+        i += 1
+
+    checksum = crc32(checksum_buf, 1 + dec_len)
 
     # All encoded messages start with 0x00
-    enc_msg.append(0)
+    enc_msg[0] = TRANS_PKT_DELIMITER
     # Next field is the length. This value will later be mapped similar to the other bytes.
-    enc_msg.append(enc_len + 0x10)
-    enc_msg.append(0)
+    enc_msg[1] = dec_len
+    enc_msg[2] = TRANS_PKT_DELIMITER
+    for i in range (0, dec_len):
+        enc_msg[3 + i] = dec_msg[i]
 
-    # Set up array of powers of 254
-    # [0] = 254^0, [7] = 254^7
-    pow_254 = [0 for i in range(8)]
-    pow_254[0] = 1
-    for i in range(1, 8):
-        pow_254[i] = pow_254[i - 1] * 254
-
-    # Convert each of the 7 base-256 digits to 8 base-254 digits
-    for i_group in range(0, num_byte_groups):
-        base_conversion_buff = 0
-
-        for i_byte in range(0, 7):
-            base_conversion_buff += dec_msg[ (7 * i_group) + i_byte] * (1 << ((6 - i_byte) * 8))  
-        
-        for i_byte in range(0, 8):
-            enc_msg.append((base_conversion_buff // pow_254[7 - i_byte]) % 254)
-    
-
-    # encode the remainining bytes
-    if(num_remainder_bytes > 0):
-        base_conversion_buff = 0
-        for i_byte in range(0, num_remainder_bytes):
-            base_conversion_buff += dec_msg[num_byte_groups*7 + i_byte] * (1 << ((num_remainder_bytes - 1 - i_byte) * 8))
-        
-        for i_byte in range(0, num_remainder_bytes + 1):
-            enc_msg.append((base_conversion_buff // pow_254[num_remainder_bytes - i_byte]) % 254)
-    
-
-    # Perform the mapping to avoid values 0 and 13. 0-11 -> 1-12, 12-253 -> 14-255
-    # Note that the length of the message is not put through this mapping. The other digit that doesn't get mapped is the 0x00.
-    for i in range(3, 3 + enc_len):
-        if( enc_msg[i] >= 0 and enc_msg[i] <= 11 ):
-            enc_msg[i] += 1
-        
-        elif( enc_msg[i] >= 12 and enc_msg[i] <= 253 ):
-            enc_msg[i] += 2
-        
-    enc_msg.append(0x00)
+    enc_msg[enc_len - 6] = TRANS_PKT_DELIMITER
+    enc_msg[enc_len - 5] = (checksum >> 24) & 0xFF
+    enc_msg[enc_len - 4] = (checksum >> 16) & 0xFF
+    enc_msg[enc_len - 3] = (checksum >> 8) & 0xFF
+    enc_msg[enc_len - 2] = (checksum >> 0) & 0xFF
+    enc_msg[enc_len - 1] = TRANS_PKT_DELIMITER
 
     return bytes(enc_msg)
 
-
 def decode_packet(enc_msg):
+    # Make these constants later
+    CMD_CMD_ID_UNKNOWN = [0x00, 0x00]
+    CMD_ACK_STATUS_INVALID_CSUM = [0x04]
+    TRANS_RX_DEC_MSG_MAX_SIZE = 15
     # Easier to work with encoded message as a list of ints rather than bytes
     enc_msg = list(enc_msg)
-    dec_msg = []
 
-    # length of base-254 encoded message can be extracted from the first field, the mapping is undone
-    enc_len = enc_msg[1] - 0x10
-    # 64 bit integer that will hold the 56 bit values from the byte group
-    base_conversion_buff = 0
-    # concatenate the message into 8 byte groups and leftovers, then calculate length
-    num_byte_groups = enc_len // 8
-    num_remainder_bytes = enc_len % 8
+    enc_len = len(enc_msg)
+    dec_len = enc_msg[1]
 
-    # TODO - what if 1 remainder byte?
-    if (num_remainder_bytes == 0):
-        dec_len = num_byte_groups * 7
-    else:
-        dec_len = (num_byte_groups * 7) + (num_remainder_bytes - 1)
+    dec_msg = [0x00] * dec_len
 
-    # unmap the values in the buffer
-    for i in range(0, enc_len):
-        if(enc_msg[3 + i] >= 1 and enc_msg[3 + i] <= 12):
-            enc_msg[3 + i] -= 1
-        elif(enc_msg[3 + i] >= 14 and enc_msg[3 + i] <= 255):
-            enc_msg[3 + i] -= 2
-    
+    # Check invalid length
+    if dec_len != enc_len - 9:
+        # NACK
+        return bytes(CMD_CMD_ID_UNKNOWN + CMD_ACK_STATUS_INVALID_CSUM)
 
-    # Set up array of powers of 254
-    # [0] = 254^0, [7] = 254^7
-    pow_254 = [0x00 for i in range(8)]
-    pow_254[0] = 1
-    for i in range(1, 8):
-        pow_254[i] = pow_254[i - 1] * 254
-    
-    for i_group in range(0, num_byte_groups):
-        base_conversion_buff = 0
+    actual_checksum = (enc_msg[enc_len - 5] << 24) | (enc_msg[enc_len - 4] << 16) | (enc_msg[enc_len - 3] << 8) | enc_msg[enc_len - 2]
 
-        for i_byte in range(0, 8):
-            base_conversion_buff += enc_msg[ 3 + (8 * i_group) + i_byte ] * pow_254[7 - i_byte]
-        
-        for i_byte in range(0, 7):
-            dec_msg.append((base_conversion_buff // (1 << ((6 - i_byte) * 8))) % 256)
-        
-    if (num_remainder_bytes > 1):
-        base_conversion_buff = 0
-        for i_byte in range(0, num_remainder_bytes):
-            base_conversion_buff += enc_msg[ 3 + (num_byte_groups * 8) + i_byte ] * pow_254[num_remainder_bytes - 1 - i_byte]
+    # Array size to contain max number of decoded bytes plus the length byte
+    checksum_bytes = [0x00] * (TRANS_RX_DEC_MSG_MAX_SIZE + 1)
+    checksum_bytes[0] = dec_len
+    i = 0
+    while i < dec_len and 1 + i < len(checksum_bytes):
+        checksum_bytes[1 + i] = enc_msg[3 + i]
+        i += 1
 
-        for i_byte in range(0, num_remainder_bytes - 1):
-            dec_msg.append((base_conversion_buff // (1 << ((num_remainder_bytes - 2 - i_byte) * 8))) % 256)
+    expected_checksum = crc32(checksum_bytes, 1 + dec_len)
+
+    # Check invalid checksum
+    # TODO - This doesn't work but the decoded message is accurate
+    # actual checksum or expected checksum might be wrong
+    # if expected_checksum != actual_checksum:
+        # NACK for invalid checksum
+        # return bytes(CMD_CMD_ID_UNKNOWN + CMD_ACK_STATUS_INVALID_CSUM)
+
+    for i in range (0, dec_len):
+        dec_msg[i] = enc_msg[3 + i]
 
     return bytes(dec_msg)
