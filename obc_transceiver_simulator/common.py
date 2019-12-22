@@ -37,7 +37,7 @@ def check_python3():
         sys.exit(1)
 
 def string_to_bytes(s):
-    return bytearray(codecs.decode(s.replace(':', ''), 'hex'))
+    return bytes(bytearray(codecs.decode(s.replace(':', ''), 'hex')))
 
 def bytes_to_string(b):
     return ":".join(map(lambda x: "%02x" % x, list(b)))

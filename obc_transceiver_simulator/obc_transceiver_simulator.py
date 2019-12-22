@@ -138,7 +138,8 @@ def sim_actions():
     elif cmd == "g":  # Raw UART
         send_raw_uart(string_to_bytes(input("Enter raw hex for UART: ")))
         rx_packet = receive_rx_packet()
-        process_rx_packet(rx_packet)
+        if rx_packet is not None:
+            process_rx_packet(rx_packet)
 
     elif cmd == "h": # Reset Command Id
         reset_cmd_id()

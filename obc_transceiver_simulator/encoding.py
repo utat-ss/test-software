@@ -11,7 +11,7 @@ def crc32(message, len):
    crc = 0xFFFFFFFF
 
    i = 0
-   while message[i] != 0 and i < len:
+   while i < len and message[i] != 0:
       byte = message[i]
       crc = crc ^ byte
       for j in range (0, 8):
