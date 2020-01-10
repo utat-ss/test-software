@@ -290,7 +290,20 @@ def send_and_receive_packet(opcode, arg1=0, arg2=0, cmd_id=None, attempts=10):
 
         # At least got a successful ACK, so consider that a success
         Global.cmd_id += 1
+
+        # When viewing the serial files with `tail`, it doesn't show the most
+        # recent block from serial_read.log unless something is added to the
+        # serial_write.log file
+        # Write dummy data to force it to display the rest of serial_read.log
+        Global.serial_write_file.write("\n")
+        Global.serial_write_file.flush()
+
         return True
 
     Global.cmd_id += 1
+
+    # Write dummy data to force it to display the rest of serial_read.log
+    Global.serial_write_file.write("\n")
+    Global.serial_write_file.flush()
+
     return False

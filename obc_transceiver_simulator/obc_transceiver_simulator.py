@@ -238,7 +238,11 @@ if __name__ == "__main__":
         print("Did not find existing file %s, creating new file" % read_path)
     Global.serial_read_file = open(read_path, 'a+')
 
-    print("To view these files live, run `tail -f out/serial*.log`")
+    print("To view these files live, run:")
+    print("tail -f out/serial*.log")
+    # Command from https://serverfault.com/questions/126407/display-n-characters-as-newlines-when-using-tail
+    print("To view them with newlines, run:")
+    print(r"tail -f out/serial*.log | sed 's/\\n/\n/g'")
 
     # Just do this at the beginning
     # If we restart the simulator it won't restart OBC, so just sync them up
