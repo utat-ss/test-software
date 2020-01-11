@@ -82,7 +82,7 @@ class ReadOBCEEPROM(object):
 
     # packet must be an RXPacket
     def run_rx(self, packet):
-        print("Value is 0x%.8x" % packet.data[0:4])
+        print("Value: 0x%.8x" % bytes_to_uint32(packet.data[0:4]))
 
 
 class EraseOBCEEPROM(object):
@@ -223,12 +223,15 @@ class CollectDataBlock(object):
     
     def run_tx(self):
         arg1 = input_block_type()
-        send_and_receive_packet(CommandOpcode.COL_DATA_BLOCK, arg1)
+        # Needs longer wait time for CAN messages to be sent back and forth
+        send_and_receive_packet(CommandOpcode.COL_DATA_BLOCK, arg1, wait_time=30)
     
     # packet must be an RXPacket
     def run_rx(self, packet):
         # TODO - subtract one somewhere? probably on OBC?
-        print("Collected block number %d" % bytes_to_uint32(packet.data[0:4]))
+        # Only check data if we received any (OK status)
+        if len(packet.data) > 0:
+            print("Collected block number %d" % bytes_to_uint32(packet.data[0:4]))
 
 
 class GetAutoDataCollectionSettings(object):

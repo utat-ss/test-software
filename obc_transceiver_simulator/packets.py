@@ -33,7 +33,8 @@ class RXPacket(object):
         self.data = self.dec_msg[3:]
 
 
-def receive_rx_packet():
+# wait_time is in seconds
+def receive_rx_packet(wait_time=5):
     print("Waiting for RX packet...")
 
     uart_rx_buf = bytes(0)
@@ -45,7 +46,7 @@ def receive_rx_packet():
     
     # Make sure to delay for longer than 2 seconds
     # (OBC needs to clear its UART RX buffer after 2 seconds)
-    for i in range(50):
+    for i in range(int(wait_time / Global.serial.timeout)):
         new = read_serial()
         # print("%d new bytes" % len(new))
         uart_rx_buf += new

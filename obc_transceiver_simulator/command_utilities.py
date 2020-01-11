@@ -258,14 +258,15 @@ def read_missing_sec_cmd_log_blocks():
 # Can't use cmd_id=Global.cmd_id directly in the function signature, because the
 # default value is bound when the method is created
 # https://stackoverflow.com/questions/6689652/using-global-variable-as-default-parameter
-def send_and_receive_packet(opcode, arg1=0, arg2=0, cmd_id=None, attempts=10):
+# wait_time is in seconds
+def send_and_receive_packet(opcode, arg1=0, arg2=0, cmd_id=None, wait_time=5, attempts=3):
     if cmd_id is None:
         cmd_id = Global.cmd_id
     for i in range(attempts):
         # TODO - receive previous characters and discard before sending?
         send_tx_packet(TXPacket(cmd_id, opcode, arg1, arg2))
 
-        ack_packet = receive_rx_packet()
+        ack_packet = receive_rx_packet(wait_time)
     
         # If we didn't receive an ACK packet, send the request again
         if ack_packet is None:
@@ -284,7 +285,7 @@ def send_and_receive_packet(opcode, arg1=0, arg2=0, cmd_id=None, attempts=10):
         # response packet
         if cmd_id > 0:
             # Try to receive the response packet if we can, but this might fail
-            resp_packet = receive_rx_packet()
+            resp_packet = receive_rx_packet(wait_time)
             if resp_packet is not None:
                 process_rx_packet(resp_packet)
 
