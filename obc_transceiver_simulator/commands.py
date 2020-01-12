@@ -266,7 +266,9 @@ class SetAutoDataCollectionEnable(object):
     
     # packet must be an RXPacket
     def run_rx(self, packet):
-        print("%s - %s" % (section_num_to_str(packet.arg1), "enabled" if packet.arg2 else "disabled"))
+        tx_packet = tx_packet_for_rx_packet(packet)
+        if tx_packet is not None:
+            print("%s - %s" % (section_num_to_str(tx_packet.arg1), "enabled" if tx_packet.arg2 else "disabled"))
 
 
 class SetAutoDataCollectionPeriod(object):

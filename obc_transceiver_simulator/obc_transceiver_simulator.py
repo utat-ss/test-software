@@ -150,6 +150,7 @@ def main_loop():
         # Print top-level command groups
         print("a. Simulator Data Collection")
         print("b. Simulator Actions")
+        print("c. Read Serial")
         print("q. Quit Simulator")
         for (num, desc) in g_command_groups:
             print("%d. %s" % (num, desc))
@@ -161,7 +162,15 @@ def main_loop():
         
         elif cmd == "b":
             sim_actions()
-            
+
+        elif cmd == "c":
+            read_serial()
+            print("Read serial")
+
+            # Write dummy data to force it to display the rest of serial_read.log
+            Global.serial_write_file.write("\n")
+            Global.serial_write_file.flush()
+
         elif cmd == "q":
             Global.serial.close() # Close serial port when program done
             print("Quitting simulator")
