@@ -283,7 +283,9 @@ class SetAutoDataCollectionPeriod(object):
     
     # packet must be an RXPacket
     def run_rx(self, packet):
-        print("%s - %d seconds" % (section_num_to_str(packet.arg1), packet.arg2))
+        tx_packet = tx_packet_for_rx_packet(packet)
+        if tx_packet is not None:
+            print("%s - %d seconds" % (section_num_to_str(tx_packet.arg1), tx_packet.arg2))
 
 
 class ResyncAutoDataCollectionTimers(object):
