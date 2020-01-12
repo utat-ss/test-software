@@ -224,7 +224,7 @@ class CollectDataBlock(object):
     def run_tx(self):
         arg1 = input_block_type()
         # Needs longer wait time for CAN messages to be sent back and forth
-        send_and_receive_packet(CommandOpcode.COL_DATA_BLOCK, arg1, wait_time=30)
+        send_and_receive_packet(CommandOpcode.COL_DATA_BLOCK, arg1, wait_time=45)
     
     # packet must be an RXPacket
     def run_rx(self, packet):

@@ -11,6 +11,7 @@ def crc32(message, len):
    crc = 0xFFFFFFFF
 
    i = 0
+   # TODO - this is probably a bug, would stop early if a byte is 0x00
    while i < len and message[i] != 0:
       byte = message[i]
       crc = crc ^ byte
