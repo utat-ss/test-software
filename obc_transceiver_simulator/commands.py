@@ -634,7 +634,7 @@ class ResetSubsystem(object):
         arg1 = input_subsys()
         if arg1 == Subsystem.OBC:
             # don't wait for response if it's OBC
-            send_tx_packet(TXPacket(self.opcode, arg1, 0))
+            send_tx_packet(TXPacket(Global.cmd_id, self.opcode, arg1, 0))
         else:
             send_and_receive_packet(self.opcode, arg1)
     
