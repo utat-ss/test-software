@@ -106,7 +106,10 @@ def input_subsys():
     return input_int("Enter subsystem (OBC = %d, EPS = %d, PAY = %d): " % (Subsystem.OBC, Subsystem.EPS, Subsystem.PAY))
 
 def input_block_type():
-    return input_int("Enter block type (OBC_HK = %d, EPS_HK = %d, PAY_HK = %d, PAY_OPT = %d, PRIM_CMD_LOG = %d, SEC_CMD_LOG = %d): " % (BlockType.OBC_HK, BlockType.EPS_HK, BlockType.PAY_HK, BlockType.PAY_OPT, BlockType.PRIM_CMD_LOG, BlockType.SEC_CMD_LOG))
+    return input_int("Enter block type (OBC_HK = %d, EPS_HK = %d, PAY_HK = %d, PAY_OPT = %d, PAY_OPT_1 = %d, PAY_OPT_2 = %d, PRIM_CMD_LOG = %d, SEC_CMD_LOG = %d): " % (
+        BlockType.OBC_HK, BlockType.EPS_HK, BlockType.PAY_HK, BlockType.PAY_OPT,
+        BlockType.PAY_OPT_1, BlockType.PAY_OPT_2,
+        BlockType.PRIM_CMD_LOG, BlockType.SEC_CMD_LOG))
 
 def subsys_num_to_str(num):
     if num == Subsystem.OBC:

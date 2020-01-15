@@ -60,7 +60,12 @@ def print_header(header):
 def process_data_block(rx_packet):
     tx_packet = tx_packet_for_rx_packet(rx_packet)
 
+    # If the status was an error, don't parse
+    if len(rx_packet.data) == 0:
+        return
+
     (header, fields) = parse_data(rx_packet.data)
+
     block_type = tx_packet.arg1
     block_num = tx_packet.arg2
     print("Expected block number:", block_num)
@@ -153,16 +158,27 @@ def process_data_block(rx_packet):
         # Write to file
         pay_hk_section.write_block_to_file(block_num, header, converted)
 
-    elif block_type == BlockType.PAY_OPT:
-        num_fields = len(PAY_OPT_MAPPING)
+    elif block_type == BlockType.PAY_OPT_1:
+        num_fields = len(PAY_OPT_1_MAPPING)
         converted = [0 for i in range(num_fields)]
         for i in range(num_fields):
-            converted[i] = opt_adc_raw_data_to_vol(fields[i], 1)
+            converted[i] = "0x%.6x (%f)" % (fields[i], opt_adc_raw_data_to_vol(fields[i], 1))
+
+        # Print to screen
+        pay_opt_1_section.print_fields(fields, converted)
+        # Write to file
+        pay_opt_1_section.write_block_to_file(block_num, header, converted)
+
+    elif block_type == BlockType.PAY_OPT_2:
+        num_fields = len(PAY_OPT_2_MAPPING)
+        converted = [0 for i in range(num_fields)]
+        for i in range(num_fields):
+            converted[i] = "0x%.6x (%f)" % (fields[i], opt_adc_raw_data_to_vol(fields[i], 1))
         
         # Print to screen
-        pay_opt_section.print_fields(fields, converted)
+        pay_opt_2_section.print_fields(fields, converted)
         # Write to file
-        pay_opt_section.write_block_to_file(block_num, header, converted)
+        pay_opt_2_section.write_block_to_file(block_num, header, converted)
 
 def process_cmd_block(rx_packet):
     tx_packet = tx_packet_for_rx_packet(rx_packet)

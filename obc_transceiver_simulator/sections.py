@@ -79,7 +79,8 @@ PAY_HK_MAPPING = [
     ("Restart reason",          "",     23  ),
 ]
 
-PAY_OPT_MAPPING = [("Well #%d" % (i + 1), "V", i) for i in range(32)]
+PAY_OPT_1_MAPPING = [("Field %d" % i, "V", i) for i in range(0, 24)]
+PAY_OPT_2_MAPPING = [("Field %d" % i, "V", i) for i in range(24, 47)]
 
 # The command log mappings have a different format
 # Same for primary and secondary
@@ -186,7 +187,8 @@ class Section(object):
 obc_hk_section          = Section(BlockType.OBC_HK,         "OBC_HK",       OBC_HK_MAPPING)
 eps_hk_section          = Section(BlockType.EPS_HK,         "EPS_HK",       EPS_HK_MAPPING)
 pay_hk_section          = Section(BlockType.PAY_HK,         "PAY_HK",       PAY_HK_MAPPING)
-pay_opt_section         = Section(BlockType.PAY_OPT,        "PAY_OPT",      PAY_OPT_MAPPING)
+pay_opt_1_section       = Section(BlockType.PAY_OPT_1,      "PAY_OPT_1",    PAY_OPT_1_MAPPING)
+pay_opt_2_section       = Section(BlockType.PAY_OPT_2,      "PAY_OPT_2",    PAY_OPT_2_MAPPING)
 # Command log sections
 prim_cmd_log_section    = Section(BlockType.PRIM_CMD_LOG,   "PRIM_CMD_LOG", CMD_LOG_MAPPING)
 sec_cmd_log_section     = Section(BlockType.SEC_CMD_LOG,    "SEC_CMD_LOG",  CMD_LOG_MAPPING)
@@ -195,7 +197,8 @@ g_all_data_sections = [
     obc_hk_section,
     eps_hk_section,
     pay_hk_section,
-    pay_opt_section,
+    pay_opt_1_section,
+    pay_opt_2_section,
 ]
 g_all_cmd_log_sections = [
     prim_cmd_log_section,
@@ -205,7 +208,8 @@ g_all_sections = [
     obc_hk_section,
     eps_hk_section,
     pay_hk_section,
-    pay_opt_section,
+    pay_opt_1_section,
+    pay_opt_2_section,
     prim_cmd_log_section,
     sec_cmd_log_section,
 ]
