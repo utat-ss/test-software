@@ -221,6 +221,15 @@ g_all_col_sections = [
     prim_cmd_log_section,
     sec_cmd_log_section,
 ]
+g_all_read_sections = [
+    obc_hk_section,
+    eps_hk_section,
+    pay_hk_section,
+    pay_opt_1_section,
+    pay_opt_2_section,
+    prim_cmd_log_section,
+    sec_cmd_log_section,
+]
 g_all_sections = [
     obc_hk_section,
     eps_hk_section,

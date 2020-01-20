@@ -169,6 +169,9 @@ def process_data_block(rx_packet):
         # Write to file
         pay_opt_1_section.write_block_to_file(block_num, header, converted)
 
+        # Keep latest block number consistent
+        pay_opt_section.write_block_to_file(block_num, header, converted)
+
     elif block_type == BlockType.PAY_OPT_2:
         num_fields = len(PAY_OPT_2_MAPPING)
         converted = [0 for i in range(num_fields)]
@@ -179,6 +182,9 @@ def process_data_block(rx_packet):
         pay_opt_2_section.print_fields(fields, converted)
         # Write to file
         pay_opt_2_section.write_block_to_file(block_num, header, converted)
+
+        # Keep latest block number consistent
+        pay_opt_section.write_block_to_file(block_num, header, converted)
 
 def process_cmd_block(rx_packet):
     tx_packet = tx_packet_for_rx_packet(rx_packet)
@@ -249,11 +255,17 @@ def read_missing_blocks():
 
     print("Reading all missing blocks...")
     
-    for i, section in enumerate(g_all_data_sections):
+    for i, section in enumerate(g_all_col_data_sections):
         for block_num in range(section.file_block_num, section.sat_block_num):
-            if not send_and_receive_packet(CommandOpcode.READ_DATA_BLOCK, i + 1, block_num):
-                return
-    
+            if section == pay_opt_section:
+                if not send_and_receive_packet(CommandOpcode.READ_DATA_BLOCK, pay_opt_1_section.number, block_num):
+                    return
+                if not send_and_receive_packet(CommandOpcode.READ_DATA_BLOCK, pay_opt_2_section.number, block_num):
+                    return
+            else:
+                if not send_and_receive_packet(CommandOpcode.READ_DATA_BLOCK, section.number, block_num):
+                    return
+
     # Can read up to 5 at a time
     for block_num in range(prim_cmd_log_section.file_block_num, prim_cmd_log_section.sat_block_num, 5):
         if not send_and_receive_packet(CommandOpcode.READ_PRIM_CMD_BLOCKS, block_num,

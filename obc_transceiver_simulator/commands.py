@@ -182,9 +182,9 @@ class ReadRecentStatusInfo(object):
     
     # packet must be an RXPacket
     def run_rx(self, packet):
-        print("OBC data: ", bytes_to_string(packet.data[0:13]))
-        print("EPS data: ", bytes_to_string(packet.data[13:20]))
-        print("PAY data: ", bytes_to_string(packet.data[20:27]))
+        print("OBC data: ", bytes_to_string(packet.data[0:15]))
+        print("EPS data: ", bytes_to_string(packet.data[15:24]))
+        print("PAY data: ", bytes_to_string(packet.data[24:33]))
 
 
 class ReadRecentLocalDataBlock(object):
