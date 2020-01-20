@@ -246,7 +246,7 @@ class GetAutoDataCollectionSettings(object):
     def run_rx(self, packet):
         assert len(packet.data) == 36
 
-        for i, section in enumerate(g_all_data_sections):
+        for i, section in enumerate(g_all_col_data_sections):
             data = packet.data[i * 9 : (i+1) * 9]
             enabled_str = "enabled" if data[0] else "disabled"
             period = bytes_to_uint32(data[1:5])
@@ -359,7 +359,7 @@ class GetMemorySectionAddrs(object):
     
     # packet must be an RXPacket
     def run_rx(self, packet):
-        for i, section in enumerate(g_all_sections):
+        for i, section in enumerate(g_all_col_sections):
             data = packet.data[i * 8 : (i+1) * 8]
             start = bytes_to_uint32(data[0:4])
             end = bytes_to_uint32(data[4:8])

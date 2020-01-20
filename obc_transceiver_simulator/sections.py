@@ -187,20 +187,37 @@ class Section(object):
 obc_hk_section          = Section(BlockType.OBC_HK,         "OBC_HK",       OBC_HK_MAPPING)
 eps_hk_section          = Section(BlockType.EPS_HK,         "EPS_HK",       EPS_HK_MAPPING)
 pay_hk_section          = Section(BlockType.PAY_HK,         "PAY_HK",       PAY_HK_MAPPING)
+pay_opt_section         = Section(BlockType.PAY_OPT,        "PAY_OPT",      PAY_OPT_1_MAPPING)  # won't be used for reading data blocks
 pay_opt_1_section       = Section(BlockType.PAY_OPT_1,      "PAY_OPT_1",    PAY_OPT_1_MAPPING)
 pay_opt_2_section       = Section(BlockType.PAY_OPT_2,      "PAY_OPT_2",    PAY_OPT_2_MAPPING)
 # Command log sections
 prim_cmd_log_section    = Section(BlockType.PRIM_CMD_LOG,   "PRIM_CMD_LOG", CMD_LOG_MAPPING)
 sec_cmd_log_section     = Section(BlockType.SEC_CMD_LOG,    "SEC_CMD_LOG",  CMD_LOG_MAPPING)
 
-g_all_data_sections = [
+g_all_col_data_sections = [
+    obc_hk_section,
+    eps_hk_section,
+    pay_hk_section,
+    pay_opt_section,
+]
+g_all_read_data_sections = [
     obc_hk_section,
     eps_hk_section,
     pay_hk_section,
     pay_opt_1_section,
     pay_opt_2_section,
 ]
+
 g_all_cmd_log_sections = [
+    prim_cmd_log_section,
+    sec_cmd_log_section,
+]
+
+g_all_col_sections = [
+    obc_hk_section,
+    eps_hk_section,
+    pay_hk_section,
+    pay_opt_section,
     prim_cmd_log_section,
     sec_cmd_log_section,
 ]
@@ -208,6 +225,7 @@ g_all_sections = [
     obc_hk_section,
     eps_hk_section,
     pay_hk_section,
+    pay_opt_section,
     pay_opt_1_section,
     pay_opt_2_section,
     prim_cmd_log_section,
