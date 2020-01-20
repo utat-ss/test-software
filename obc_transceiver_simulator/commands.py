@@ -244,10 +244,12 @@ class GetAutoDataCollectionSettings(object):
     
     # packet must be an RXPacket
     def run_rx(self, packet):
-        assert len(packet.data) == 36
+        assert len(packet.data) == 40
+
+        print("Current uptime = %ds" % (bytes_to_uint32(packet.data[0:4])))
 
         for i, section in enumerate(g_all_col_data_sections):
-            data = packet.data[i * 9 : (i+1) * 9]
+            data = packet.data[4 + (i * 9) : 4 + ((i+1) * 9)]
             enabled_str = "enabled" if data[0] else "disabled"
             period = bytes_to_uint32(data[1:5])
             count = bytes_to_uint32(data[5:9])
