@@ -526,10 +526,11 @@ class SendEPSCANMessage(object):
     
     # packet must be an RXPacket
     def run_rx(self, packet):
-        opcode = packet.data[2]
-        field_num = packet.data[3]
+        opcode = packet.data[0]
+        field_num = packet.data[1]
+        status = packet.data[2]
         rx_data = packet.data[4:8]
-        print("Opcode =", opcode, ", Field =", field_num, ", Data = ", bytes_to_string(rx_data))
+        print("Opcode =", opcode, ", Field =", field_num, ", Status =", status, ", Data = ", bytes_to_string(rx_data))
         
         # EPS CTRL
         if opcode == 1:
@@ -593,10 +594,11 @@ class SendPAYCANMessage(object):
 
     # packet must be an RXPacket
     def run_rx(self, packet):
-        opcode = packet.data[2]
-        field_num = packet.data[3]
+        opcode = packet.data[0]
+        field_num = packet.data[1]
+        status = packet.data[2]
         rx_data = packet.data[4:8]
-        print("Opcode =", opcode, ", Field =", field_num, ", Data = ", bytes_to_string(rx_data))
+        print("Opcode =", opcode, ", Field =", field_num, ", Status =", status, ", Data = ", bytes_to_string(rx_data))
         
         # PAY CTRL
         if opcode == 4:

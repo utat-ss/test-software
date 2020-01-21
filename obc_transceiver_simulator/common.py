@@ -164,12 +164,18 @@ def packet_ack_status_to_str(status):
         return "UNKNOWN"
 
 def packet_resp_status_to_str(status):
-    if status == 0:
+    if status == 0x00:
         return "OK"
-    elif status == 1:
+    elif status == 0x01:
         return "Invalid Arguments"
-    elif status == 2:
+    elif status == 0x02:
         return "Timed Out"
+    elif status == 0x11:
+        return "Invalid CAN Opcode"
+    elif status == 0x12:
+        return "Invalid CAN Field Number"
+    elif status == 0x13:
+        return "Invalid CAN Data"
     elif status == 0xFF:
         return "Unknown Failure"
     else:
