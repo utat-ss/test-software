@@ -113,18 +113,21 @@ class ReadOBCRAMByte(object):
         print("Value is 0x%.2x" % packet.data[0])
 
 
-class SetBeaconInhibitEnable(object):
+class SetIndefBeaconEnable(object):
     def __init__(self):
-        self.name = "Set Beacon Inhibit Enable"
-        self.opcode = CommandOpcode.SET_BEACON_INHIBIT_ENABLE
+        self.name = "Set Indefinite Beacon Enable"
+        self.opcode = CommandOpcode.SET_INDEF_BEACON_ENABLE
     
     def run_tx(self):
-        setting = input_int("Enter setting (0 = disable inhibit, 1 = enable inhibit): ")
-        send_and_receive_packet(self.opcode, setting, 0)
+        number = input_int("Enter enable number (1 or 2): ")
+        setting = input_int("Enter setting (0 = disable, 1 = enable): ")
+        send_and_receive_packet(self.opcode, number, setting)
     
     # packet must be an RXPacket
     def run_rx(self, packet):
-        print("%s beacon inhibit" % ("Enabled" if packet.arg1 else "Disabled"))
+        tx_packet = tx_packet_for_rx_packet(packet)
+        if tx_packet is not None:
+            print("Set indefinite beacon enable %d to %s" % (tx_packet.arg1, "Enabled" if tx_packet.arg2 else "Disabled"))
 
 
 class ReadDataBlock(object):
@@ -663,20 +666,6 @@ class ResetSubsystem(object):
         pass
 
 
-class SetIndefiniteLPMEnable(object):
-    def __init__(self):
-        self.name = "Set Indefinite LPM Enable"
-        self.opcode = CommandOpcode.SET_INDEF_LPM_ENABLE
-    
-    def run_tx(self):
-        arg1 = input_int("Enter 0 (disable) or 1 (enable): ")
-        send_and_receive_packet(CommandOpcode.SET_INDEF_LPM_ENABLE, arg1)
-
-    # packet must be an RXPacket
-    def run_rx(self, packet):
-        pass
-
-
 
 
 g_all_commands = [
@@ -686,7 +675,7 @@ g_all_commands = [
     ReadOBCEEPROM(),
     EraseOBCEEPROM(),
     ReadOBCRAMByte(),
-    SetBeaconInhibitEnable(),
+    SetIndefBeaconEnable(),
 
     ReadDataBlock(),
     ReadPrimaryCommandBlocks(),
@@ -714,7 +703,6 @@ g_all_commands = [
     SendPAYCANMessage(),
     ActuatePAYMotors(),
     ResetSubsystem(),
-    SetIndefiniteLPMEnable(),
 ]
 
 g_command_groups = [

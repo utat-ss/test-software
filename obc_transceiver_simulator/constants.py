@@ -7,7 +7,7 @@ class CommandOpcode(IntEnum):
     READ_OBC_EEPROM             = 0x03
     ERASE_OBC_EEPROM            = 0x04
     READ_OBC_RAM_BYTE           = 0x05
-    SET_BEACON_INHIBIT_ENABLE   = 0x06
+    SET_INDEF_BEACON_ENABLE     = 0x06
     READ_DATA_BLOCK             = 0x10
     READ_PRIM_CMD_BLOCKS        = 0x11
     READ_SEC_CMD_BLOCKS         = 0x12
@@ -31,7 +31,6 @@ class CommandOpcode(IntEnum):
     SEND_PAY_CAN_MSG            = 0x41
     ACT_PAY_MOTORS              = 0x42
     RESET_SUBSYS                = 0x43
-    SET_INDEF_LPM_ENABLE        = 0x44
 
 
 
