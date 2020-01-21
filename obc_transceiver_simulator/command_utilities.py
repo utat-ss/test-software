@@ -232,11 +232,11 @@ def process_cmd_block(rx_packet):
 
 
 
-def send_and_receive_eps_can(msg_type, field_num, tx_data=0):
-    send_and_receive_packet(CommandOpcode.SEND_EPS_CAN_MSG, (msg_type << 8) | field_num, tx_data)
+def send_and_receive_eps_can(opcode, field_num, tx_data=0):
+    send_and_receive_packet(CommandOpcode.SEND_EPS_CAN_MSG, (opcode << 24) | (field_num << 16), tx_data)
 
-def send_and_receive_pay_can(msg_type, field_num, tx_data=0):
-    send_and_receive_packet(CommandOpcode.SEND_PAY_CAN_MSG, (msg_type << 8) | field_num, tx_data)
+def send_and_receive_pay_can(opcode, field_num, tx_data=0):
+    send_and_receive_packet(CommandOpcode.SEND_PAY_CAN_MSG, (opcode << 24) | (field_num << 16), tx_data)
 
 
 

@@ -450,7 +450,7 @@ class SendEPSCANMessage(object):
         self.opcode = CommandOpcode.SEND_EPS_CAN_MSG
     
     def run_tx(self):
-        print("a. Arbitraray bytes")
+        print("a. Arbitrary bytes")
         print("b. Arbitrary values")
         print("0. Ping")
         print("14. Read EEPROM")
@@ -569,12 +569,28 @@ class SendPAYCANMessage(object):
         self.opcode = CommandOpcode.SEND_PAY_CAN_MSG
     
     def run_tx(self):
+        print("a. Arbitrary bytes")
+        print("b. Arbitrary values")
         print("0. Ping")
-        cmd = input_int("Enter command number: ")
+        cmd = input("Enter command number: ")
+
+        if cmd == "a":
+            b = string_to_bytes(input("Enter 8 bytes: "))
+            send_and_receive_packet(CommandOpcode.SEND_PAY_CAN_MSG, bytes_to_uint32(b[0:4]), bytes_to_uint32(b[4:8]))
+            return
+
+        if cmd == "b":
+            opcode = input_int("Enter opcode: ")
+            field_num = input_int("Enter field number: ")
+            tx_data = input_int("Enter data: ")
+            send_and_receive_pay_can(opcode, field_num, tx_data)
+            return
+
+        cmd = str_to_int(cmd)
 
         if cmd == 0:
             send_and_receive_pay_can(CAN.PAY_CTRL, PAY_CTRL.PING)
-    
+
     # packet must be an RXPacket
     def run_rx(self, packet):
         opcode = packet.data[2]
