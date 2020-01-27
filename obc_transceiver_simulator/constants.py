@@ -29,8 +29,7 @@ class CommandOpcode(IntEnum):
     ERASE_ALL_MEM               = 0x37
     SEND_EPS_CAN_MSG            = 0x40
     SEND_PAY_CAN_MSG            = 0x41
-    ACT_PAY_MOTORS              = 0x42
-    RESET_SUBSYS                = 0x43
+    RESET_SUBSYS                = 0x42
 
 
 

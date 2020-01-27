@@ -631,23 +631,6 @@ class SendPAYCANMessage(object):
                 print("Start temporary low-power mode")
 
 
-class ActuatePAYMotors(object):
-    def __init__(self):
-        self.name = "Actuate PAY Motors"
-        self.opcode = CommandOpcode.ACT_PAY_MOTORS
-    
-    def run_tx(self):
-        print("15. Move plate up")
-        print("16. Move plate down")
-        print("17. Run deployment sequence")
-        arg1 = input_int("Enter command number: ")
-        send_and_receive_packet(CommandOpcode.ACT_PAY_MOTORS, arg1, 0)
-    
-    # packet must be an RXPacket
-    def run_rx(self, packet):
-        pass
-
-
 class ResetSubsystem(object):
     def __init__(self):
         self.name = "Reset Subsystem"
@@ -701,7 +684,6 @@ g_all_commands = [
 
     SendEPSCANMessage(),
     SendPAYCANMessage(),
-    ActuatePAYMotors(),
     ResetSubsystem(),
 ]
 
