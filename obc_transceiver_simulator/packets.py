@@ -95,6 +95,8 @@ def receive_rx_packet(wait_time=5):
                         print("Correct checksum")
                     else:
                         print("WRONG CHECKSUM")
+                        print("Encoded packet (%d bytes): %s" % (enc_len, bytes_to_string(enc_pkt)))
+                        print("received 0x%.8lx, should be 0x%.8lx" % (rcvd_csum, calc_csum))
                         sys.exit(1)
 
                     # Drop packet?

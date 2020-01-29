@@ -7,26 +7,28 @@ This attempts to follow obc/src/transceiver.c as closely as possible.
 # Algorithm modified for python from:
 # https://stackoverflow.com/questions/21001659/crc32-algorithm-implementation-in-c-without-a-look-up-table-and-with-a-public-li
 
+# Python might have a negative number, so make sure it is in the range
+# [0, 1 << 32)
+def get_uint32(num):
+    while num < 0:
+        num += (1 << 32)
+    while num >= (1 << 32):
+        num -= (1 << 32)
+    return num
+
 def crc32(message, len):
    crc = 0xFFFFFFFF
 
    i = 0
-   # TODO - this is probably a bug, would stop early if a byte is 0x00
-   while i < len and message[i] != 0:
+   while i < len:
       byte = message[i]
       crc = crc ^ byte
       for j in range (0, 8):
-         mask = -(crc & 1)
+         mask = get_uint32(-(crc & 1))
          crc = (crc >> 1) ^ (0xEDB88320 & mask)
       i = i + 1
    
-   crc = ~crc
-
-   # Python might treat this as a negative number, so make it the positive
-   # 32-bit equivalent if necessary
-   if crc < 0:
-       crc += (1 << 32)
-    
+   crc = get_uint32(~crc)
    return crc
 
 
@@ -87,14 +89,14 @@ def decode_packet(enc_msg):
     actual_checksum = (enc_msg[enc_len - 5] << 24) | (enc_msg[enc_len - 4] << 16) | (enc_msg[enc_len - 3] << 8) | enc_msg[enc_len - 2]
 
     # Array size to contain max number of decoded bytes plus the length byte
-    checksum_bytes = [0x00] * (TRANS_RX_DEC_MSG_MAX_SIZE + 1)
+    checksum_bytes = [0x00] * (dec_len + 1)
     checksum_bytes[0] = dec_len
     i = 0
     while i < dec_len and 1 + i < len(checksum_bytes):
         checksum_bytes[1 + i] = enc_msg[3 + i]
         i += 1
 
-    expected_checksum = crc32(checksum_bytes, 1 + dec_len)
+    expected_checksum = crc32(checksum_bytes, len(checksum_bytes))
 
     # Check invalid checksum
     # TODO - This doesn't work but the decoded message is accurate
