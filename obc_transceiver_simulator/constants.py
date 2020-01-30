@@ -44,8 +44,8 @@ class BlockType(IntEnum):
     EPS_HK          = 2
     PAY_HK          = 3
     PAY_OPT         = 4
-    PAY_OPT_1       = 5
-    PAY_OPT_2       = 6
+    PAY_OPT_OD      = 5
+    PAY_OPT_FL      = 6
     PRIM_CMD_LOG    = 7
     SEC_CMD_LOG     = 8
 

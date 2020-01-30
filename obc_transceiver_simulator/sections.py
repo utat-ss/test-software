@@ -79,8 +79,7 @@ PAY_HK_MAPPING = [
     ("Restart reason",          "",     23  ),
 ]
 
-PAY_OPT_1_MAPPING = [("Field %d" % i, "V", i) for i in range(0, 24)]
-PAY_OPT_2_MAPPING = [("Field %d" % i, "V", i) for i in range(24, 47)]
+PAY_OPT_MAPPING = [("Well %d" % i, "V", i) for i in range(0, 32)]
 
 # The command log mappings have a different format
 # Same for primary and secondary
@@ -187,9 +186,9 @@ class Section(object):
 obc_hk_section          = Section(BlockType.OBC_HK,         "OBC_HK",       OBC_HK_MAPPING)
 eps_hk_section          = Section(BlockType.EPS_HK,         "EPS_HK",       EPS_HK_MAPPING)
 pay_hk_section          = Section(BlockType.PAY_HK,         "PAY_HK",       PAY_HK_MAPPING)
-pay_opt_section         = Section(BlockType.PAY_OPT,        "PAY_OPT",      PAY_OPT_1_MAPPING)  # won't be used for reading data blocks
-pay_opt_1_section       = Section(BlockType.PAY_OPT_1,      "PAY_OPT_1",    PAY_OPT_1_MAPPING)
-pay_opt_2_section       = Section(BlockType.PAY_OPT_2,      "PAY_OPT_2",    PAY_OPT_2_MAPPING)
+pay_opt_section         = Section(BlockType.PAY_OPT,        "PAY_OPT",      PAY_OPT_MAPPING)  # won't be used for reading data blocks
+pay_opt_od_section      = Section(BlockType.PAY_OPT_OD,     "PAY_OPT_OD",   PAY_OPT_MAPPING)
+pay_opt_fl_section      = Section(BlockType.PAY_OPT_FL,     "PAY_OPT_FL",   PAY_OPT_MAPPING)
 # Command log sections
 prim_cmd_log_section    = Section(BlockType.PRIM_CMD_LOG,   "PRIM_CMD_LOG", CMD_LOG_MAPPING)
 sec_cmd_log_section     = Section(BlockType.SEC_CMD_LOG,    "SEC_CMD_LOG",  CMD_LOG_MAPPING)
@@ -204,8 +203,8 @@ g_all_read_data_sections = [
     obc_hk_section,
     eps_hk_section,
     pay_hk_section,
-    pay_opt_1_section,
-    pay_opt_2_section,
+    pay_opt_od_section,
+    pay_opt_fl_section,
 ]
 
 g_all_cmd_log_sections = [
@@ -225,8 +224,8 @@ g_all_read_sections = [
     obc_hk_section,
     eps_hk_section,
     pay_hk_section,
-    pay_opt_1_section,
-    pay_opt_2_section,
+    pay_opt_od_section,
+    pay_opt_fl_section,
     prim_cmd_log_section,
     sec_cmd_log_section,
 ]
@@ -235,8 +234,8 @@ g_all_sections = [
     eps_hk_section,
     pay_hk_section,
     pay_opt_section,
-    pay_opt_1_section,
-    pay_opt_2_section,
+    pay_opt_od_section,
+    pay_opt_fl_section,
     prim_cmd_log_section,
     sec_cmd_log_section,
 ]

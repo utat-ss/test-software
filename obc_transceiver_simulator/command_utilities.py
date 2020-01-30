@@ -158,30 +158,30 @@ def process_data_block(rx_packet):
         # Write to file
         pay_hk_section.write_block_to_file(block_num, header, converted)
 
-    elif block_type == BlockType.PAY_OPT_1:
-        num_fields = len(PAY_OPT_1_MAPPING)
+    elif block_type == BlockType.PAY_OPT_OD:
+        num_fields = len(PAY_OPT_MAPPING)
         converted = [0 for i in range(num_fields)]
         for i in range(num_fields):
             converted[i] = "0x%.6x (%f)" % (fields[i], opt_adc_raw_data_to_vol(fields[i], 1))
 
         # Print to screen
-        pay_opt_1_section.print_fields(fields, converted)
+        pay_opt_od_section.print_fields(fields, converted)
         # Write to file
-        pay_opt_1_section.write_block_to_file(block_num, header, converted)
+        pay_opt_od_section.write_block_to_file(block_num, header, converted)
 
         # Keep latest block number consistent
         pay_opt_section.write_block_to_file(block_num, header, converted)
 
-    elif block_type == BlockType.PAY_OPT_2:
-        num_fields = len(PAY_OPT_2_MAPPING)
+    elif block_type == BlockType.PAY_OPT_FL:
+        num_fields = len(PAY_OPT_MAPPING)
         converted = [0 for i in range(num_fields)]
         for i in range(num_fields):
             converted[i] = "0x%.6x (%f)" % (fields[i], opt_adc_raw_data_to_vol(fields[i], 1))
         
         # Print to screen
-        pay_opt_2_section.print_fields(fields, converted)
+        pay_opt_fl_section.print_fields(fields, converted)
         # Write to file
-        pay_opt_2_section.write_block_to_file(block_num, header, converted)
+        pay_opt_fl_section.write_block_to_file(block_num, header, converted)
 
         # Keep latest block number consistent
         pay_opt_section.write_block_to_file(block_num, header, converted)
@@ -258,9 +258,9 @@ def read_missing_blocks():
     for i, section in enumerate(g_all_col_data_sections):
         for block_num in range(section.file_block_num, section.sat_block_num):
             if section == pay_opt_section:
-                if not send_and_receive_packet(CommandOpcode.READ_DATA_BLOCK, pay_opt_1_section.number, block_num):
+                if not send_and_receive_packet(CommandOpcode.READ_DATA_BLOCK, pay_opt_od_section.number, block_num):
                     return
-                if not send_and_receive_packet(CommandOpcode.READ_DATA_BLOCK, pay_opt_2_section.number, block_num):
+                if not send_and_receive_packet(CommandOpcode.READ_DATA_BLOCK, pay_opt_fl_section.number, block_num):
                     return
             else:
                 if not send_and_receive_packet(CommandOpcode.READ_DATA_BLOCK, section.number, block_num):
