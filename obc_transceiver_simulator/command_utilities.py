@@ -299,7 +299,9 @@ def send_and_receive_packet(opcode, arg1=0, arg2=0, cmd_id=None, wait_time=5, at
     if cmd_id is None:
         cmd_id = Global.cmd_id
     for i in range(attempts):
-        # TODO - receive previous characters and discard before sending?
+        # Read any missed input to flush the buffer
+        read_serial()
+
         send_tx_packet(TXPacket(cmd_id, opcode, arg1, arg2))
 
         ack_packet = receive_rx_packet(wait_time)
