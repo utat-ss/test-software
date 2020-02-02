@@ -72,11 +72,17 @@ PAY_HK_MAPPING = [
     ("MF Temp 10",              "C",    16  ),
     ("MF Temp 11",              "C",    17  ),
     ("MF Temp 12",              "C",    18  ),
-    ("Heater Enabled States",   "",     19  ),
-    ("Limit Switch States",     "",     20  ),
-    ("Uptime",                  "s",    21  ),
-    ("Restart count",           "",     22  ),
-    ("Restart reason",          "",     23  ),
+    ("Batt Vol",                "V",    19  ),
+    ("6V Vol",                  "V",    20  ),
+    ("6V Cur",                  "A",    21  ),
+    ("10V Vol",                 "V",    22  ),
+    ("10V Cur",                 "A",    23  ),
+    ("Thermistor Enabled States","",    24  ),
+    ("Heater Enabled States",   "",     25  ),
+    ("Limit Switch States",     "",     26  ),
+    ("Uptime",                  "s",    27  ),
+    ("Restart count",           "",     28  ),
+    ("Restart reason",          "",     29  ),
 ]
 
 PAY_OPT_MAPPING = [("Well %d" % i, "V", i) for i in range(0, 32)]

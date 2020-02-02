@@ -147,11 +147,19 @@ def process_data_block(rx_packet):
         converted[16]   = adc_raw_data_to_therm_temp(fields[16])
         converted[17]   = adc_raw_data_to_therm_temp(fields[17])
         converted[18]   = adc_raw_data_to_therm_temp(fields[18])
-        converted[19]   = enable_states_to_str(fields[19], 5)
-        converted[20]   = enable_states_to_str(fields[20], 4)
-        converted[21]   = fields[21]
-        converted[22]   = fields[22]
-        converted[23]   = "0x%.2x (%s)" % (fields[23], restart_reason_to_str(fields[23])) # Represent as string
+        # TODO - proper conversion ratios
+        converted[19]   = adc_raw_data_to_eps_vol(fields[19])
+        converted[20]   = adc_raw_data_to_eps_vol(fields[20])
+        converted[21]    = adc_raw_data_to_eps_cur(fields[21])
+        converted[22]   = adc_raw_data_to_eps_vol(fields[22])
+        converted[23]    = adc_raw_data_to_eps_cur(fields[23])
+        # converted[24]   = adc_raw_data_to_eps_vol(fields[24])
+        converted[24]   = enable_states_to_str(fields[24], 12)
+        converted[25]   = enable_states_to_str(fields[25], 5)
+        converted[26]   = enable_states_to_str(fields[27], 4)
+        converted[27]   = fields[21]
+        converted[28]   = fields[22]
+        converted[29]   = "0x%.2x (%s)" % (fields[23], restart_reason_to_str(fields[23])) # Represent as string
 
         # Print to screen
         pay_hk_section.print_fields(fields, converted)
