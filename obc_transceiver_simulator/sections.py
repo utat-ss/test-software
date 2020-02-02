@@ -85,7 +85,7 @@ PAY_HK_MAPPING = [
     ("Restart reason",          "",     29  ),
 ]
 
-PAY_OPT_MAPPING = [("Well %d" % i, "V", i) for i in range(0, 32)]
+PAY_OPT_MAPPING = [("Well %d" % i, "counts/ms", i) for i in range(0, 32)]
 
 # The command log mappings have a different format
 # Same for primary and secondary

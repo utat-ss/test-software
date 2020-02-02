@@ -27,8 +27,8 @@ https:#sensing.honeywell.com/honeywell-sensing-humidicon-hih7000-series-product-
 Pressure sensor - MS5803-05BA - PAY
 http:#www.te.com/commerce/DocumentDelivery/DDEController?Action=showdoc&DocId=Data+Sheet%7FMS5803-05BA%7FB3%7Fpdf%7FEnglish%7FENG_DS_MS5803-05BA_B3.pdf%7FCAT-BLPS0011
 
-Optical ADC - AD7194 - PAY-Optical, different from main ADC
-http:#www.analog.com/media/en/technical-documentation/data-sheets/AD7194.pdf
+Optical Sensor - TSL2591
+https://ams.com/documents/20143/36005/TSL2591_DS000338_6-00.pdf
 
 Thermistor:
 NTC Thermistor 10k 0603 (1608 Metric) Part # NCU18XH103F60RB
@@ -48,64 +48,57 @@ from ctypes import *
 
 
 ADC_V_REF = 5.0
+ADC_CUR_SENSE_AMP_GAIN  = 100.0
 
-ADC_EPS_VOUT_DIV_RATIO = 0.5
-
-ADC_EPS_IOUT_RES        = 0.010
-ADC_EPS_IOUT_AMP_GAIN   = 100.0
-ADC_EPS_IOUT_VREF       = 3.3
-
-ADC_EPS_BAT_IOUT_RES    = 0.002
-ADC_EPS_BAT_IOUT_VREF   = 2.5
-
+EFUSE_IMON_CUR_GAIN = 246e-6
 
 DAC_VREF        = 2.5
 DAC_VREF_GAIN   = 2
 DAC_NUM_BITS    = 12
-
-
-OPT_ADC_V_REF       = 2.5
-OPT_ADC_NUM_BITS    = 24
-
 
 THERM_V_REF = 2.5
 THERM_R_REF = 10.0
 
 THERM_LUT_COUNT = 34
 
-
-# Resistances (in kilo-ohms)
-THERM_RES = [
-    195.652,    148.171,    113.347,    87.559,     68.237,
-    53.650,     42.506,     33.892,     27.219,     22.021,
-    17.926,     14.674,     12.081,     10.000,     8.315,
-    6.948,      5.834,      4.917,      4.161,      3.535,
-    3.014,      2.586,      2.228,      1.925,      1.669,
-    1.452,      1.268,      1.110,      0.974,      0.858,
-    0.758,      0.672,      0.596,      0.531
-]
-
-# Temperatures (in C)
-THERM_TEMP = [
-    -40,        -35,        -30,        -25,        -20,
-    -15,        -10,        -5,         0,          5,
-    10,         15,         20,         25,         30,
-    35,         40,         45,         50,         55,
-    60,         65,         70,         75,         80,
-    85,         90,         95,         100,        105,
-    110,        115,        120,        125
-]
-
-
 # IMU Q points
 IMU_ACCEL_Q = 8
 IMU_GYRO_Q  = 9
 
 
+# EPS parameters
+
+# Current sense resistor values (in ohms)
+EPS_ADC_DEF_CUR_SENSE_RES   = 0.008
+EPS_ADC_BAT_CUR_SENSE_RES   = 0.002
+
+# Voltage references for INA214's (in V)
+EPS_ADC_DEF_CUR_SENSE_VREF  = 0.0
+EPS_ADC_BAT_CUR_SENSE_VREF  = 2.5
+
+# Voltage divider resistor values (in ohms)
+# Applies to 5V, PACK, 3V3
+EPS_ADC_VOL_SENSE_LOW_RES   = 10000
+EPS_ADC_VOL_SENSE_HIGH_RES  = 10000
 
 
-def adc_raw_data_to_raw_vol(raw_data):
-    ratio = raw_data / 0x0FFF
+# PAY parameters
+PAY_ADC1_BOOST10_LOW_RES    = 1000
+PAY_ADC1_BOOST10_HIGH_RES   = 3000
+PAY_ADC1_BOOST10_SENSE_RES  = 0.008
+PAY_ADC1_BOOST10_REF_VOL    = 0.0
+PAY_ADC1_BOOST6_LOW_RES     = 1000
+PAY_ADC1_BOOST6_HIGH_RES    = 1400
+PAY_ADC1_BOOST6_SENSE_RES   = 0.008
+PAY_ADC1_BOOST6_REF_VOL     = 0.0
+PAY_ADC1_BATT_LOW_RES       = 2200
+PAY_ADC1_BATT_HIGH_RES      = 1000
+
+
+
+
+def adc_raw_to_ch_vol(raw):
+    ratio = raw / 0x0FFF
     voltage = ratio * ADC_V_REF
     return voltage
 
@@ -114,46 +107,27 @@ Converts the voltage on an ADC input pin to raw data from an ADC channel.
 raw_data - raw voltage on ADC input channel pin (in V)
 returns - 12 bit ADC data
 '''
-def adc_raw_vol_to_raw_data(raw_voltage):
-    return int((raw_voltage / float(ADC_V_REF)) * 0x0FFF)
+def adc_ch_vol_to_raw(ch_vol):
+    return int((ch_vol / float(ADC_V_REF)) * 0x0FFF)
 
 
-def adc_raw_vol_to_eps_vol(raw_voltage):
+def adc_ch_vol_to_circ_vol(ch_vol, low_res, high_res):
     # Use voltage divider circuit ratio to recover original voltage before division
-    return raw_voltage / ADC_EPS_VOUT_DIV_RATIO
+    return ch_vol / low_res * (low_res + high_res)
 
 
-def adc_raw_vol_to_eps_cur(raw_voltage):
+def adc_ch_vol_to_circ_cur(ch_vol, sense_res, ref_vol):
     # Get the voltage across the resistor before amplifier gain
-    before_gain_voltage = raw_voltage / ADC_EPS_IOUT_AMP_GAIN
+    before_gain_voltage = (ch_vol - ref_vol) / ADC_CUR_SENSE_AMP_GAIN
     # Ohm's law (I = V / R)
-    current = before_gain_voltage / ADC_EPS_IOUT_RES
+    circ_cur = before_gain_voltage / sense_res
+    return circ_cur
 
-    return current
-
-'''
-Converts a current in the EPS electronics to a raw voltage on an ADC pin using
-    the known current monitoring circuit.
-NOTE: this does not apply to battery current
-current - current in the EPS circuit (in A)
-returns - voltage on an ADC input pin (in V)
-'''
-def adc_eps_cur_to_raw_vol(current):
-    # Ohm's law (I = V / R)
-    before_gain_voltage = current * ADC_EPS_IOUT_RES
-    # Get the voltage to the ADC input after amplifier gain
-    after_gain_voltage = before_gain_voltage * ADC_EPS_IOUT_AMP_GAIN
-    return after_gain_voltage
+def adc_ch_vol_to_efuse_cur(ch_vol, sense_res):
+    iout = ch_vol / (EFUSE_IMON_CUR_GAIN * sense_res)
+    return iout
 
 
-def adc_raw_vol_to_bat_cur(raw_voltage):
-    # Get the voltage across the resistor before amplifier gain
-    before_gain_voltage = \
-        (raw_voltage - ADC_EPS_BAT_IOUT_VREF) / ADC_EPS_IOUT_AMP_GAIN
-    # Ohm's law (I = V / R)
-    current = before_gain_voltage / ADC_EPS_BAT_IOUT_RES
-
-    return current
 
 
 '''
@@ -161,8 +135,8 @@ Converts raw 12 bit data from an ADC channel to a voltage in the EPS circuit.
 raw_data - 12 bits
 returns - in V
 '''
-def adc_raw_data_to_eps_vol(raw_data):
-    return adc_raw_vol_to_eps_vol(adc_raw_data_to_raw_vol(raw_data))
+def adc_raw_to_circ_vol(raw, low_res, high_res):
+    return adc_ch_vol_to_circ_vol(adc_raw_to_ch_vol(raw), low_res, high_res)
 
 
 '''
@@ -170,26 +144,20 @@ Converts raw 12 bit data from an ADC channel to a current in the EPS circuit.
 raw_data - 12 bits
 returns - in A
 '''
-def adc_raw_data_to_eps_cur(raw_data):
-    return adc_raw_vol_to_eps_cur(adc_raw_data_to_raw_vol(raw_data))
+def adc_raw_to_circ_cur(raw, sense_res, ref_vol):
+    return adc_ch_vol_to_circ_cur(adc_raw_to_ch_vol(raw), sense_res, ref_vol)
 
 '''
 Converts a current in the EPS circuit to raw 12 bit data from an ADC channel.
 current - in A
 returns - 12 bits
 '''
-def adc_eps_cur_to_raw_data(current):
-    return adc_raw_vol_to_raw_data(adc_eps_cur_to_raw_vol(current))
+def adc_circ_cur_to_raw(circ_cur, sense_res, ref_vol):
+    return adc_ch_vol_to_raw(adc_circ_cur_to_ch_vol(circ_cur, sense_res, ref_vol))
 
-
-'''
-Converts raw 12 bit data from an ADC channel to the battery current in the EPS circuit.
-raw_data - 12 bits
-returns - in A
-'''
-def adc_raw_data_to_bat_cur(raw_data):
-    return adc_raw_vol_to_bat_cur(adc_raw_data_to_raw_vol(raw_data))
-
+def adc_raw_to_efuse_cur(raw, sense_res):
+    iout = adc_ch_vol_to_efuse_cur(adc_raw_to_ch_vol(raw), sense_res)
+    return iout
 
 
 '''
@@ -198,8 +166,8 @@ Converts raw 12 bit data from an ADC channel to the temperature measured by a
 raw_data - 12 bits
 returns - in C
 '''
-def adc_raw_data_to_therm_temp(raw_data):
-    return therm_res_to_temp(therm_vol_to_res(adc_raw_data_to_raw_vol(raw_data)))
+def adc_raw_to_therm_temp(raw_data):
+    return therm_res_to_temp(therm_vol_to_res(adc_raw_to_ch_vol(raw_data)))
 
 
 
@@ -215,7 +183,6 @@ def dac_raw_data_to_vol(raw_data):
     result = ratio * DAC_VREF * DAC_VREF_GAIN
 
     return result
-
 
 '''
 Converts a DAC output voltage value to the raw data (12 bit) value.
@@ -233,16 +200,17 @@ def dac_vol_to_raw_data(voltage):
     return result
 
 
+def dac_raw_data_to_heater_setpoint(raw_data):
+    vol = dac_raw_data_to_vol(raw_data)
+    res = therm_vol_to_res(vol)
+    temp = therm_res_to_temp(res)
+    return temp
 
-'''
-Converts raw data to a temperature from the temperature sensor
-raw_data - 16 bits (INCLUDING the 0b11 on the right that is always there)
-returns - temperature in degrees C (p. 9).
-'''
-def temp_raw_data_to_temperature(raw_data):
-    signed_temp_data = raw_data / 4
-    # LSB is 0.03125 C
-    return signed_temp_data * 0.03125
+def heater_setpoint_to_dac_raw_data(temp):
+    res = therm_temp_to_res(temp)
+    vol = therm_res_to_vol(res)
+    raw_data = dac_vol_to_raw_data(vol)
+    return raw_data
 
 
 '''
@@ -272,34 +240,70 @@ def pres_raw_data_to_pressure(raw_data):
 
 
 '''
-Converts a raw measurement to the input voltage on the ADC pin.
-raw_data - 24 bits
-gain - gain scaling factor to multiply the voltage by
-returns - voltage (in V)
-Unipolar operation (only positive)
+Converts bits representing gain to actual gain.
+p.8,16
+Only using channel 0
 '''
-def opt_adc_raw_data_to_vol(raw_data, gain):
-    # p.31
-    # Code = (2^N * AIN * Gain) / (V_REF)
-    # => AIN = (Code * V_REF) / (2^N * Gain)
-    num = raw_data *  OPT_ADC_V_REF
-    denom = (1 << OPT_ADC_NUM_BITS) * gain
-    return num / denom
+def opt_gain_raw_to_conv(raw):
+    # Low
+    if raw == 0b00:
+        return 1.0
+    # Medium
+    elif raw == 0b01:
+        return 24.5
+    # High
+    elif raw == 0b10:
+        return 400.0
+    # Max
+    elif raw == 0b11:
+        return 9200.0
+    else:
+        return 1.0
+
+'''
+Converts bits representing integration time to integration time (in ms).
+p.16
+'''
+def opt_int_time_raw_to_conv(raw):
+    return (raw + 1) * 100
 
 
-def opt_adc_raw_data_to_diff_vol(raw_data, gain):
-  # p.31
-  # Code = 2^(n-1) x [(AIN * Gain / V_REF) + 1]
-  # => AIN = (Code/2^(n-1) - 1) * V_REF/Gain
-  volt = raw_data / (1 << (OPT_ADC_NUM_BITS - 1))
-  volt -= 1
-  volt *= OPT_ADC_V_REF /  gain
+'''
+Format:
+bits[23:22] are gain
+bits[18:16] are integration time
+bits[15:0] are the data
+Returns intensity value in ADC counts / ms
+'''
+def opt_raw_to_light_intensity(raw):
+    gain = opt_gain_raw_to_conv((raw >> 22) & 0x03)
+    int_time = opt_int_time_raw_to_conv((raw >> 16) & 0x07)
+    reading = raw & 0xFFFF
+    return reading / (gain * int_time)
 
-  return volt
 
 
+# Resistances (in kilo-ohms)
+THERM_RES = [
+    195.652,    148.171,    113.347,    87.559,     68.237,
+    53.650,     42.506,     33.892,     27.219,     22.021,
+    17.926,     14.674,     12.081,     10.000,     8.315,
+    6.948,      5.834,      4.917,      4.161,      3.535,
+    3.014,      2.586,      2.228,      1.925,      1.669,
+    1.452,      1.268,      1.110,      0.974,      0.858,
+    0.758,      0.672,      0.596,      0.531
+]
 
-
+# Temperatures (in C)
+THERM_TEMP = [
+    -40,        -35,        -30,        -25,        -20,
+    -15,        -10,        -5,         0,          5,
+    10,         15,         20,         25,         30,
+    35,         40,         45,         50,         55,
+    60,         65,         70,         75,         80,
+    85,         90,         95,         100,        105,
+    110,        115,        120,        125
+]
 
 '''
 Converts the measured thermistor resistance to temperature.
@@ -307,25 +311,31 @@ resistance - thermistor resistance (in kilo-ohms)
 Returns - temperature (in C)
 '''
 def therm_res_to_temp(resistance):
-    for i in range(THERM_LUT_COUNT - 1):
+    # If higher than the highest resistance, cap at the lowest temperature
+    if resistance >= THERM_RES[0]:
+        return THERM_TEMP[0]
+
+    for i in range(0, THERM_LUT_COUNT - 1):
         # Next value should be smaller than previous value
+        resistance_prev = THERM_RES[i]
         resistance_next = THERM_RES[i + 1]
 
-        if (resistance >= resistance_next):
-            resistance_prev = THERM_RES[i]
-            temp_next = THERM_TEMP[i + 1]
+        # Must compare to next instead of prev or else we will always trigger
+        # at i = 0
+        if resistance >= resistance_next:
             temp_prev = THERM_TEMP[i]
+            temp_next = THERM_TEMP[i + 1]
 
-            temp_diff = (temp_next - temp_prev)
-            resistance_diff = (resistance_next - resistance_prev)
+            temp_diff = temp_next - temp_prev
+            resistance_diff = resistance_next - resistance_prev
             slope = temp_diff / resistance_diff
 
             diff = resistance - resistance_prev  #should be negative
+
             return temp_prev + (diff * slope)
 
-    # This shouldn't happen
-    return 0.0
-
+    # If lower than the lowest resistance, cap at the highest temperature
+    return THERM_TEMP[THERM_LUT_COUNT - 1]
 
 '''
 Converts the thermistor temperature to resistance.
@@ -333,24 +343,31 @@ temp - temperature (in C)
 Returns - thermistor resistance (in kilo-ohms)
 '''
 def therm_temp_to_res(temp):
-    for i in range(THERM_LUT_COUNT - 1):
+    # If lower than the lowest temperature, cap at the highest resistance
+    if temp <= THERM_TEMP[0]:
+        return THERM_RES[0]
+
+    for i in range(0, THERM_LUT_COUNT - 1):
         # Next value should be bigger than previous value
+        temp_prev = THERM_TEMP[i]
         temp_next = THERM_TEMP[i + 1]
 
-        if (temp <= temp_next):
-            temp_prev = THERM_TEMP[i]
-            resistance_next = THERM_RES[i + 1]
+        # Must compare to next instead of prev or else we will always trigger
+        # at i = 0
+        if temp <= temp_next:
             resistance_prev = THERM_RES[i]
+            resistance_next = THERM_RES[i + 1]
 
-            resistance_diff = (resistance_next - resistance_prev)
-            temp_diff = (temp_next - temp_prev)
+            resistance_diff = resistance_next - resistance_prev
+            temp_diff = temp_next - temp_prev
             slope = resistance_diff / temp_diff
 
             diff = temp - temp_prev  #should be positive
+
             return resistance_prev + (diff * slope)
 
-    # This shouldn't happen
-    return 0.0
+    # If higher than the highest temperature, cap at the lowest resistance
+    return THERM_RES[THERM_LUT_COUNT - 1]
 
 
 '''

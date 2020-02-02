@@ -518,7 +518,7 @@ class SendEPSCANMessage(object):
         #     next_cmd = input("Enter command number: ")
 
         #     threshold = float(input("Enter threshold (in A): "))
-        #     data = adc_eps_cur_to_raw_data(threshold)
+        #     data = adc_circ_cur_to_raw(threshold)
 
         #     if next_cmd == ("1"):
         #         send_and_receive_eps_can(1, 5, data)

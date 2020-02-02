@@ -71,7 +71,7 @@ def process_data_block(rx_packet):
     print("Expected block number:", block_num)
     print_header(header)
 
-    # TODO - each "converted" value should be allowable as either a float, int, or string
+    # Each "converted" value is allowable as either a float, int, or string
     # If float, log with constant number of decimal places
 
     if block_type == BlockType.OBC_HK:
@@ -79,7 +79,7 @@ def process_data_block(rx_packet):
         converted = [0 for i in range(num_fields)]
         converted[0] = fields[0]
         converted[1] = fields[1]
-        converted[2] = "0x%.2x (%s)" % (fields[2], restart_reason_to_str(fields[2])) # Represent as string
+        converted[2] = restart_reason_to_str(fields[2]) # Represent as string
         converted[3] = date_time_to_str(uint24_to_bytes(fields[3]))
         converted[4] = date_time_to_str(uint24_to_bytes(fields[4]))
 
@@ -91,25 +91,25 @@ def process_data_block(rx_packet):
     elif block_type == BlockType.EPS_HK:
         num_fields = len(EPS_HK_MAPPING)
         converted = [0 for i in range(num_fields)]
-        converted[0]    = adc_raw_data_to_eps_vol(fields[0])
-        converted[1]    = adc_raw_data_to_bat_cur(fields[1])
-        converted[2]    = adc_raw_data_to_eps_cur(fields[2])
-        converted[3]    = adc_raw_data_to_eps_cur(fields[3])
-        converted[4]    = adc_raw_data_to_eps_cur(fields[4])
-        converted[5]    = adc_raw_data_to_eps_cur(fields[5])
-        converted[6]    = adc_raw_data_to_eps_vol(fields[6])
-        converted[7]    = adc_raw_data_to_eps_cur(fields[7])
-        converted[8]    = adc_raw_data_to_eps_vol(fields[8])
-        converted[9]    = adc_raw_data_to_eps_cur(fields[9])
-        converted[10]   = adc_raw_data_to_eps_cur(fields[10])
-        converted[11]   = therm_res_to_temp(therm_vol_to_res(dac_raw_data_to_vol(fields[11])))
-        converted[12]   = therm_res_to_temp(therm_vol_to_res(dac_raw_data_to_vol(fields[12])))
-        converted[13]   = therm_res_to_temp(therm_vol_to_res(dac_raw_data_to_vol(fields[13])))
-        converted[14]   = therm_res_to_temp(therm_vol_to_res(dac_raw_data_to_vol(fields[14])))
-        converted[15]   = therm_res_to_temp(therm_vol_to_res(dac_raw_data_to_vol(fields[15])))
+        converted[0]    = adc_raw_to_circ_vol(fields[0], EPS_ADC_VOL_SENSE_LOW_RES, EPS_ADC_VOL_SENSE_HIGH_RES)
+        converted[1]    = adc_raw_to_circ_cur(fields[1], EPS_ADC_BAT_CUR_SENSE_RES, EPS_ADC_BAT_CUR_SENSE_VREF)
+        converted[2]    = adc_raw_to_circ_cur(fields[2], EPS_ADC_DEF_CUR_SENSE_RES, EPS_ADC_DEF_CUR_SENSE_VREF)
+        converted[3]    = adc_raw_to_circ_cur(fields[3], EPS_ADC_DEF_CUR_SENSE_RES, EPS_ADC_DEF_CUR_SENSE_VREF)
+        converted[4]    = adc_raw_to_circ_cur(fields[4], EPS_ADC_DEF_CUR_SENSE_RES, EPS_ADC_DEF_CUR_SENSE_VREF)
+        converted[5]    = adc_raw_to_circ_cur(fields[5], EPS_ADC_DEF_CUR_SENSE_RES, EPS_ADC_DEF_CUR_SENSE_VREF)
+        converted[6]    = adc_raw_to_circ_vol(fields[6], EPS_ADC_VOL_SENSE_LOW_RES, EPS_ADC_VOL_SENSE_HIGH_RES)
+        converted[7]    = adc_raw_to_circ_cur(fields[7], EPS_ADC_DEF_CUR_SENSE_RES, EPS_ADC_DEF_CUR_SENSE_VREF)
+        converted[8]    = adc_raw_to_circ_vol(fields[8], EPS_ADC_VOL_SENSE_LOW_RES, EPS_ADC_VOL_SENSE_HIGH_RES)
+        converted[9]    = adc_raw_to_circ_cur(fields[9], EPS_ADC_DEF_CUR_SENSE_RES, EPS_ADC_DEF_CUR_SENSE_VREF)
+        converted[10]   = adc_raw_to_circ_cur(fields[10], EPS_ADC_DEF_CUR_SENSE_RES, EPS_ADC_DEF_CUR_SENSE_VREF)
+        converted[11]   = adc_raw_to_therm_temp(fields[11])
+        converted[12]   = adc_raw_to_therm_temp(fields[12])
+        converted[13]   = adc_raw_to_therm_temp(fields[13])
+        converted[14]   = adc_raw_to_therm_temp(fields[14])
+        converted[15]   = adc_raw_to_therm_temp(fields[15])
         converted[16]   = enable_states_to_str(fields[16], 4)
-        converted[17]   = therm_res_to_temp(therm_vol_to_res(dac_raw_data_to_vol(fields[17])))
-        converted[18]   = therm_res_to_temp(therm_vol_to_res(dac_raw_data_to_vol(fields[18])))
+        converted[17]   = dac_raw_data_to_heater_setpoint(fields[17])
+        converted[18]   = dac_raw_data_to_heater_setpoint(fields[18])
         converted[19]   = imu_raw_data_to_gyro(fields[19])
         converted[20]   = imu_raw_data_to_gyro(fields[20])
         converted[21]   = imu_raw_data_to_gyro(fields[21])
@@ -118,7 +118,7 @@ def process_data_block(rx_packet):
         converted[24]   = imu_raw_data_to_gyro(fields[24])
         converted[25]   = fields[25]
         converted[26]   = fields[26]
-        converted[27]   = "0x%.2x (%s)" % (fields[27], restart_reason_to_str(fields[27])) # Represent as string
+        converted[27]   = restart_reason_to_str(fields[27]) # Represent as string
 
         # Print to screen
         eps_hk_section.print_fields(fields, converted)
@@ -130,36 +130,36 @@ def process_data_block(rx_packet):
         converted = [0 for i in range(num_fields)]
         converted[0]    = hum_raw_data_to_humidity(fields[0])
         converted[1]    = pres_raw_data_to_pressure(fields[1])
-        converted[2]    = adc_raw_data_to_therm_temp(fields[2])
-        converted[3]    = adc_raw_data_to_therm_temp(fields[3])
-        converted[4]    = adc_raw_data_to_therm_temp(fields[4])
-        converted[5]    = adc_raw_data_to_therm_temp(fields[5])
-        converted[6]    = adc_raw_data_to_therm_temp(fields[6])
-        converted[7]    = adc_raw_data_to_therm_temp(fields[7])
-        converted[8]    = adc_raw_data_to_therm_temp(fields[8])
-        converted[9]    = adc_raw_data_to_therm_temp(fields[9])
-        converted[10]   = adc_raw_data_to_therm_temp(fields[10])
-        converted[11]   = adc_raw_data_to_therm_temp(fields[11])
-        converted[12]   = adc_raw_data_to_therm_temp(fields[12])
-        converted[13]   = adc_raw_data_to_therm_temp(fields[13])
-        converted[14]   = adc_raw_data_to_therm_temp(fields[14])
-        converted[15]   = adc_raw_data_to_therm_temp(fields[15])
-        converted[16]   = adc_raw_data_to_therm_temp(fields[16])
-        converted[17]   = adc_raw_data_to_therm_temp(fields[17])
-        converted[18]   = adc_raw_data_to_therm_temp(fields[18])
+        converted[2]    = adc_raw_to_therm_temp(fields[2])
+        converted[3]    = adc_raw_to_therm_temp(fields[3])
+        converted[4]    = adc_raw_to_therm_temp(fields[4])
+        converted[5]    = adc_raw_to_therm_temp(fields[5])
+        converted[6]    = adc_raw_to_therm_temp(fields[6])
+        converted[7]    = adc_raw_to_therm_temp(fields[7])
+        converted[8]    = adc_raw_to_therm_temp(fields[8])
+        converted[9]    = adc_raw_to_therm_temp(fields[9])
+        converted[10]   = adc_raw_to_therm_temp(fields[10])
+        converted[11]   = adc_raw_to_therm_temp(fields[11])
+        converted[12]   = adc_raw_to_therm_temp(fields[12])
+        converted[13]   = adc_raw_to_therm_temp(fields[13])
+        converted[14]   = adc_raw_to_therm_temp(fields[14])
+        converted[15]   = adc_raw_to_therm_temp(fields[15])
+        converted[16]   = adc_raw_to_therm_temp(fields[16])
+        converted[17]   = adc_raw_to_therm_temp(fields[17])
+        converted[18]   = adc_raw_to_therm_temp(fields[18])
         # TODO - proper conversion ratios
-        converted[19]   = adc_raw_data_to_eps_vol(fields[19])
-        converted[20]   = adc_raw_data_to_eps_vol(fields[20])
-        converted[21]    = adc_raw_data_to_eps_cur(fields[21])
-        converted[22]   = adc_raw_data_to_eps_vol(fields[22])
-        converted[23]    = adc_raw_data_to_eps_cur(fields[23])
-        # converted[24]   = adc_raw_data_to_eps_vol(fields[24])
+        converted[19]   = adc_raw_to_circ_vol(fields[19], PAY_ADC1_BATT_LOW_RES, PAY_ADC1_BATT_HIGH_RES)
+        converted[20]   = adc_raw_to_circ_vol(fields[20], PAY_ADC1_BOOST6_LOW_RES, PAY_ADC1_BOOST6_HIGH_RES)
+        converted[21]    = adc_raw_to_circ_cur(fields[21], PAY_ADC1_BOOST6_SENSE_RES, PAY_ADC1_BOOST6_REF_VOL)
+        converted[22]   = adc_raw_to_circ_vol(fields[22], PAY_ADC1_BOOST10_LOW_RES, PAY_ADC1_BOOST10_HIGH_RES)
+        converted[23]    = adc_raw_to_circ_cur(fields[23], PAY_ADC1_BOOST10_SENSE_RES, PAY_ADC1_BOOST10_REF_VOL)
+        # converted[24]   = adc_raw_to_circ_vol(fields[24])
         converted[24]   = enable_states_to_str(fields[24], 12)
         converted[25]   = enable_states_to_str(fields[25], 5)
-        converted[26]   = enable_states_to_str(fields[27], 4)
-        converted[27]   = fields[21]
-        converted[28]   = fields[22]
-        converted[29]   = "0x%.2x (%s)" % (fields[23], restart_reason_to_str(fields[23])) # Represent as string
+        converted[26]   = enable_states_to_str(fields[26], 4)
+        converted[27]   = fields[27]
+        converted[28]   = fields[28]
+        converted[29]   = restart_reason_to_str(fields[29]) # Represent as string
 
         # Print to screen
         pay_hk_section.print_fields(fields, converted)
@@ -170,7 +170,7 @@ def process_data_block(rx_packet):
         num_fields = len(PAY_OPT_MAPPING)
         converted = [0 for i in range(num_fields)]
         for i in range(num_fields):
-            converted[i] = "0x%.6x (%f)" % (fields[i], opt_adc_raw_data_to_vol(fields[i], 1))
+            converted[i] = opt_raw_to_light_intensity(fields[i])
 
         # Print to screen
         pay_opt_od_section.print_fields(fields, converted)
@@ -184,8 +184,8 @@ def process_data_block(rx_packet):
         num_fields = len(PAY_OPT_MAPPING)
         converted = [0 for i in range(num_fields)]
         for i in range(num_fields):
-            converted[i] = "0x%.6x (%f)" % (fields[i], opt_adc_raw_data_to_vol(fields[i], 1))
-        
+            converted[i] = opt_raw_to_light_intensity(fields[i])
+
         # Print to screen
         pay_opt_fl_section.print_fields(fields, converted)
         # Write to file
