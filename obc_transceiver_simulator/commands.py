@@ -256,7 +256,7 @@ class GetAutoDataCollectionSettings(object):
             enabled_str = "enabled" if data[0] else "disabled"
             period = bytes_to_uint32(data[1:5])
             count = bytes_to_uint32(data[5:9])
-            print("%s: %s, period = %ds, count = %ds" % (section.name, enabled_str, period, count))
+            print("%s: %s, period = %ds, last_uptime = %ds" % (section.name, enabled_str, period, count))
 
 
 class SetAutoDataCollectionEnable(object):

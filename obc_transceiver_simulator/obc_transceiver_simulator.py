@@ -53,7 +53,7 @@ def sim_data_col():
     cmd = input("Enter command: ")
 
     if cmd == "a":
-        for section in g_all_read_sections:
+        for section in g_all_sections:
             print(section)
     
     elif cmd == "b":  # Read missing blocks
@@ -85,6 +85,8 @@ def sim_actions():
             eps_hk_section.set_file_block_num(num)
         elif arg1 == BlockType.PAY_HK:
             pay_hk_section.set_file_block_num(num)
+        elif arg1 == BlockType.PAY_OPT:
+            pay_opt_section.set_file_block_num(num)
         elif arg1 == BlockType.PAY_OPT_OD:
             pay_opt_od_section.set_file_block_num(num)
         elif arg1 == BlockType.PAY_OPT_FL:
