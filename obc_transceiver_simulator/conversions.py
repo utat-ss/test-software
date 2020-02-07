@@ -65,6 +65,11 @@ THERM_LUT_COUNT = 34
 IMU_ACCEL_Q = 8
 IMU_GYRO_Q  = 9
 
+OPT_ADC_VREF               = 3.3
+OPT_ADC_BITS               = 10
+OPT_ADC_CUR_SENSE          = 0.010
+OPT_ADC_CUR_SENSE_AMP_GAIN = 100.0
+
 
 # EPS parameters
 
@@ -237,6 +242,25 @@ def pres_raw_data_to_pressure(raw_data):
     kpa = mbar / 10.0
     return kpa
 
+
+def opt_adc_raw_to_ch_vol(raw):
+    return (float(raw) / float(1 << OPT_ADC_BITS)) * OPT_ADC_VREF
+
+'''
+Converts raw 24 bits (2 measurements) to voltage, current, and power.
+voltage - in V
+current - in A
+power - in W
+'''
+def opt_power_raw_to_conv(raw):
+    voltage_raw = (raw >> 12) & 0x3FF
+    current_raw = raw & 0x3FF
+
+    voltage = opt_adc_raw_to_ch_vol(voltage_raw)
+    current = (opt_adc_raw_to_ch_vol(current_raw) / OPT_ADC_CUR_SENSE_AMP_GAIN) / OPT_ADC_CUR_SENSE
+    power = voltage * current
+
+    return (voltage, current, power)
 
 
 '''

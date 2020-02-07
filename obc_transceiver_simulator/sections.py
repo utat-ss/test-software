@@ -14,75 +14,75 @@ COMMON_HEADER = [
 
 # Name, unit, mapping for reordering measurements
 OBC_HK_MAPPING = [
-    ("Uptime",                  "s",        0   ),
-    ("Restart count",           "",         1   ),
-    ("Restart reason",          "",         2   ),
-    ("Restart date",            "",         3   ),
-    ("Restart time",            "",         4   )
+    ("Uptime",                  "s",        0x00    ),
+    ("Restart count",           "",         0x01    ),
+    ("Restart reason",          "",         0x02    ),
+    ("Restart date",            "",         0x03    ),
+    ("Restart time",            "",         0x04    ),
 ]
 
 EPS_HK_MAPPING = [
-    ("Bat Vol",                 "V",        0   ),
-    ("Bat Cur",                 "A",        1   ),
-    ("X+ Cur",                  "A",        2   ),
-    ("X- Cur",                  "A",        3   ),
-    ("Y+ Cur",                  "A",        4   ),
-    ("Y- Cur",                  "A",        5   ),
-    ("3V3 Vol",                 "V",        6   ),
-    ("3V3 Cur",                 "A",        7   ),
-    ("5V Vol",                  "V",        8   ),
-    ("5V Cur",                  "A",        9   ),
-    ("PAY Cur",                 "A",        10  ),
-    ("Bat Temp 1",              "C",        11  ),
-    ("Bat Temp 2",              "C",        12  ),
-    ("3V3 Temp",                "C",        13  ),
-    ("5V Temp",                 "C",        14  ),
-    ("PAY Conn Temp",           "C",        15  ),
-    ("Solar shunt states",      "",         16  ),
-    ("Heater Setpoint 1",       "C",        17  ),
-    ("Heater Setpoint 2",       "C",        18  ),
-    ("Gyroscope (Uncal) X",     "rad/s",    19  ),
-    ("Gyroscope (Uncal) Y",     "rad/s",    20  ),
-    ("Gyroscope (Uncal) Z",     "rad/s",    21  ),
-    ("Gyroscope (Cal) X",       "rad/s",    22  ),
-    ("Gyroscope (Cal) Y",       "rad/s",    23  ),
-    ("Gyroscope (Cal) Z",       "rad/s",    24  ),
-    ("Uptime",                  "s",        25  ),
-    ("Restart count",           "",         26  ),
-    ("Restart reason",          "",         27  ),
+    ("Uptime",                  "s",        0x00    ),
+    ("Restart count",           "",         0x01    ),
+    ("Restart reason",          "",         0x02    ),
+    ("Bat Vol",                 "V",        0x03    ),
+    ("Bat Cur",                 "A",        0x04    ),
+    ("X+ Cur",                  "A",        0x05    ),
+    ("X- Cur",                  "A",        0x06    ),
+    ("Y+ Cur",                  "A",        0x07    ),
+    ("Y- Cur",                  "A",        0x08    ),
+    ("3V3 Vol",                 "V",        0x09    ),
+    ("3V3 Cur",                 "A",        0x0A    ),
+    ("5V Vol",                  "V",        0x0B    ),
+    ("5V Cur",                  "A",        0x0C    ),
+    ("PAY Cur",                 "A",        0x0D    ),
+    ("3V3 Temp",                "C",        0x0E    ),
+    ("5V Temp",                 "C",        0x0F    ),
+    ("PAY Conn Temp",           "C",        0x10    ),
+    ("Bat Temp 1",              "C",        0x11    ),
+    ("Bat Temp 2",              "C",        0x12    ),
+    ("Heater Setpoint 1",       "C",        0x13    ),
+    ("Heater Setpoint 2",       "C",        0x14    ),
+    ("Gyroscope (Uncal) X",     "rad/s",    0x15    ),
+    ("Gyroscope (Uncal) Y",     "rad/s",    0x16    ),
+    ("Gyroscope (Uncal) Z",     "rad/s",    0x17    ),
+    ("Gyroscope (Cal) X",       "rad/s",    0x18    ),
+    ("Gyroscope (Cal) Y",       "rad/s",    0x19    ),
+    ("Gyroscope (Cal) Z",       "rad/s",    0x1A    ),
 ]
 
 PAY_HK_MAPPING = [
-    ("Humidity",                "%RH",  0   ),
-    ("Pressure",                "kPa",  1   ),
-    ("Ambient Temp",            "C",    2   ),
-    ("Motor Driver 1 Temp",     "C",    3   ),
-    ("Motor Driver 2 Temp",     "C",    4   ),
-    ("10V Temp",                "C",    5   ),
-    ("6V Temp",                 "C",    6   ),
-    ("MF Temp 1",               "C",    7   ),
-    ("MF Temp 2",               "C",    8   ),
-    ("MF Temp 3",               "C",    9   ),
-    ("MF Temp 4",               "C",    10   ),
-    ("MF Temp 5",               "C",    11  ),
-    ("MF Temp 6",               "C",    12   ),
-    ("MF Temp 7",               "C",    13  ),
-    ("MF Temp 8",               "C",    14  ),
-    ("MF Temp 9",               "C",    15  ),
-    ("MF Temp 10",              "C",    16  ),
-    ("MF Temp 11",              "C",    17  ),
-    ("MF Temp 12",              "C",    18  ),
-    ("Batt Vol",                "V",    19  ),
-    ("6V Vol",                  "V",    20  ),
-    ("6V Cur",                  "A",    21  ),
-    ("10V Vol",                 "V",    22  ),
-    ("10V Cur",                 "A",    23  ),
-    ("Thermistor Enabled States","",    24  ),
-    ("Heater Enabled States",   "",     25  ),
-    ("Limit Switch States",     "",     26  ),
-    ("Uptime",                  "s",    27  ),
-    ("Restart count",           "",     28  ),
-    ("Restart reason",          "",     29  ),
+    ("Uptime",                  "s",    0x00    ),
+    ("Restart count",           "",     0x01    ),
+    ("Restart reason",          "",     0x02    ),
+    ("Humidity",                "%RH",  0x03    ),
+    ("Pressure",                "kPa",  0x04    ),
+    ("Ambient Temp",            "C",    0x05    ),
+    ("6V Temp",                 "C",    0x06    ),
+    ("10V Temp",                "C",    0x07    ),
+    ("Motor Driver 1 Temp",     "C",    0x08    ),
+    ("Motor Driver 2 Temp",     "C",    0x09    ),
+    ("MF Temp 1",               "C",    0x0A    ),
+    ("MF Temp 2",               "C",    0x0B    ),
+    ("MF Temp 3",               "C",    0x0C    ),
+    ("MF Temp 4",               "C",    0x0D    ),
+    ("MF Temp 5",               "C",    0x0E    ),
+    ("MF Temp 6",               "C",    0x0F    ),
+    ("MF Temp 7",               "C",    0x10    ),
+    ("MF Temp 8",               "C",    0x11    ),
+    ("MF Temp 9",               "C",    0x12    ),
+    ("MF Temp 10",              "C",    0x13    ),
+    ("MF Temp 11",              "C",    0x14    ),
+    ("MF Temp 12",              "C",    0x15    ),
+    ("Heater Setpoint",         "C",    0x16    ),
+    ("Def Invalid Therm Temp",  "C",    0x17    ),
+    ("Thermistor Enables",      "",     0x18    ),
+    ("Heater Enables",          "",     0x19    ),
+    ("Batt Vol",                "V",    0x1A    ),
+    ("6V Vol",                  "V",    0x1B    ),
+    ("6V Cur",                  "A",    0x1C    ),
+    ("10V Vol",                 "V",    0x1D    ),
+    ("10V Cur",                 "A",    0x1E    ),
 ]
 
 PAY_OPT_MAPPING = [("Well %d" % i, "counts/ms", i) for i in range(0, 32)]
@@ -166,11 +166,17 @@ class Section(object):
                 out_str += " " + self.mapping[i][1]
             print(out_str)
     
-    def write_block_to_file(self, expected_block_num, header, converted):
+    def write_block_to_file(self, expected_block_num, header, fields, converted):
         # Write row
         values = []
+        # Add header
         values.extend(map(str, [expected_block_num, bytes_to_uint24(header[0:3]),  date_time_to_str(header[3:6]), date_time_to_str(header[6:9]), "0x%.2x (%s)" % (header[9], packet_resp_status_to_str(header[9]))]))
-        values.extend(map(conv_value_to_str, converted))
+
+        # Add fields (raw and converted)
+        assert len(fields) == len(converted)
+        for i in range(len(fields)):
+            values.append("0x%.6x (%s)" % (fields[i], conv_value_to_str(converted[i])))
+
         self.data_file.write(", ".join(values) + "\n")
         self.data_file.flush()
         print("Added block row to file", self.file_name)

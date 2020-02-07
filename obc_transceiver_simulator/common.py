@@ -78,7 +78,7 @@ def conv_value_to_str(value):
     if type(value) == float:
         return "%.6f" % value
     elif type(value) == int:
-        return "0x%x (%d)" % (value, value)
+        return "%d" % value
     elif type(value) == str:
         return value
     else:

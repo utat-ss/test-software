@@ -77,94 +77,95 @@ def process_data_block(rx_packet):
     if block_type == BlockType.OBC_HK:
         num_fields = len(OBC_HK_MAPPING)
         converted = [0 for i in range(num_fields)]
-        converted[0] = fields[0]
-        converted[1] = fields[1]
-        converted[2] = restart_reason_to_str(fields[2]) # Represent as string
-        converted[3] = date_time_to_str(uint24_to_bytes(fields[3]))
-        converted[4] = date_time_to_str(uint24_to_bytes(fields[4]))
+
+        converted[0x00] = fields[0x00]
+        converted[0x01] = fields[0x01]
+        converted[0x02] = restart_reason_to_str(fields[0x02]) # Represent as string
+        converted[0x03] = date_time_to_str(uint24_to_bytes(fields[0x03]))
+        converted[0x04] = date_time_to_str(uint24_to_bytes(fields[0x04]))
 
         # Print to screen
         obc_hk_section.print_fields(fields, converted)
         # Write to file
-        obc_hk_section.write_block_to_file(block_num, header, converted)
+        obc_hk_section.write_block_to_file(block_num, header, fields, converted)
 
     elif block_type == BlockType.EPS_HK:
         num_fields = len(EPS_HK_MAPPING)
         converted = [0 for i in range(num_fields)]
-        converted[0]    = adc_raw_to_circ_vol(fields[0], EPS_ADC_VOL_SENSE_LOW_RES, EPS_ADC_VOL_SENSE_HIGH_RES)
-        converted[1]    = adc_raw_to_circ_cur(fields[1], EPS_ADC_BAT_CUR_SENSE_RES, EPS_ADC_BAT_CUR_SENSE_VREF)
-        converted[2]    = adc_raw_to_circ_cur(fields[2], EPS_ADC_DEF_CUR_SENSE_RES, EPS_ADC_DEF_CUR_SENSE_VREF)
-        converted[3]    = adc_raw_to_circ_cur(fields[3], EPS_ADC_DEF_CUR_SENSE_RES, EPS_ADC_DEF_CUR_SENSE_VREF)
-        converted[4]    = adc_raw_to_circ_cur(fields[4], EPS_ADC_DEF_CUR_SENSE_RES, EPS_ADC_DEF_CUR_SENSE_VREF)
-        converted[5]    = adc_raw_to_circ_cur(fields[5], EPS_ADC_DEF_CUR_SENSE_RES, EPS_ADC_DEF_CUR_SENSE_VREF)
-        converted[6]    = adc_raw_to_circ_vol(fields[6], EPS_ADC_VOL_SENSE_LOW_RES, EPS_ADC_VOL_SENSE_HIGH_RES)
-        converted[7]    = adc_raw_to_circ_cur(fields[7], EPS_ADC_DEF_CUR_SENSE_RES, EPS_ADC_DEF_CUR_SENSE_VREF)
-        converted[8]    = adc_raw_to_circ_vol(fields[8], EPS_ADC_VOL_SENSE_LOW_RES, EPS_ADC_VOL_SENSE_HIGH_RES)
-        converted[9]    = adc_raw_to_circ_cur(fields[9], EPS_ADC_DEF_CUR_SENSE_RES, EPS_ADC_DEF_CUR_SENSE_VREF)
-        converted[10]   = adc_raw_to_circ_cur(fields[10], EPS_ADC_DEF_CUR_SENSE_RES, EPS_ADC_DEF_CUR_SENSE_VREF)
-        converted[11]   = adc_raw_to_therm_temp(fields[11])
-        converted[12]   = adc_raw_to_therm_temp(fields[12])
-        converted[13]   = adc_raw_to_therm_temp(fields[13])
-        converted[14]   = adc_raw_to_therm_temp(fields[14])
-        converted[15]   = adc_raw_to_therm_temp(fields[15])
-        converted[16]   = enable_states_to_str(fields[16], 4)
-        converted[17]   = dac_raw_data_to_heater_setpoint(fields[17])
-        converted[18]   = dac_raw_data_to_heater_setpoint(fields[18])
-        converted[19]   = imu_raw_data_to_gyro(fields[19])
-        converted[20]   = imu_raw_data_to_gyro(fields[20])
-        converted[21]   = imu_raw_data_to_gyro(fields[21])
-        converted[22]   = imu_raw_data_to_gyro(fields[22])
-        converted[23]   = imu_raw_data_to_gyro(fields[23])
-        converted[24]   = imu_raw_data_to_gyro(fields[24])
-        converted[25]   = fields[25]
-        converted[26]   = fields[26]
-        converted[27]   = restart_reason_to_str(fields[27]) # Represent as string
+
+        converted[0x00] = fields[0x00]
+        converted[0x01] = fields[0x01]
+        converted[0x02] = restart_reason_to_str(fields[0x02]) # Represent as string
+        converted[0x03] = adc_raw_to_circ_vol(fields[0x03], EPS_ADC_VOL_SENSE_LOW_RES, EPS_ADC_VOL_SENSE_HIGH_RES)
+        converted[0x04] = adc_raw_to_circ_cur(fields[0x04], EPS_ADC_BAT_CUR_SENSE_RES, EPS_ADC_BAT_CUR_SENSE_VREF)
+        converted[0x05] = adc_raw_to_circ_cur(fields[0x05], EPS_ADC_DEF_CUR_SENSE_RES, EPS_ADC_DEF_CUR_SENSE_VREF)
+        converted[0x06] = adc_raw_to_circ_cur(fields[0x06], EPS_ADC_DEF_CUR_SENSE_RES, EPS_ADC_DEF_CUR_SENSE_VREF)
+        converted[0x07] = adc_raw_to_circ_cur(fields[0x07], EPS_ADC_DEF_CUR_SENSE_RES, EPS_ADC_DEF_CUR_SENSE_VREF)
+        converted[0x08] = adc_raw_to_circ_cur(fields[0x08], EPS_ADC_DEF_CUR_SENSE_RES, EPS_ADC_DEF_CUR_SENSE_VREF)
+        converted[0x09] = adc_raw_to_circ_vol(fields[0x09], EPS_ADC_VOL_SENSE_LOW_RES, EPS_ADC_VOL_SENSE_HIGH_RES)
+        converted[0x0A] = adc_raw_to_circ_cur(fields[0x0A], EPS_ADC_DEF_CUR_SENSE_RES, EPS_ADC_DEF_CUR_SENSE_VREF)
+        converted[0x0B] = adc_raw_to_circ_vol(fields[0x0B], EPS_ADC_VOL_SENSE_LOW_RES, EPS_ADC_VOL_SENSE_HIGH_RES)
+        converted[0x0C] = adc_raw_to_circ_cur(fields[0x0C], EPS_ADC_DEF_CUR_SENSE_RES, EPS_ADC_DEF_CUR_SENSE_VREF)
+        converted[0x0D] = adc_raw_to_circ_cur(fields[0x0D], EPS_ADC_DEF_CUR_SENSE_RES, EPS_ADC_DEF_CUR_SENSE_VREF)
+        converted[0x0E] = adc_raw_to_therm_temp(fields[0x0E])
+        converted[0x0F] = adc_raw_to_therm_temp(fields[0x0F])
+        converted[0x10] = adc_raw_to_therm_temp(fields[0x10])
+        converted[0x11] = adc_raw_to_therm_temp(fields[0x11])
+        converted[0x12] = adc_raw_to_therm_temp(fields[0x12])
+        converted[0x13] = dac_raw_data_to_heater_setpoint(fields[0x13])
+        converted[0x14] = dac_raw_data_to_heater_setpoint(fields[0x14])
+        converted[0x15] = imu_raw_data_to_gyro(fields[0x15])
+        converted[0x16] = imu_raw_data_to_gyro(fields[0x16])
+        converted[0x17] = imu_raw_data_to_gyro(fields[0x17])
+        converted[0x18] = imu_raw_data_to_gyro(fields[0x18])
+        converted[0x19] = imu_raw_data_to_gyro(fields[0x19])
+        converted[0x1A] = imu_raw_data_to_gyro(fields[0x1A])
 
         # Print to screen
         eps_hk_section.print_fields(fields, converted)
         # Write to file
-        eps_hk_section.write_block_to_file(block_num, header, converted)
+        eps_hk_section.write_block_to_file(block_num, header, fields, converted)
         
     elif block_type == BlockType.PAY_HK:
         num_fields = len(PAY_HK_MAPPING)
         converted = [0 for i in range(num_fields)]
-        converted[0]    = hum_raw_data_to_humidity(fields[0])
-        converted[1]    = pres_raw_data_to_pressure(fields[1])
-        converted[2]    = adc_raw_to_therm_temp(fields[2])
-        converted[3]    = adc_raw_to_therm_temp(fields[3])
-        converted[4]    = adc_raw_to_therm_temp(fields[4])
-        converted[5]    = adc_raw_to_therm_temp(fields[5])
-        converted[6]    = adc_raw_to_therm_temp(fields[6])
-        converted[7]    = adc_raw_to_therm_temp(fields[7])
-        converted[8]    = adc_raw_to_therm_temp(fields[8])
-        converted[9]    = adc_raw_to_therm_temp(fields[9])
-        converted[10]   = adc_raw_to_therm_temp(fields[10])
-        converted[11]   = adc_raw_to_therm_temp(fields[11])
-        converted[12]   = adc_raw_to_therm_temp(fields[12])
-        converted[13]   = adc_raw_to_therm_temp(fields[13])
-        converted[14]   = adc_raw_to_therm_temp(fields[14])
-        converted[15]   = adc_raw_to_therm_temp(fields[15])
-        converted[16]   = adc_raw_to_therm_temp(fields[16])
-        converted[17]   = adc_raw_to_therm_temp(fields[17])
-        converted[18]   = adc_raw_to_therm_temp(fields[18])
-        # TODO - proper conversion ratios
-        converted[19]   = adc_raw_to_circ_vol(fields[19], PAY_ADC1_BATT_LOW_RES, PAY_ADC1_BATT_HIGH_RES)
-        converted[20]   = adc_raw_to_circ_vol(fields[20], PAY_ADC1_BOOST6_LOW_RES, PAY_ADC1_BOOST6_HIGH_RES)
-        converted[21]    = adc_raw_to_circ_cur(fields[21], PAY_ADC1_BOOST6_SENSE_RES, PAY_ADC1_BOOST6_REF_VOL)
-        converted[22]   = adc_raw_to_circ_vol(fields[22], PAY_ADC1_BOOST10_LOW_RES, PAY_ADC1_BOOST10_HIGH_RES)
-        converted[23]    = adc_raw_to_circ_cur(fields[23], PAY_ADC1_BOOST10_SENSE_RES, PAY_ADC1_BOOST10_REF_VOL)
-        # converted[24]   = adc_raw_to_circ_vol(fields[24])
-        converted[24]   = enable_states_to_str(fields[24], 12)
-        converted[25]   = enable_states_to_str(fields[25], 5)
-        converted[26]   = enable_states_to_str(fields[26], 4)
-        converted[27]   = fields[27]
-        converted[28]   = fields[28]
-        converted[29]   = restart_reason_to_str(fields[29]) # Represent as string
+
+        converted[0x00] = fields[0x00]
+        converted[0x01] = fields[0x01]
+        converted[0x02] = restart_reason_to_str(fields[0x02]) # Represent as string
+        converted[0x03] = hum_raw_data_to_humidity(fields[0x03])
+        converted[0x04] = pres_raw_data_to_pressure(fields[0x04])
+        converted[0x05] = adc_raw_to_therm_temp(fields[0x05])
+        converted[0x06] = adc_raw_to_therm_temp(fields[0x06])
+        converted[0x07] = adc_raw_to_therm_temp(fields[0x07])
+        converted[0x08] = adc_raw_to_therm_temp(fields[0x08])
+        converted[0x09] = adc_raw_to_therm_temp(fields[0x09])
+        converted[0x0A] = adc_raw_to_therm_temp(fields[0x0A])
+        converted[0x0B] = adc_raw_to_therm_temp(fields[0x0B])
+        converted[0x0C] = adc_raw_to_therm_temp(fields[0x0C])
+        converted[0x0D] = adc_raw_to_therm_temp(fields[0x0D])
+        converted[0x0E] = adc_raw_to_therm_temp(fields[0x0E])
+        converted[0x0F] = adc_raw_to_therm_temp(fields[0x0F])
+        converted[0x10] = adc_raw_to_therm_temp(fields[0x10])
+        converted[0x11] = adc_raw_to_therm_temp(fields[0x11])
+        converted[0x12] = adc_raw_to_therm_temp(fields[0x12])
+        converted[0x13] = adc_raw_to_therm_temp(fields[0x13])
+        converted[0x14] = adc_raw_to_therm_temp(fields[0x14])
+        converted[0x15] = adc_raw_to_therm_temp(fields[0x15])
+        converted[0x16] = dac_raw_data_to_heater_setpoint(fields[0x16])
+        converted[0x17] = adc_raw_to_therm_temp(fields[0x17])
+        converted[0x18] = enable_states_to_str(fields[0x18], 12)
+        converted[0x19] = enable_states_to_str(fields[0x19], 5)
+        converted[0x1A] = adc_raw_to_circ_vol(fields[0x1A], PAY_ADC1_BATT_LOW_RES, PAY_ADC1_BATT_HIGH_RES)
+        converted[0x1B] = adc_raw_to_circ_vol(fields[0x1B], PAY_ADC1_BOOST6_LOW_RES, PAY_ADC1_BOOST6_HIGH_RES)
+        converted[0x1C] = adc_raw_to_circ_cur(fields[0x1C], PAY_ADC1_BOOST6_SENSE_RES, PAY_ADC1_BOOST6_REF_VOL)
+        converted[0x1D] = adc_raw_to_circ_vol(fields[0x1D], PAY_ADC1_BOOST10_LOW_RES, PAY_ADC1_BOOST10_HIGH_RES)
+        converted[0x1E] = adc_raw_to_circ_cur(fields[0x1E], PAY_ADC1_BOOST10_SENSE_RES, PAY_ADC1_BOOST10_REF_VOL)
 
         # Print to screen
         pay_hk_section.print_fields(fields, converted)
         # Write to file
-        pay_hk_section.write_block_to_file(block_num, header, converted)
+        pay_hk_section.write_block_to_file(block_num, header, fields, converted)
 
     elif block_type == BlockType.PAY_OPT_OD:
         num_fields = len(PAY_OPT_MAPPING)
@@ -175,10 +176,10 @@ def process_data_block(rx_packet):
         # Print to screen
         pay_opt_od_section.print_fields(fields, converted)
         # Write to file
-        pay_opt_od_section.write_block_to_file(block_num, header, converted)
+        pay_opt_od_section.write_block_to_file(block_num, header, fields, converted)
 
         # Keep latest block number consistent
-        pay_opt_section.write_block_to_file(block_num, header, converted)
+        pay_opt_section.write_block_to_file(block_num, header, fields, converted)
 
     elif block_type == BlockType.PAY_OPT_FL:
         num_fields = len(PAY_OPT_MAPPING)
@@ -189,10 +190,10 @@ def process_data_block(rx_packet):
         # Print to screen
         pay_opt_fl_section.print_fields(fields, converted)
         # Write to file
-        pay_opt_fl_section.write_block_to_file(block_num, header, converted)
+        pay_opt_fl_section.write_block_to_file(block_num, header, fields, converted)
 
         # Keep latest block number consistent
-        pay_opt_section.write_block_to_file(block_num, header, converted)
+        pay_opt_section.write_block_to_file(block_num, header, fields, converted)
 
 def process_cmd_block(rx_packet):
     tx_packet = tx_packet_for_rx_packet(rx_packet)
@@ -220,7 +221,9 @@ def process_cmd_block(rx_packet):
             opcode_str = matches[0].name
         else:
             opcode_str = "UNKNOWN"
-        converted = ["0x%.2x (%s)" % (opcode, opcode_str), arg1, arg2]
+        
+        fields = [opcode, arg1, arg2]
+        converted = [opcode_str, arg1, arg2]
 
         print_div()
         print_header(header)
@@ -230,9 +233,9 @@ def process_cmd_block(rx_packet):
         print("Argument 2 = 0x%x (%d)" % (arg2, arg2))
 
         if tx_packet.opcode == CommandOpcode.READ_PRIM_CMD_BLOCKS:
-            prim_cmd_log_section.write_block_to_file(tx_packet.arg1 + i, header, converted)
+            prim_cmd_log_section.write_block_to_file(tx_packet.arg1 + i, header, fields, converted)
         elif tx_packet.opcode == CommandOpcode.READ_SEC_CMD_BLOCKS:
-            sec_cmd_log_section.write_block_to_file(tx_packet.arg1 + i, header, converted)
+            sec_cmd_log_section.write_block_to_file(tx_packet.arg1 + i, header, fields, converted)
         else:
             sys.exit(1)
 
