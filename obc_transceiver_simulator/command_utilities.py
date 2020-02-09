@@ -265,22 +265,32 @@ def read_missing_blocks():
     get_sat_block_nums()
 
     print("Reading all missing blocks...")
-    
+
+    # Subtract 1 from the block number to start at so we re-collect the last
+    # block we saved, just in case the last time we collected the data block it
+    # was incomplete
     for i, section in enumerate(g_all_col_data_sections):
-        for block_num in range(section.file_block_num, section.sat_block_num):
-            if section == pay_opt_section:
-                if not send_and_receive_packet(CommandOpcode.READ_DATA_BLOCK, pay_opt_od_section.number, block_num):
-                    return
-                if not send_and_receive_packet(CommandOpcode.READ_DATA_BLOCK, pay_opt_fl_section.number, block_num):
-                    return
-            else:
-                if not send_and_receive_packet(CommandOpcode.READ_DATA_BLOCK, section.number, block_num):
+        if section == pay_opt_section:
+            for block_num in range(min(pay_opt_od_section.file_block_num, pay_opt_fl_section.file_block_num) - 1, pay_opt_section.sat_block_num):
+                if block_num < 0:
+                    print("Negative block num, skipping")
+                    continue
+
+                if pay_opt_od_section.file_block_num - 1 <= block_num:
+                    if not send_and_receive_packet(CommandOpcode.READ_DATA_BLOCK, pay_opt_od_section.number, block_num, attempts=10):
+                        return
+                if pay_opt_fl_section.file_block_num - 1 <= block_num:
+                    if not send_and_receive_packet(CommandOpcode.READ_DATA_BLOCK, pay_opt_fl_section.number, block_num, attempts=10):
+                        return
+        else:
+            for block_num in range(section.file_block_num - 1, section.sat_block_num):
+                if not send_and_receive_packet(CommandOpcode.READ_DATA_BLOCK, section.number, block_num, attempts=10):
                     return
 
-    # Can read up to 5 at a time
-    for block_num in range(prim_cmd_log_section.file_block_num, prim_cmd_log_section.sat_block_num, 5):
+    # Can read up to 5 at a time for command log blocks
+    for block_num in range(prim_cmd_log_section.file_block_num - 1, prim_cmd_log_section.sat_block_num, 5):
         if not send_and_receive_packet(CommandOpcode.READ_PRIM_CMD_BLOCKS, block_num,
-                min(prim_cmd_log_section.sat_block_num - prim_cmd_log_section.file_block_num, 5)):
+                min(prim_cmd_log_section.sat_block_num - prim_cmd_log_section.file_block_num, 5), attempts=10):
             return
     
 
@@ -315,13 +325,13 @@ def send_and_receive_packet(opcode, arg1=0, arg2=0, cmd_id=None, wait_time=5, at
         
         # Still make sure to process/print it first to see the result
         process_rx_packet(ack_packet)
-        # If the ACK packet has a failed status code, it's an invalid packet and
-        # sending it again would produce the same result, so stop attempting
+        # If the ACK packet has a failed status code, it might be because
+        # OBC did not receive all the UART properly
         # TODO constants
         # TODO - maybe an exception for full command queue?
         if ack_packet.status > 0x01:
-            break
-        
+            continue
+
         # If we are not requesting OBC to reset its command ID, check for a
         # response packet
         if cmd_id > 0:
