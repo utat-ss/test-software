@@ -30,12 +30,11 @@ http:#www.te.com/commerce/DocumentDelivery/DDEController?Action=showdoc&DocId=Da
 Optical Sensor - TSL2591
 https://ams.com/documents/20143/36005/TSL2591_DS000338_6-00.pdf
 
-Thermistor:
-NTC Thermistor 10k 0603 (1608 Metric) Part # NCU18XH103F60RB
-Digikey link: https:#www.digikey.ca/product-detail/en/murata-electronics-north-america/NCU18XH103F60RB/490-16279-1-ND/7363262
-Datasheet (page 13. Part # NCU__XH103):
-https:#www.murata.com/~/media/webrenewal/support/library/catalog/products/thermistor/r03e.ashx?la=en-us
-Datasheet (NCU18XH103F60RB): https:#www.murata.com/en-us/api/pdfdownloadapi?cate=luNTCforTempeSenso&partno=NCU18XH103F60RB
+Thermistor - ERT-J0EG103FA:
+https://www.digikey.ca/product-detail/en/panasonic-electronic-components/ERT-J0EG103FA/P12007CT-ND/526624
+https://industrial.panasonic.com/cdbs/www-data/pdf/AUA0000/AUA0000C8.pdf
+https://www.murata.com/~/media/webrenewal/support/library/catalog/products/thermistor/r03e.ashx?la=en-us
+http://www.resistorguide.com/ntc-thermistor/
 
 IMU - BNO080
 https://cdn.sparkfun.com/assets/1/3/4/5/9/BNO080_Datasheet_v1.3.pdf
@@ -45,6 +44,7 @@ https://cdn.sparkfun.com/assets/7/6/9/3/c/Sensor-Hub-Transport-Protocol-v1.7.pdf
 
 
 from ctypes import *
+from math import exp, log
 
 
 ADC_V_REF = 5.0
@@ -59,7 +59,10 @@ DAC_NUM_BITS    = 12
 THERM_V_REF = 2.5
 THERM_R_REF = 10.0
 
-THERM_LUT_COUNT = 34
+THERM_CELSIUS_TO_KELVIN = 273.15
+THERM_BETA              = 3380.0  # in Kelvin
+THERM_NOM_RES           = 10.0    # in kilo-ohms
+THERM_NOM_TEMP          = (25.0 + THERM_CELSIUS_TO_KELVIN)  # in Kelvin
 
 # IMU Q points
 IMU_ACCEL_Q = 8
@@ -75,11 +78,11 @@ OPT_ADC_CUR_SENSE_AMP_GAIN = 100.0
 
 # Current sense resistor values (in ohms)
 EPS_ADC_DEF_CUR_SENSE_RES   = 0.008
-EPS_ADC_BAT_CUR_SENSE_RES   = 0.002
+EPS_ADC_BAT_CUR_SENSE_RES   = 0.008
 
 # Voltage references for INA214's (in V)
 EPS_ADC_DEF_CUR_SENSE_VREF  = 0.0
-EPS_ADC_BAT_CUR_SENSE_VREF  = 2.5
+EPS_ADC_BAT_CUR_SENSE_VREF  = 0.0
 
 # Voltage divider resistor values (in ohms)
 # Applies to 5V, PACK, 3V3
@@ -88,8 +91,8 @@ EPS_ADC_VOL_SENSE_HIGH_RES  = 10000
 
 
 # PAY parameters
-PAY_ADC1_BOOST10_LOW_RES    = 1000
-PAY_ADC1_BOOST10_HIGH_RES   = 3000
+PAY_ADC1_BOOST10_LOW_RES    = 976
+PAY_ADC1_BOOST10_HIGH_RES   = 2972
 PAY_ADC1_BOOST10_SENSE_RES  = 0.008
 PAY_ADC1_BOOST10_REF_VOL    = 0.0
 PAY_ADC1_BOOST6_LOW_RES     = 1000
@@ -306,60 +309,14 @@ def opt_raw_to_light_intensity(raw):
     return reading / (gain * int_time)
 
 
-
-# Resistances (in kilo-ohms)
-THERM_RES = [
-    195.652,    148.171,    113.347,    87.559,     68.237,
-    53.650,     42.506,     33.892,     27.219,     22.021,
-    17.926,     14.674,     12.081,     10.000,     8.315,
-    6.948,      5.834,      4.917,      4.161,      3.535,
-    3.014,      2.586,      2.228,      1.925,      1.669,
-    1.452,      1.268,      1.110,      0.974,      0.858,
-    0.758,      0.672,      0.596,      0.531
-]
-
-# Temperatures (in C)
-THERM_TEMP = [
-    -40,        -35,        -30,        -25,        -20,
-    -15,        -10,        -5,         0,          5,
-    10,         15,         20,         25,         30,
-    35,         40,         45,         50,         55,
-    60,         65,         70,         75,         80,
-    85,         90,         95,         100,        105,
-    110,        115,        120,        125
-]
-
 '''
 Converts the measured thermistor resistance to temperature.
 resistance - thermistor resistance (in kilo-ohms)
 Returns - temperature (in C)
 '''
 def therm_res_to_temp(resistance):
-    # If higher than the highest resistance, cap at the lowest temperature
-    if resistance >= THERM_RES[0]:
-        return THERM_TEMP[0]
-
-    for i in range(0, THERM_LUT_COUNT - 1):
-        # Next value should be smaller than previous value
-        resistance_prev = THERM_RES[i]
-        resistance_next = THERM_RES[i + 1]
-
-        # Must compare to next instead of prev or else we will always trigger
-        # at i = 0
-        if resistance >= resistance_next:
-            temp_prev = THERM_TEMP[i]
-            temp_next = THERM_TEMP[i + 1]
-
-            temp_diff = temp_next - temp_prev
-            resistance_diff = resistance_next - resistance_prev
-            slope = temp_diff / resistance_diff
-
-            diff = resistance - resistance_prev  #should be negative
-
-            return temp_prev + (diff * slope)
-
-    # If lower than the lowest resistance, cap at the highest temperature
-    return THERM_TEMP[THERM_LUT_COUNT - 1]
+    denom = (log(resistance / THERM_NOM_RES) / THERM_BETA) + (1.0 / THERM_NOM_TEMP)
+    return (1.0 / denom) - THERM_CELSIUS_TO_KELVIN
 
 '''
 Converts the thermistor temperature to resistance.
@@ -367,31 +324,8 @@ temp - temperature (in C)
 Returns - thermistor resistance (in kilo-ohms)
 '''
 def therm_temp_to_res(temp):
-    # If lower than the lowest temperature, cap at the highest resistance
-    if temp <= THERM_TEMP[0]:
-        return THERM_RES[0]
-
-    for i in range(0, THERM_LUT_COUNT - 1):
-        # Next value should be bigger than previous value
-        temp_prev = THERM_TEMP[i]
-        temp_next = THERM_TEMP[i + 1]
-
-        # Must compare to next instead of prev or else we will always trigger
-        # at i = 0
-        if temp <= temp_next:
-            resistance_prev = THERM_RES[i]
-            resistance_next = THERM_RES[i + 1]
-
-            resistance_diff = resistance_next - resistance_prev
-            temp_diff = temp_next - temp_prev
-            slope = resistance_diff / temp_diff
-
-            diff = temp - temp_prev  #should be positive
-
-            return resistance_prev + (diff * slope)
-
-    # If higher than the highest temperature, cap at the lowest resistance
-    return THERM_RES[THERM_LUT_COUNT - 1]
+    temp_diff = (1.0 / (temp + THERM_CELSIUS_TO_KELVIN)) - (1.0 / THERM_NOM_TEMP)
+    return THERM_NOM_RES * exp(THERM_BETA * temp_diff)
 
 
 '''
