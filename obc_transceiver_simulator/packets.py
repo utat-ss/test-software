@@ -5,7 +5,10 @@ from encoding import *
 
 
 class TXPacket(object):
-    def __init__(self, cmd_id, opcode, arg1, arg2, password=Global.password):
+    def __init__(self, cmd_id, opcode, arg1, arg2, password=None):
+        if password is None:
+            password = Global.password
+
         self.cmd_id = cmd_id
         self.opcode = opcode
         self.arg1 = arg1
@@ -17,7 +20,7 @@ class TXPacket(object):
         self.dec_pkt += bytes([self.opcode])
         self.dec_pkt += uint32_to_bytes(self.arg1)
         self.dec_pkt += uint32_to_bytes(self.arg2)
-        self.dec_pkt += bytes(self.password, 'utf-8')
+        self.dec_pkt += self.password
 
         self.enc_pkt = encode_packet(self.dec_pkt)
 
@@ -149,7 +152,7 @@ def send_tx_packet(packet):
     print("Opcode = 0x%x (%d)" % (packet.opcode, packet.opcode))
     print("Argument 1 = 0x%x (%d)" % (packet.arg1, packet.arg1))
     print("Argument 2 = 0x%x (%d)" % (packet.arg2, packet.arg2))
-    print("Password = %s" % packet.password)
+    print("Password = %s" % bytes_to_string(packet.password))
 
     print("Decoded (%d bytes):" % len(packet.dec_pkt), bytes_to_string(packet.dec_pkt))
     print("Encoded (%d bytes):" % len(packet.enc_pkt), bytes_to_string(packet.enc_pkt))

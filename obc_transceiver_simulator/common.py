@@ -7,7 +7,7 @@ from constants import *
 # Global Variables
 class Global(object):
     serial = None       # UART serial port, one port is used
-    password = "UTAT"   # To send to OBC, store as a string
+    password = str.encode("UTAT")   # To send to OBC, store as bytes
     uplink_drop = 0     # Ratio of packets to drop from ground to satellite
     downlink_drop = 0   # Ratio of packets to drop from satellite to ground
 

@@ -129,8 +129,13 @@ def sim_actions():
         print_div()
 
     elif cmd == "e":  # Change password
-        Global.password = input("Enter new password: ")
+        pwd = input("Enter new password (string or hex bytes): ")
+        if ":" in pwd:
+            Global.password = string_to_bytes(pwd)
+        else:
+            Global.password = pwd
         assert len(Global.password) == 4
+        print("Set password to %s" % bytes_to_string(Global.password))
 
     elif cmd == "f":  # Arbitrary command
         cmd_id = input_int("Enter command ID: ")
