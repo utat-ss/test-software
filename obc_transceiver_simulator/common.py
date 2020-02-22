@@ -137,6 +137,114 @@ def section_num_to_str(num):
     else:
         sys.exit(1)
 
+def eps_ctrl_field_num_to_str(num):
+    if num == EPS_CTRL.PING:
+        return "Ping"
+    elif num == EPS_CTRL.READ_EEPROM:
+        return "Read EEPROM"
+    elif num == EPS_CTRL.ERASE_EEPROM:
+        return "Erase EEPROM"
+    elif num == EPS_CTRL.READ_RAM_BYTE:
+        return "Read RAM Byte"
+    elif num == EPS_CTRL.RESET:
+        return "Reset"
+    elif num == EPS_CTRL.GET_HEAT_SHAD_SP:
+        return "Get heater shadow setpoints"
+    elif num == EPS_CTRL.SET_HEAT_1_SHAD_SP:
+        return "Set heater 1 shadow setpoint"
+    elif num == EPS_CTRL.SET_HEAT_2_SHAD_SP:
+        return "Set heater 2 shadow setpoint"
+    elif num == EPS_CTRL.GET_HEAT_SUN_SP:
+        return "Get heater sun setpoints"
+    elif num == EPS_CTRL.SET_HEAT_1_SUN_SP:
+        return "Set heater 1 sun setpoint"
+    elif num == EPS_CTRL.SET_HEAT_2_SUN_SP:
+        return "Set heater 2 sun setpoint"
+    elif num == EPS_CTRL.GET_HEAT_CUR_THR:
+        return "Get heater current thresholds"
+    elif num == EPS_CTRL.SET_HEAT_LOWER_CUR_THR:
+        return "Set heater lower current threshold"
+    elif num == EPS_CTRL.SET_HEAT_UPPER_CUR_THR:
+        return "Set heater upper current threshold"
+    else:
+        return "UNKNOWN"
+
+def pay_ctrl_field_num_to_str(num):
+    if num == PAY_CTRL.PING:
+        return "Ping"
+    elif num == PAY_CTRL.READ_EEPROM:
+        return "Read EEPROM"
+    elif num == PAY_CTRL.ERASE_EEPROM:
+        return "Erase EEPROM"
+    elif num == PAY_CTRL.READ_RAM_BYTE:
+        return "Read RAM Byte"
+    elif num == PAY_CTRL.RESET_SSM:
+        return "Reset SSM"
+    elif num == PAY_CTRL.RESET_OPT:
+        return "Reset OPT"
+    elif num == PAY_CTRL.ENABLE_6V:
+        return "Enable 6V"
+    elif num == PAY_CTRL.DISABLE_6V:
+        return "Disable 6V"
+    elif num == PAY_CTRL.ENABLE_10V:
+        return "Enable 10V"
+    elif num == PAY_CTRL.DISABLE_10V:
+        return "Disable 10V"
+    elif num == PAY_CTRL.GET_HEAT_PARAMS:
+        return "Get Heater Parameters"
+    elif num == PAY_CTRL.SET_HEAT_SP:
+        return "Set Heater Setpoint"
+    elif num == PAY_CTRL.SET_INV_THERM_READING:
+        return "Set Invalid Thermistor Reading"
+    elif num == PAY_CTRL.GET_THERM_READING:
+        return "Get Thermistor Reading"
+    elif num == PAY_CTRL.GET_THERM_ERR_CODE:
+        return "Get Thermistor Error Code"
+    elif num == PAY_CTRL.SET_THERM_ERR_CODE:
+        return "Set Thermistor Error Code"
+    elif num == PAY_CTRL.GET_MOTOR_STATUS:
+        return "Get Motor Status"
+    elif num == PAY_CTRL.MOTOR_DEP_ROUTINE:
+        return "Run Motor Deployment Routine"
+    elif num == PAY_CTRL.MOTOR_UP:
+        return "Move Motors Up"
+    elif num == PAY_CTRL.MOTOR_DOWN:
+        return "Move Motors Down"
+    elif num == PAY_CTRL.SEND_OPT_SPI:
+        return "Send Optical SPI"
+    else:
+        return "UNKNOWN"
+
+def pay_therm_err_code_to_str(code):
+    if code == PAYThermErrCode.NORMAL:
+        return "Normal"
+    elif code == PAYThermErrCode.BELOW_ULL:
+        return "Below ULL"
+    elif code == PAYThermErrCode.ABOVE_UHL:
+        return "Above ULL"
+    elif code == PAYThermErrCode.BELOW_MIU:
+        return "Below miu"
+    elif code == PAYThermErrCode.ABOVE_MIU:
+        return "Above miu"
+    elif code == PAYThermErrCode.MANUAL_INVALID:
+        return "Manual invalid"
+    elif code == PAYThermErrCode.MANUAL_VALID:
+        return "Manual valid"
+    else:
+        return "UNKNOWN"
+
+def pay_opt_spi_opcode_to_str(code):
+    if code == PAYOptSPIOpcode.GET_READING:
+        return "Get Reading"
+    elif code == PAYOptSPIOpcode.GET_POWER:
+        return "Get Power"
+    elif code == PAYOptSPIOpcode.ENTER_SLEEP_MODE:
+        return "Enter Sleep Mode"
+    elif code == PAYOptSPIOpcode.ENTER_NORMAL_MODE:
+        return "Enter Normal Mode"
+    else:
+        return "UNKNOWN"
+
 def packet_ack_status_to_str(status):
     if status == 0:
         return "OK"

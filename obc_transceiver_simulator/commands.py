@@ -453,118 +453,98 @@ class SendEPSCANMessage(object):
         self.opcode = CommandOpcode.SEND_EPS_CAN_MSG
     
     def run_tx(self):
-        print("a. Arbitrary bytes")
-        print("b. Arbitrary values")
-        print("0. Ping")
-        print("14. Read EEPROM")
-        print("15. Erase EEPROM")
+        print("a. Arbitrary values")
+        print("b. Arbitrary bytes")
+
+        # Enum to all ints: https://stackoverflow.com/questions/29503339/how-to-get-all-values-from-python-enum-class/29503414
+        for field in list(map(int, EPS_CTRL)):
+            print("%d. %s" % (field, eps_ctrl_field_num_to_str(field)))
+
         cmd = input("Enter command number: ")
 
         if cmd == "a":
-            b = string_to_bytes(input("Enter 8 bytes: "))
-            send_and_receive_packet(CommandOpcode.SEND_EPS_CAN_MSG, bytes_to_uint32(b[0:4]), bytes_to_uint32(b[4:8]))
-            return
-        
-        if cmd == "b":
             opcode = input_int("Enter opcode: ")
             field_num = input_int("Enter field number: ")
             tx_data = input_int("Enter data: ")
             send_and_receive_eps_can(opcode, field_num, tx_data)
             return
 
-        cmd = str_to_int(cmd)
+        if cmd == "b":
+            b = string_to_bytes(input("Enter 8 bytes: "))
+            send_and_receive_packet(CommandOpcode.SEND_EPS_CAN_MSG, bytes_to_uint32(b[0:4]), bytes_to_uint32(b[4:8]))
+            return
+
+        field_num = str_to_int(cmd)
+        # Can be overriden depending on the command
+        tx_data = 0
+
+        if field_num == EPS_CTRL.READ_EEPROM:
+            tx_data = input_int("Enter address: ")
         
-        if cmd == 0:
-            send_and_receive_eps_can(CAN.EPS_CTRL, EPS_CTRL.PING)
+        elif field_num == EPS_CTRL.ERASE_EEPROM:
+            tx_data = input_int("Enter address: ")
+        
+        elif field_num == EPS_CTRL.READ_RAM_BYTE:
+            tx_data = input_int("Enter address: ")
 
-        elif cmd == 14:
-            send_and_receive_eps_can(CAN.EPS_CTRL, EPS_CTRL.READ_EEPROM)
-
-        elif cmd == 15:
-            send_and_receive_pay_can(CAN.PAY_CTRL, PAY_CTRL.ERASE_EEPROM)
-
-        # TODO
-        # elif opcode == CommandOpcode.PING_OBC: #Heater DAC Setpoints
-        #     print("1. Set EPS - Shadow Setpoint 1")
-        #     print("2. Set EPS - Shadow Setpoint 2")
-        #     print("3. Set EPS - Sun Setpoint 1")
-        #     print("4. Set EPS - Sun Setpoint 2")
-        #     print("5. Set PAY - Setpoint 1")
-        #     print("6. Set PAY - Setpoint 2")
-        #     next_cmd = input("Enter command number: ")
-
-        #     setpoint = float(input("Enter setpoint (in C): "))
-        #     data = dac_vol_to_raw_data(therm_res_to_vol(therm_temp_to_res(setpoint)))
-
-        #     if next_cmd == ("1"):
-        #         send_and_receive_eps_can(1, 1, data)
-        #     elif next_cmd == ("2"):
-        #         send_and_receive_eps_can(1, 2, data)
-        #     elif next_cmd == ("3"):
-        #         send_and_receive_eps_can(1, 3, data)
-        #     elif next_cmd == ("4"):
-        #         send_and_receive_eps_can(1, 4, data)
-        #     elif next_cmd == ("5"):
-        #         send_and_receive_pay_can(4, 1, data)
-        #     elif next_cmd == ("6"):
-        #         send_and_receive_pay_can(4, 2, data)
-        #     else:
-        #         print("Invalid command")
-
-        # TODO
-        # elif opcode == CommandOpcode.PING_OBC:
-        #     print("1. Lower")
-        #     print("2. Upper")
-        #     next_cmd = input("Enter command number: ")
-
-        #     threshold = float(input("Enter threshold (in A): "))
-        #     data = adc_circ_cur_to_raw(threshold)
-
-        #     if next_cmd == ("1"):
-        #         send_and_receive_eps_can(1, 5, data)
-        #     elif next_cmd == ("2"):
-        #         send_and_receive_eps_can(1, 6, data)
-        #     else:
-        #         print("Invalid command")
+        elif field_num == EPS_CTRL.SET_HEAT_1_SHAD_SP:
+            tx_data = heater_setpoint_to_dac_raw_data(
+                input("Enter temperature in C:"))
+        
+        elif field_num == EPS_CTRL.SET_HEAT_2_SHAD_SP:
+            tx_data = heater_setpoint_to_dac_raw_data(
+                input("Enter temperature in C:"))
+        
+        elif field_num == EPS_CTRL.SET_HEAT_1_SUN_SP:
+            tx_data = heater_setpoint_to_dac_raw_data(
+                input("Enter temperature in C:"))
+        
+        elif field_num == EPS_CTRL.SET_HEAT_2_SUN_SP:
+            tx_data = heater_setpoint_to_dac_raw_data(
+                input("Enter temperature in C:"))
+        
+        elif field_num == EPS_CTRL.SET_HEAT_LOWER_CUR_THR:
+            tx_data = adc_circ_cur_to_raw(input("Enter current in A:"), EPS_ADC_DEF_CUR_SENSE_RES, EPS_ADC_DEF_CUR_SENSE_VREF)
+        
+        elif field_num == EPS_CTRL.SET_HEAT_UPPER_CUR_THR:
+            tx_data = adc_circ_cur_to_raw(input("Enter current in A:"), EPS_ADC_DEF_CUR_SENSE_RES, EPS_ADC_DEF_CUR_SENSE_VREF)
+        
+        send_and_receive_eps_can(CAN.EPS_CTRL, field_num, tx_data)
     
     # packet must be an RXPacket
     def run_rx(self, packet):
         opcode = packet.data[0]
         field_num = packet.data[1]
         status = packet.data[2]
-        rx_data = packet.data[4:8]
-        print("Opcode =", opcode, ", Field =", field_num, ", Status =", status, ", Data = ", bytes_to_string(rx_data))
-        
-        # EPS CTRL
-        if opcode == 1:
-            if field_num == 0:
-                print("Ping")
-            elif field_num == 1:
-                print("Battery heater - shadow setpoint 1")
-            elif field_num == 2:
-                print("Battery heater - shadow setpoint 2")
-            elif field_num == 3:
-                print("Battery heater - sun setpoint 1")
-            elif field_num == 4:
-                print("Battery heater - sun setpoint 2")
-            elif field_num == 5:
-                print("Battery heater mode - lower current threshold")
-            elif field_num == 6:
-                print("Battery heater mode - upper current threshold")
-            elif field_num == 7:
-                print("Reset")
-            elif field_num == 8:
-                print("Read EEPROM")
-            elif field_num == 9:
-                print("Erase EEPROM")
-            elif field_num == 14:
-                print("Get restart count")
-            elif field_num == 15:
-                print("Get restart reason")
-            elif field_num == 12:
-                print("Get uptime")
-            elif field_num == 13:
-                print("Start temporary low-power mode")
+        rx_data = bytes_to_uint32(packet.data[4:8])
+        print("Opcode =", opcode, ", Field =", field_num, ", Status =", status, "(", packet_resp_status_to_str(status), "), Data = ", bytes_to_string(uint32_to_bytes(rx_data)))
+
+        if opcode == CAN.EPS_CTRL:
+            if field_num == EPS_CTRL.READ_EEPROM:
+                print("Value is 0x%x" % rx_data)
+            
+            elif field_num == EPS_CTRL.READ_RAM_BYTE:
+                print("Value is 0x%x" % rx_data)
+
+            elif field_num == EPS_CTRL.GET_HEAT_SHAD_SP:
+                sp1 = (rx_data >> 16) & 0xFFFF
+                sp2 = rx_data & 0xFFFF
+                print("Heater 1 setpoint: %f C" % dac_raw_data_to_heater_setpoint(sp1))
+                print("Heater 2 setpoint: %f C" % dac_raw_data_to_heater_setpoint(sp2))
+            
+            elif field_num == EPS_CTRL.GET_HEAT_SUN_SP:
+                sp1 = (rx_data >> 16) & 0xFFFF
+                sp2 = rx_data & 0xFFFF
+                print("Heater 1 setpoint: %f C" % dac_raw_data_to_heater_setpoint(sp1))
+                print("Heater 2 setpoint: %f C" % dac_raw_data_to_heater_setpoint(sp2))
+            
+            elif field_num == EPS_CTRL.GET_HEAT_CUR_THR:
+                lower = (rx_data >> 16) & 0xFFFF
+                upper = rx_data & 0xFFFF
+                print("Lower threshold: %f A" % adc_raw_to_circ_cur(lower,
+                    EPS_ADC_DEF_CUR_SENSE_RES, EPS_ADC_DEF_CUR_SENSE_VREF))
+                print("Upper threshold: %f A" % adc_raw_to_circ_cur(upper,
+                    EPS_ADC_DEF_CUR_SENSE_RES, EPS_ADC_DEF_CUR_SENSE_VREF))
 
 
 class SendPAYCANMessage(object):
@@ -573,62 +553,117 @@ class SendPAYCANMessage(object):
         self.opcode = CommandOpcode.SEND_PAY_CAN_MSG
     
     def run_tx(self):
-        print("a. Arbitrary bytes")
-        print("b. Arbitrary values")
-        print("0. Ping")
+        print("a. Arbitrary values")
+        print("b. Arbitrary bytes")
+
+        # Enum to all ints: https://stackoverflow.com/questions/29503339/how-to-get-all-values-from-python-enum-class/29503414
+        for field in list(map(int, PAY_CTRL)):
+            print("%d. %s" % (field, pay_ctrl_field_num_to_str(field)))
+
         cmd = input("Enter command number: ")
 
         if cmd == "a":
-            b = string_to_bytes(input("Enter 8 bytes: "))
-            send_and_receive_packet(CommandOpcode.SEND_PAY_CAN_MSG, bytes_to_uint32(b[0:4]), bytes_to_uint32(b[4:8]))
-            return
-
-        if cmd == "b":
             opcode = input_int("Enter opcode: ")
             field_num = input_int("Enter field number: ")
             tx_data = input_int("Enter data: ")
             send_and_receive_pay_can(opcode, field_num, tx_data)
             return
 
-        cmd = str_to_int(cmd)
+        if cmd == "b":
+            b = string_to_bytes(input("Enter 8 bytes: "))
+            send_and_receive_packet(CommandOpcode.SEND_PAY_CAN_MSG, bytes_to_uint32(b[0:4]), bytes_to_uint32(b[4:8]))
+            return
 
-        if cmd == 0:
-            send_and_receive_pay_can(CAN.PAY_CTRL, PAY_CTRL.PING)
+        field_num = str_to_int(cmd)
+        tx_data = 0
+
+        if field_num == PAY_CTRL.READ_EEPROM:
+            tx_data = input_int("Enter address: ")
+        
+        elif field_num == PAY_CTRL.ERASE_EEPROM:
+            tx_data = input_int("Enter address: ")
+        
+        elif field_num == PAY_CTRL.READ_RAM_BYTE:
+            tx_data = input_int("Enter address: ")
+        
+        elif field_num == PAY_CTRL.SET_HEAT_SP:
+            tx_data = input_int("Enter address: ")
+
+        elif field_num == PAY_CTRL.SET_INV_THERM_READING:
+            tx_data = input_int("Enter address: ")
+
+        elif field_num == PAY_CTRL.SET_THERM_ERR_CODE:
+            tx_data = input_int("Enter address: ")
+
+        elif field_num == PAY_CTRL.SEND_OPT_SPI:
+            tx_data = input_int("Enter address: ")
+
+        send_and_receive_pay_can(CAN.PAY_CTRL, field_num, tx_data)
 
     # packet must be an RXPacket
     def run_rx(self, packet):
+        tx_packet = tx_packet_for_rx_packet(packet)
+
         opcode = packet.data[0]
         field_num = packet.data[1]
         status = packet.data[2]
         rx_data = packet.data[4:8]
         print("Opcode =", opcode, ", Field =", field_num, ", Status =", status, ", Data = ", bytes_to_string(rx_data))
-        
-        # PAY CTRL
-        if opcode == 4:
-            if field_num == 0:
-                print("Ping")
-            elif field_num == 1:
-                print("MF heater - setpoint 1")
-            elif field_num == 2:
-                print("MF heater - setpoint 2")
-            elif field_num == 3:
-                print("Move act plate up")
-            elif field_num == 4:
-                print("Move act plate down")
-            elif field_num == 5:
-                print("Reset")
-            elif field_num == 6:
-                print("Read EEPROM")
-            elif field_num == 7:
-                print("Erase EEPROM")
-            elif field_num == 8:
-                print("Get restart count")
-            elif field_num == 9:
-                print("Get restart reason")
-            elif field_num == 10:
-                print("Get uptime")
-            elif field_num == 11:
-                print("Start temporary low-power mode")
+        print(pay_ctrl_field_num_to_str(field_num))
+
+        if opcode == CAN.PAY_CTRL:
+            if field_num == PAY_CTRL.READ_EEPROM:
+                print("Value is 0x%x" % rx_data)
+            
+            elif field_num == PAY_CTRL.READ_RAM_BYTE:
+                print("Value is 0x%x" % rx_data)
+
+            elif field_num == PAY_CTRL.GET_HEAT_PARAMS:
+                setpoint = (rx_data >> 16) & 0xFFFF
+                inv_therm_reading = rx_data & 0xFFFF
+                print("Heater setpoint: %f C" % dac_raw_data_to_heater_setpoint(setpoint))
+                print("Invalid thermistor reading: %f C" % adc_raw_to_therm_temp(inv_therm_reading))
+
+            elif field_num == PAY_CTRL.GET_THERM_READING:
+                zero = (rx_data >> 16) & 0xFFFF
+                one = rx_data & 0xFFFF
+                print("(n+0) reading: %f C" % adc_raw_to_therm_temp(zero))
+                print("(n+1) reading: %f C" % adc_raw_to_therm_temp(one))
+
+            elif field_num == PAY_CTRL.GET_THERM_ERR_CODE:
+                zero = (rx_data >> 24) & 0xFFFF
+                one = (rx_data >> 16) & 0xFFFF
+                two = (rx_data >> 8) & 0xFFFF
+                three = rx_data & 0xFFFF
+
+                print("(n+0) code: 0x%x (%s) C" % (zero, pay_therm_err_code_to_str(zero)))
+                print("(n+1) code: 0x%x (%s) C" % (one, pay_therm_err_code_to_str(one)))
+                print("(n+2) code: 0x%x (%s) C" % (two, pay_therm_err_code_to_str(two)))
+                print("(n+3) code: 0x%x (%s) C" % (three, pay_therm_err_code_to_str(three)))
+
+            elif field_num == PAY_CTRL.GET_MOTOR_STATUS:
+                fault2 = (rx_data >> 31) & 0x01
+                fault1 = (rx_data >> 30) & 0x01
+                lim2 = (rx_data >> 29) & 0x01
+                lim1 = (rx_data >> 28) & 0x01
+                last_exec_time = (rx_data >> 8) & 0xFFFFF
+                motor_status = rx_data & 0xFF
+
+                # TODO
+            
+            elif field_num == PAY_CTRL.SEND_OPT_SPI:
+                spi_opcode = (tx_packet.arg2 >> 8) & 0xFF
+                spi_field = tx_packet.arg2 & 0xFF
+                print("Opcode:", spi_opcode)
+                print("Field:", spi_field)
+                print(pay_opt_spi_opcode_to_str(spi_opcode))
+
+                print("Response data: 0x%x" % rx_data)
+
+                # Print power data
+                if spi_opcode == PAYOptSPIOpcode.GET_POWER:
+                    (voltage, current, power) = opt_power_raw_to_conv(rx_data)
+                    print("%f V, %f A, %f W" % (voltage, current, power))
 
 
 class ResetSubsystem(object):

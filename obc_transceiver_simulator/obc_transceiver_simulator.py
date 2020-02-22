@@ -186,6 +186,10 @@ def main_loop():
             sys.exit(0)
 
         else:
+            # Could be empty input
+            if len(cmd) == 0:
+                continue
+
             # A base opcode covers a group of 16 numbers
             base_opcode = str_to_int(cmd) << 4
             # List the commands within this group of opcodes

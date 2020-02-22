@@ -31,9 +31,6 @@ class CommandOpcode(IntEnum):
     SEND_PAY_CAN_MSG            = 0x41
     RESET_SUBSYS                = 0x42
 
-
-
-
 class Subsystem(IntEnum):
     OBC = 1
     EPS = 2
@@ -54,15 +51,55 @@ class CAN(IntEnum):
     PAY_CTRL = 0x05
 
 class EPS_CTRL(IntEnum):
-    PING            = 0
-    RESET           = 13
-    READ_EEPROM     = 14
-    ERASE_EEPROM    = 15
-    READ_RAM_BYTE   = 16
+    PING                    = 0
+    READ_EEPROM             = 1
+    ERASE_EEPROM            = 2
+    READ_RAM_BYTE           = 3
+    RESET                   = 4
+    GET_HEAT_SHAD_SP        = 5
+    SET_HEAT_1_SHAD_SP      = 6
+    SET_HEAT_2_SHAD_SP      = 7
+    GET_HEAT_SUN_SP         = 8
+    SET_HEAT_1_SUN_SP       = 9
+    SET_HEAT_2_SUN_SP       = 10
+    GET_HEAT_CUR_THR        = 11
+    SET_HEAT_LOWER_CUR_THR  = 12
+    SET_HEAT_UPPER_CUR_THR  = 13
 
 class PAY_CTRL(IntEnum):
-    PING            = 0
-    RESET           = 18
-    READ_EEPROM     = 19
-    ERASE_EEPROM    = 20
-    READ_RAM_BYTE   = 21
+    PING                    = 0
+    READ_EEPROM             = 1
+    ERASE_EEPROM            = 2
+    READ_RAM_BYTE           = 3
+    RESET_SSM               = 4
+    RESET_OPT               = 5
+    ENABLE_6V               = 6
+    DISABLE_6V              = 7
+    ENABLE_10V              = 8
+    DISABLE_10V             = 9
+    GET_HEAT_PARAMS         = 10
+    SET_HEAT_SP             = 11
+    SET_INV_THERM_READING   = 12
+    GET_THERM_READING       = 13
+    GET_THERM_ERR_CODE      = 14
+    SET_THERM_ERR_CODE      = 15
+    GET_MOTOR_STATUS        = 16
+    MOTOR_DEP_ROUTINE       = 17
+    MOTOR_UP                = 18
+    MOTOR_DOWN              = 19
+    SEND_OPT_SPI            = 20
+
+class PAYThermErrCode(IntEnum):
+    NORMAL          = 0x00
+    BELOW_ULL       = 0x01
+    ABOVE_UHL       = 0x02
+    BELOW_MIU       = 0x03
+    ABOVE_MIU       = 0x04
+    MANUAL_INVALID  = 0x05
+    MANUAL_VALID    = 0x06
+
+class PAYOptSPIOpcode(IntEnum):
+    GET_READING         = 0x01
+    GET_POWER           = 0x02
+    ENTER_SLEEP_MODE    = 0x03
+    ENTER_NORMAL_MODE   = 0x04
