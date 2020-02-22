@@ -246,46 +246,46 @@ def pay_opt_spi_opcode_to_str(code):
         return "UNKNOWN"
 
 def packet_ack_status_to_str(status):
-    if status == 0:
+    if status == PacketACKStatus.OK:
         return "OK"
-    elif status == 1:
-        return "Successfully Reset Expected Command ID"
-    elif status == 2:
+    elif status == PacketACKStatus.RESET_CMD_ID:
+        return "Successfully Reset Command ID"
+    elif status == PacketACKStatus.INVALID_ENC_FMT:
         return "Invalid Encoded Format"
-    elif status == 3:
+    elif status == PacketACKStatus.INVALID_LEN:
         return "Invalid Length"
-    elif status == 4:
+    elif status == PacketACKStatus.INVALID_CSUM:
         return "Invalid Checksum"
-    elif status == 5:
+    elif status == PacketACKStatus.INVALID_DEC_FMT:
         return "Invalid Decoded Format"
-    elif status == 6:
+    elif status == PacketACKStatus.INVALID_CMD_ID:
         return "Invalid Command ID"
-    elif status == 7:
+    elif status == PacketACKStatus.DECREMENTED_CMD_ID:
         return "Decremented Command ID"
-    elif status == 8:
+    elif status == PacketACKStatus.REPEATED_CMD_ID:
         return "Repeated Command ID"
-    elif status == 9:
+    elif status == PacketACKStatus.INVALID_OPCODE:
         return "Invalid Opcode"
-    elif status == 10:
+    elif status == PacketACKStatus.INVALID_PWD:
         return "Invalid Password"
+    elif status == PacketACKStatus.FULL_CMD_QUEUE:
+        return "Full Command Queue"
     else:
         return "UNKNOWN"
 
 def packet_resp_status_to_str(status):
-    if status == 0x00:
+    if status == PacketRespStatus.OK:
         return "OK"
-    elif status == 0x01:
+    elif status == PacketRespStatus.INVALID_ARGS:
         return "Invalid Arguments"
-    elif status == 0x02:
+    elif status == PacketRespStatus.TIMED_OUT:
         return "Timed Out"
-    elif status == 0x11:
+    elif status == PacketRespStatus.INVALID_CAN_OPCODE:
         return "Invalid CAN Opcode"
-    elif status == 0x12:
+    elif status == PacketRespStatus.INVALID_CAN_FIELD_NUM:
         return "Invalid CAN Field Number"
-    elif status == 0x13:
+    elif status == PacketRespStatus.INVALID_CAN_DATA:
         return "Invalid CAN Data"
-    elif status == 0xFF:
-        return "Unknown Failure"
     else:
         return "UNKNOWN"
 

@@ -103,3 +103,25 @@ class PAYOptSPIOpcode(IntEnum):
     GET_POWER           = 0x02
     ENTER_SLEEP_MODE    = 0x03
     ENTER_NORMAL_MODE   = 0x04
+
+class PacketACKStatus(IntEnum):
+    OK                  = 0x00
+    RESET_CMD_ID        = 0x01
+    INVALID_ENC_FMT     = 0x02
+    INVALID_LEN         = 0x03
+    INVALID_CSUM        = 0x04
+    INVALID_DEC_FMT     = 0x05
+    INVALID_CMD_ID      = 0x06
+    DECREMENTED_CMD_ID  = 0x07
+    REPEATED_CMD_ID     = 0x08
+    INVALID_OPCODE      = 0x09
+    INVALID_PWD         = 0x0A
+    FULL_CMD_QUEUE      = 0x0B
+
+class PacketRespStatus(IntEnum):
+    OK                      = 0x00
+    INVALID_ARGS            = 0x01
+    TIMED_OUT               = 0x02
+    INVALID_CAN_OPCODE      = 0x11
+    INVALID_CAN_FIELD_NUM   = 0x12
+    INVALID_CAN_DATA        = 0x13

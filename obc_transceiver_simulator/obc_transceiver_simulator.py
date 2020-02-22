@@ -233,7 +233,6 @@ if __name__ == "__main__":
     print("Downlink packet drop rate: %.1f%%" % (Global.downlink_drop * 100.0))
 
     try:
-        # TODO - figure out inter_byte_timeout
         Global.serial = serial.Serial(uart, baud, timeout=0.1)
         print("Using port " + uart + " for UART")
     except serial.SerialException as e:
@@ -243,7 +242,6 @@ if __name__ == "__main__":
     for section in g_all_sections:
         section.load_file()
     
-    # TODO - refactor checking for out folder?
     # https://stackoverflow.com/questions/2757887/file-mode-for-creatingreadingappendingbinary
 
     write_path = OUT_FOLDER + "/" + "serial_write.log"

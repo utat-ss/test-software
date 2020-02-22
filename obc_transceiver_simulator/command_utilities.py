@@ -327,9 +327,7 @@ def send_and_receive_packet(opcode, arg1=0, arg2=0, cmd_id=None, wait_time=5, at
         process_rx_packet(ack_packet)
         # If the ACK packet has a failed status code, it might be because
         # OBC did not receive all the UART properly
-        # TODO constants
-        # TODO - maybe an exception for full command queue?
-        if ack_packet.status > 0x01:
+        if ack_packet.status > PacketACKStatus.RESET_CMD_ID:
             continue
 
         # If we are not requesting OBC to reset its command ID, check for a

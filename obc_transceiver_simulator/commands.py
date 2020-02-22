@@ -231,10 +231,9 @@ class CollectDataBlock(object):
     
     # packet must be an RXPacket
     def run_rx(self, packet):
-        # TODO - subtract one somewhere? probably on OBC?
         # Only check data if we received any (OK status)
         if len(packet.data) > 0:
-            print("Collected block number %d" % bytes_to_uint32(packet.data[0:4]))
+            print("Collected block %d" % bytes_to_uint32(packet.data[0:4]))
 
 
 class GetAutoDataCollectionSettings(object):
@@ -517,7 +516,10 @@ class SendEPSCANMessage(object):
         field_num = packet.data[1]
         status = packet.data[2]
         rx_data = bytes_to_uint32(packet.data[4:8])
-        print("Opcode =", opcode, ", Field =", field_num, ", Status =", status, "(", packet_resp_status_to_str(status), "), Data = ", bytes_to_string(uint32_to_bytes(rx_data)))
+        print("Opcode =", opcode, ", Field =", field_num, ", Status =", status,
+            "(", packet_resp_status_to_str(status), "), Data = ",
+            bytes_to_string(uint32_to_bytes(rx_data)))
+        print(eps_ctrl_field_num_to_str(field_num))
 
         if opcode == CAN.EPS_CTRL:
             if field_num == EPS_CTRL.READ_EEPROM:
@@ -607,8 +609,10 @@ class SendPAYCANMessage(object):
         opcode = packet.data[0]
         field_num = packet.data[1]
         status = packet.data[2]
-        rx_data = packet.data[4:8]
-        print("Opcode =", opcode, ", Field =", field_num, ", Status =", status, ", Data = ", bytes_to_string(rx_data))
+        rx_data = bytes_to_uint32(packet.data[4:8])
+        print("Opcode =", opcode, ", Field =", field_num, ", Status =", status,
+            "(", packet_resp_status_to_str(status), "), Data = ",
+            bytes_to_string(uint32_to_bytes(rx_data)))
         print(pay_ctrl_field_num_to_str(field_num))
 
         if opcode == CAN.PAY_CTRL:
@@ -649,8 +653,13 @@ class SendPAYCANMessage(object):
                 last_exec_time = (rx_data >> 8) & 0xFFFFF
                 motor_status = rx_data & 0xFF
 
-                # TODO
-            
+                print("Fault 2: %d", fault2)
+                print("Fault 1: %d", fault1)
+                print("Limit switch 2: %d", lim2)
+                print("Limit switch 1: %d", lim1)
+                print("Last execution time: %d", last_exec_time)
+                print("Motor status: %d", motor_status)
+
             elif field_num == PAY_CTRL.SEND_OPT_SPI:
                 spi_opcode = (tx_packet.arg2 >> 8) & 0xFF
                 spi_field = tx_packet.arg2 & 0xFF
