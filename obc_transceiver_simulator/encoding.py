@@ -3,6 +3,8 @@ Encoding and decoding operations for transceiver messages.
 This attempts to follow obc/src/transceiver.c as closely as possible.
 """
 
+import sys
+
 # Calculates the checksum for the string message.
 # Algorithm modified for python from:
 # https://stackoverflow.com/questions/21001659/crc32-algorithm-implementation-in-c-without-a-look-up-table-and-with-a-public-li
@@ -83,8 +85,7 @@ def decode_packet(enc_msg):
 
     # Check invalid length
     if dec_len != enc_len - 9:
-        # NACK
-        return bytes(CMD_CMD_ID_UNKNOWN + CMD_ACK_STATUS_INVALID_CSUM)
+        sys.exit(1)
 
     actual_checksum = (enc_msg[enc_len - 5] << 24) | (enc_msg[enc_len - 4] << 16) | (enc_msg[enc_len - 3] << 8) | enc_msg[enc_len - 2]
 
@@ -99,11 +100,8 @@ def decode_packet(enc_msg):
     expected_checksum = crc32(checksum_bytes, len(checksum_bytes))
 
     # Check invalid checksum
-    # TODO - This doesn't work but the decoded message is accurate
-    # actual checksum or expected checksum might be wrong
-    # if expected_checksum != actual_checksum:
-        # NACK for invalid checksum
-        # return bytes(CMD_CMD_ID_UNKNOWN + CMD_ACK_STATUS_INVALID_CSUM)
+    if expected_checksum != actual_checksum:
+        sys.exit(1)
 
     for i in range (0, dec_len):
         dec_msg[i] = enc_msg[3 + i]

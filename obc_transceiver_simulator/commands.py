@@ -1,7 +1,6 @@
 import sys
 
 from command_utilities import *
-from command_utilities import send_and_receive_packet   # TODO - figure out why this needs to be done separately
 from common import *
 from constants import *
 from conversions import *

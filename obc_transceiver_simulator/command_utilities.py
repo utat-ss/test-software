@@ -28,7 +28,8 @@ def process_rx_packet(rx_packet):
         # The RXPacket doesn't contain opcode information, so we can only
         # retrieve it by inspecting the previously send packet for that command ID
 
-        # TODO
+        # This is messy but trying to put it in the Global class created a whole
+        # set of import dependency issues
         from commands import g_all_commands
         global g_all_commands
         matched_cmds = [command for command in g_all_commands if command.opcode == tx_packet.opcode]
