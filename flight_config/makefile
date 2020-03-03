@@ -43,5 +43,5 @@ write_fuses:
 write_optical_fuses:
 	make write_fuses EFUSE=0xf8 HFUSE=0xd7 LFUSE=0xff
 
-upload_bin:
+upload:
 	avrdude -c $(PGMR) -C ./$(CONF) -p $(DEVICE) -P $(PORT) -U flash:w:./$(PROG)
