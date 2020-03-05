@@ -95,7 +95,7 @@ def str_to_int(string):
     except Exception as e:
         print(e)
         print("Error! Input must be an integer or in hex")
-        raise e
+        return None
 
 # prompt is the send_tx_packet information
 # Sends data back as an int

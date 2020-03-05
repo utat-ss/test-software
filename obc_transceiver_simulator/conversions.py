@@ -322,7 +322,7 @@ def therm_res_to_temp(resistance):
         denom = (log(resistance / THERM_NOM_RES) / THERM_BETA) + (1.0 / THERM_NOM_TEMP)
         return (1.0 / denom) - THERM_CELSIUS_TO_KELVIN
     except ValueError:
-        return -1000000.0
+        return -1000.0
 
 '''
 Converts the thermistor temperature to resistance.

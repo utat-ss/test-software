@@ -487,19 +487,19 @@ class SendEPSCANMessage(object):
 
         elif field_num == EPS_CTRL.SET_HEAT_1_SHAD_SP:
             tx_data = heater_setpoint_to_dac_raw_data(
-                input("Enter temperature in C:"))
+                float(input("Enter temperature in C: ")))
         
         elif field_num == EPS_CTRL.SET_HEAT_2_SHAD_SP:
             tx_data = heater_setpoint_to_dac_raw_data(
-                input("Enter temperature in C:"))
+                float(input("Enter temperature in C: ")))
         
         elif field_num == EPS_CTRL.SET_HEAT_1_SUN_SP:
             tx_data = heater_setpoint_to_dac_raw_data(
-                input("Enter temperature in C:"))
+                float(input("Enter temperature in C: ")))
         
         elif field_num == EPS_CTRL.SET_HEAT_2_SUN_SP:
             tx_data = heater_setpoint_to_dac_raw_data(
-                input("Enter temperature in C:"))
+                float(input("Enter temperature in C: ")))
         
         elif field_num == EPS_CTRL.SET_HEAT_LOWER_CUR_THR:
             tx_data = adc_circ_cur_to_raw(input("Enter current in A:"), EPS_ADC_DEF_CUR_SENSE_RES, EPS_ADC_DEF_CUR_SENSE_VREF)
