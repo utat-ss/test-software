@@ -18,6 +18,9 @@ eeprom:
 	hexdump eeprom.bin
 
 harness:
+	@echo "Computing hash on file..."
+	shasum -a 256 $(PROG)
+	@read -p "Press enter to continue: "
 	$(PYTHON) ./harness.py -p $(PORT) -u $(UART) -d ./ -b $(PROG) -v
 
 hash:
@@ -44,4 +47,7 @@ write_optical_fuses:
 	make write_fuses EFUSE=0xf8 HFUSE=0xd7 LFUSE=0xff
 
 upload:
+	@echo "Computing hash on file..."
+	shasum -a 256 $(PROG)
+	@read -p "Press enter to continue: "
 	avrdude -c $(PGMR) -C ./$(CONF) -p $(DEVICE) -P $(PORT) -U flash:w:./$(PROG)
