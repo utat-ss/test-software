@@ -17,12 +17,6 @@ eeprom:
 	@echo "Displaying eeprom.bin in hex..."
 	hexdump eeprom.bin
 
-harness:
-	@echo "Computing hash on file..."
-	shasum -a 256 $(PROG)
-	@read -p "Press enter to continue: "
-	$(PYTHON) ./harness.py -p $(PORT) -u $(UART) -d ./ -b $(PROG) -v
-
 hash:
 	@for file in ./* ; do \
 		shasum -a 256 $$file ; \
@@ -34,17 +28,23 @@ ports:
 read_fuses:
 	avrdude -P $(PORT) -c $(PGMR) -p $(DEVICE) -v
 
+write_fuses:
+	avrdude -U efuse:w:$(EFUSE):m -U hfuse:w:$(HFUSE):m -U lfuse:w:$(LFUSE):m -c $(PGMR) -p $(DEVICE) -P $(PORT)
+
 write_debug_fuses:
 	make write_fuses EFUSE=0xf9 HFUSE=0xd7 LFUSE=0xff
 
 write_flight_fuses:
 	make write_fuses EFUSE=0xf9 HFUSE=0xdf LFUSE=0xff
 
-write_fuses:
-	avrdude -U efuse:w:$(EFUSE):m -U hfuse:w:$(HFUSE):m -U lfuse:w:$(LFUSE):m -c $(PGMR) -p $(DEVICE) -P $(PORT)
-
 write_optical_fuses:
 	make write_fuses EFUSE=0xf8 HFUSE=0xd7 LFUSE=0xff
+
+harness:
+	@echo "Computing hash on file..."
+	shasum -a 256 $(PROG)
+	@read -p "Press enter to continue: "
+	$(PYTHON) ./harness.py -p $(PORT) -u $(UART) -d ./ -b $(PROG) -v
 
 upload:
 	@echo "Computing hash on file..."
