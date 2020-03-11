@@ -51,6 +51,7 @@ ADC_V_REF = 5.0
 ADC_CUR_SENSE_AMP_GAIN  = 100.0
 
 EFUSE_IMON_CUR_GAIN = 246e-6
+EFUSE_IMON_SENSE_RES = 511
 
 DAC_VREF        = 2.5
 DAC_VREF_GAIN   = 2
@@ -177,6 +178,15 @@ returns - in C
 def adc_raw_to_therm_temp(raw_data):
     return therm_res_to_temp(therm_vol_to_res(adc_raw_to_ch_vol(raw_data)))
 
+
+'''
+Converts the temperature measured by a
+    thermistor to raw 12 bit data from an ADC channel.
+temp - in C
+returns - 12 bits
+'''
+def adc_therm_temp_to_raw(temp):
+    return adc_ch_vol_to_raw(therm_res_to_vol(therm_temp_to_res(temp)))
 
 
 '''

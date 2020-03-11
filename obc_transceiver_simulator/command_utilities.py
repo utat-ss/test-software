@@ -107,7 +107,7 @@ def process_data_block(rx_packet):
         converted[0x0A] = adc_raw_to_circ_cur(fields[0x0A], EPS_ADC_DEF_CUR_SENSE_RES, EPS_ADC_DEF_CUR_SENSE_VREF)
         converted[0x0B] = adc_raw_to_circ_vol(fields[0x0B], EPS_ADC_VOL_SENSE_LOW_RES, EPS_ADC_VOL_SENSE_HIGH_RES)
         converted[0x0C] = adc_raw_to_circ_cur(fields[0x0C], EPS_ADC_DEF_CUR_SENSE_RES, EPS_ADC_DEF_CUR_SENSE_VREF)
-        converted[0x0D] = adc_raw_to_circ_cur(fields[0x0D], EPS_ADC_DEF_CUR_SENSE_RES, EPS_ADC_DEF_CUR_SENSE_VREF)
+        converted[0x0D] = adc_raw_to_efuse_cur(fields[0x0D], EFUSE_IMON_SENSE_RES)
         converted[0x0E] = adc_raw_to_therm_temp(fields[0x0E])
         converted[0x0F] = adc_raw_to_therm_temp(fields[0x0F])
         converted[0x10] = adc_raw_to_therm_temp(fields[0x10])

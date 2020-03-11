@@ -588,16 +588,28 @@ class SendPAYCANMessage(object):
             tx_data = input_int("Enter address: ")
         
         elif field_num == PAY_CTRL.SET_HEAT_SP:
-            tx_data = input_int("Enter address: ")
+            sp = float(input("Enter setpoint (in C): "))
+            tx_data = heater_setpoint_to_dac_raw_data(sp)
 
         elif field_num == PAY_CTRL.SET_INV_THERM_READING:
-            tx_data = input_int("Enter address: ")
+            temp = float(input("Enter temperature (in C): "))
+            tx_data = adc_therm_temp_to_raw(temp)
+
+        elif field_num == PAY_CTRL.GET_THERM_READING:
+            tx_data = input_int("Enter first thermistor index: ")
+
+        elif field_num == PAY_CTRL.GET_THERM_ERR_CODE:
+            tx_data = input_int("Enter first thermistor index: ")
 
         elif field_num == PAY_CTRL.SET_THERM_ERR_CODE:
-            tx_data = input_int("Enter address: ")
+            index = input_int("Enter first thermistor index: ")
+            err_code = input_int("Enter error code (0 = OK, 5 = Invalid, 6 = Valid): ")
+            tx_data = (index << 8) | err_code
 
         elif field_num == PAY_CTRL.SEND_OPT_SPI:
-            tx_data = input_int("Enter address: ")
+            first = input_int("Enter first byte: ")
+            second = input_int("Enter second byte: ")
+            tx_data = (first << 8) | second
 
         send_and_receive_pay_can(CAN.PAY_CTRL, field_num, tx_data)
 
@@ -634,10 +646,10 @@ class SendPAYCANMessage(object):
                 print("(n+1) reading: %f C" % adc_raw_to_therm_temp(one))
 
             elif field_num == PAY_CTRL.GET_THERM_ERR_CODE:
-                zero = (rx_data >> 24) & 0xFFFF
-                one = (rx_data >> 16) & 0xFFFF
-                two = (rx_data >> 8) & 0xFFFF
-                three = rx_data & 0xFFFF
+                zero = (rx_data >> 24) & 0xFF
+                one = (rx_data >> 16) & 0xFF
+                two = (rx_data >> 8) & 0xFF
+                three = rx_data & 0xFF
 
                 print("(n+0) code: 0x%x (%s) C" % (zero, pay_therm_err_code_to_str(zero)))
                 print("(n+1) code: 0x%x (%s) C" % (one, pay_therm_err_code_to_str(one)))
@@ -652,12 +664,12 @@ class SendPAYCANMessage(object):
                 last_exec_time = (rx_data >> 8) & 0xFFFFF
                 motor_status = rx_data & 0xFF
 
-                print("Fault 2: %d", fault2)
-                print("Fault 1: %d", fault1)
-                print("Limit switch 2: %d", lim2)
-                print("Limit switch 1: %d", lim1)
-                print("Last execution time: %d", last_exec_time)
-                print("Motor status: %d", motor_status)
+                print("Fault 2: %d" % fault2)
+                print("Fault 1: %d" % fault1)
+                print("Limit switch 2: %d" % lim2)
+                print("Limit switch 1: %d" % lim1)
+                print("Last execution time: %d" % last_exec_time)
+                print("Motor status: %d" % motor_status)
 
             elif field_num == PAY_CTRL.SEND_OPT_SPI:
                 spi_opcode = (tx_packet.arg2 >> 8) & 0xFF
