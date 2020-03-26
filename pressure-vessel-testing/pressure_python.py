@@ -1,27 +1,55 @@
-# Python script to pull serial data
+#################################################################################
+#
+# Pressure Vessel Test Code
+# Written by: Dylan Vogel
+#
+# Python script for collecting UART sensor readings from PAY-SSM. Creates a nice
+# little live graph and log file. Intended to be used with the corresponding 
+# PAY-SSM test in: 
+# https://github.com/HeronMkII/pay/tree/master/manual_tests/pressure_vessel_test/
+#
+# Please check that the code version matches the one for PAY-SSM or else I give
+# no guarantees for code functionality.
+#
+# Code Version:       v1.0
+# 
+# HOOKUP:
+# RPi Zero
+# 
+#################################################################################
 
+import RPi.GPIO as GPIO
+import time
 import serial
 import datetime
 import os
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
-import time
+import traceback
 
-SERIAL_PORT = 'COM3'
+# check what this needs to be
+SERIAL_PORT = '/dev/ttyS0'
 BAUD_RATE = 9600
-TEST_NAME = 'Pressure_Test_01'
+TEST_NAME = 'Pressure_Test_02'
 LOG_DIR = './logs'
 TIMESTAMP_FORMAT = '%Y%m%d-%H%M%S'
+CONNECTION_TIMEOUT = 15
+LENGTH_GRAPH = 100
+RST_GPIO = 18
 
-global pressures, pres_coeff
-pressures = []
-pres_coeff = []
+global incoming_data
 
 # Initializes the output file for the pressure test, returns file object for
 # the output csv
 #
 def init_script():
+    GPIO.setmode(GPIO.BCM)
+    GPIO.setup(RST_GPIO, GPIO.OUT)
+    GPIO.output(RST_GPIO, GPIO.LOW)
+    time.sleep(1)
+    GPIO.output(RST_GPIO, GPIO.HIGH)
+
     # Check if logging directory exists
     logPath = os.path.abspath(LOG_DIR)
     if not os.path.exists(logPath):
@@ -33,79 +61,26 @@ def init_script():
     outFile = open(filename, 'w')
     return outFile
 
-# Perform a handshake with the arduino
+# Perform a handshake with the arduino. If handshake doesn't work out, terminates after CONNECTION_TIMEOUT
 def handshake(s):
     handshake = False
-    t0 = time.clock()
-    while not handshake and ((time.clock() - t0) < 15):
-        data = s.readline()
+    while not handshake:
+        try:
+            data = s.readline()
+            print(data)
+            if data == b'A\n':
+                s.write(b'A')
+                handshake = True
+        except:
+            print()
+            raise SystemExit
+
+    data = s.readline()
+    while (data == b'A\n'):
         print(data)
-        if data == b'1\r\n':
-            s.write(b'2')
-            print('Handshake recieved on python')
-            handshake = True
-        time.sleep(1);
-    if ((time.clock() - t0 >= 15)):
-        print('Timeout occurred')
-        raise SystemExit
-    t0 = time.clock()
-    while data != b'3\r\n' and ((time.clock() - t0) < 15):   
-        print(data)
-        data = s.readline();
-    if ((time.clock() - t0 >= 15)):
-        print('Timeout occurred')
-        raise SystemExit
+        continue;
+
     print('Completed handshake')
-        
-def get_coeff(s):
-    global pres_coeff
-    print('Reading conversion coefficients')
-    for i in range(0, 8):
-        data = int(s.readline())
-        print('Coefficient ' + str(i) +': ' + str(data))
-        pres_coeff.append(data)
-    print('Finished reading the conversion coefficients')
-
-    
-
-def convert_pressure(rawPres, rawTemp):
-    # Returns - D1 is pressure --- D2 is temperature
-    # Returns - raw pressure - need to treat as signed int32_t and divide by 1000 to get the value in kPa
-    # raw_temperature - return value (value of TEMP)
-    # gives 24 bit result
-    # from p.13 of datasheet
-    #uint32_t pres_convert_raw_uncompensated_data_to_raw_pressure(uint32_t D1, uint32_t D2, uint32_t *raw_temperature){
-    global pres_coeff
-    
-    dT = rawTemp - (pres_coeff[5] * 2**8)  # difference between actual and reference temperature
-    TEMP = 2000 + (dT * pres_coeff[6] / 2**23)  # actual temperature
-
-    OFF = (pres_coeff[2] * 2**16) + (pres_coeff[4] * dT / 2**7)  # offset at actual temperature
-    SENS = (pres_coeff[1] * 2**15) + (pres_coeff[3] * dT / 2**8)  # sensetivity at actual temperature
-    '''
-    if(TEMP < 2000): # low temperature
-        T2 = (dT * dT) / 2147483648
-        T2 = T2
-        OFF2 = 3 * ((TEMP - 2000) * (TEMP - 2000))
-        SENS2 = 7 * ((TEMP - 2000) * (TEMP - 2000)) / 8
-
-        if(TEMP < -1500):  # very low temperature
-            SENS2 += 2 * ((TEMP + 1500) * (TEMP + 1500))
-    else:  # high temperature
-        T2 = 0
-        OFF2 = 0
-        SENS2 = 0
-
-        if(TEMP >= 4500):  # very high temperature
-            SENS2 = SENS2 - (((TEMP - 4500) * (TEMP - 4500)) / 8)
-    TEMP = TEMP - T2
-    OFF = OFF - OFF2
-    SENS = SENS - SENS2
-    '''
-    pressure = ((rawPres * SENS / 2**21) - OFF) / 2**15
-
-    return pressure / 100
-    
 
 # Generator function to read the serial port
 #
@@ -113,66 +88,105 @@ def read_serial(s, outfile):
     while True:
         line = str(s.readline())
         nums = line.split(',')
-        nums[0] = int(nums[0].replace("b'", ""))
-        nums[1] = int(nums[1].replace("\\r\\n'", ""))
+        # TODO: Check these
+        nums[0] = float(nums[0].replace("b'", ""))
+        nums[1] = float(nums[1].replace("", ""))
+        nums[2] = float(nums[2].replace("\\n'",""))
         print(nums)
-        pressure = convert_pressure(nums[0], nums[1])
-        print("Pressure: " + str(pressure))
-        write_output(pressure, outfile)
-        yield pressure
+        write_output(nums, outfile)
+        nums = np.array(nums)
+        yield nums
     
 # Function exists in case I want to do any fancy formatting or processing before
 # writing the output
 #
-def write_output(value, file):
+def write_output(values, file):
+    date = datetime.datetime.now().strftime('%Y-%m-%d')
     time = datetime.datetime.now().strftime('%H:%M:%S')
-    file.write(time + ',' + str(value) + ',\n')
+    file.write(date + ',' + time + ',')
+    for value in values:
+        file.write(str(value) + ',')
+    file.write('\n')
+        
 
-def test_animation(mu):
+def test_animate(mu):
     while True:
         p = 101.3 + mu * np.random.randn()
-        yield p
+        t = 23.5 + mu * np.random.randn()
+        h = 57 + mu * np.random.randn()
+        yield np.array([p, t, h])
     
 
 def animate(i, x, read_next):
-    global pressures
-    
-    pressures.append(next(read_next))
-    numReadings = len(pressures)
-    
-    if numReadings > 100:
+    global incoming_data
+
+    # pressures
+    data = next(read_next)
+    incoming_data = np.vstack((incoming_data, data))
+    num_readings = incoming_data.shape[0]
+
+    if num_readings > LENGTH_GRAPH:
         xvals = x
-        yvals = pressures[-100:]
+        incoming_data = incoming_data[-LENGTH_GRAPH:]
     else:
-        xvals = x[0:numReadings]
-        yvals = pressures
-    line.set_xdata(xvals)
-    line.set_ydata(yvals)
-    return line,
+        xvals = x[0:num_readings]
+
+    line[0].set_data(xvals, incoming_data[:,0])
+    line[1].set_data(xvals, incoming_data[:,1])
+    line[2].set_data(xvals, incoming_data[:,2])
+    
+    return line
+
+def exit_script(file, s_port):
+    file.close()
+    s_port.close()
 
 if __name__ == "__main__":
+    global incoming_data
+    s = serial.Serial(
+        port = SERIAL_PORT,
+        baudrate = BAUD_RATE,
+        timeout = CONNECTION_TIMEOUT
+        )
+    outfile = init_script()
+
     try:
-        s = serial.Serial(SERIAL_PORT, BAUD_RATE)
-        outfile = init_script()
         handshake(s)
-        get_coeff(s)
         print('Setting up the generator')
         read_next = read_serial(s, outfile)
-        time.sleep(1);
+        # read_next = test_animate(10)
+        incoming_data = next(read_next)
+        x = np.arange(0, LENGTH_GRAPH, 1)
         print('Starting main loop')
-        fig, ax = plt.subplots()
+        fig, (ax1, ax2, ax3) = plt.subplots(nrows=3, ncols=1, sharex=True)
         
-        x = np.arange(0, 100, 1)
-        line, = ax.plot([],[])
-        ax.set_xlim(0, 100)
-        ax.set_ylim(50, 250)
-        ax.set_ylabel('Pressure (kPa)')
+        # pressure
+        line1, = ax1.plot([], [], 'b')
+        line2, = ax2.plot([], [], 'r')
+        line3, = ax3.plot([], [], 'g')
+
+        # Pressure
+        ax1.set_xlim(0, LENGTH_GRAPH)
+        ax1.set_ylim(0,250)
+        ax1.set_ylabel('Pressure (kPa)')
+        # Temperature
+        ax2.set_ylim(0,100)
+        ax2.set_ylabel('Temperature (C)')
+
+        # Humidity
+        ax3.set_ylim(0,100)
+        ax3.set_ylabel('Humidity (%RH)')
+
+        for ax in [ax1, ax2, ax3]:
+            ax.minorticks_on()
+            ax.grid(b=True, which='major', linestyle='--')
+            ax.grid(b=True, which='minor', linestyle=':')
         
+        line = [line1, line2, line3]
+
         print('Starting animation')
-        ani = animation.FuncAnimation(fig, animate, fargs=(x, read_next), blit=True)
+        ani = animation.FuncAnimation(fig, animate, fargs=(x, read_next), blit=False)
         plt.show()
-        
     except:
-        print('Closing the serial port')
-        outfile.close()
-        s.close()
+        exit_script(outfile, s)
+        
