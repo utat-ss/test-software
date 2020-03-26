@@ -63,7 +63,7 @@ if __name__ == "__main__":
             dt_string = now.strftime("%Y-%m-%d, %H:%M:%S")
             # print("Date and time:", dt_string)	
 
-            line = dt_string + line + "\n"
+            line = dt_string + ": " + line + "\n"
 
             print(line)
             read_file.write(line)
