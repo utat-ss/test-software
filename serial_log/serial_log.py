@@ -18,10 +18,10 @@ except ImportError:
 
 
 if __name__ == "__main__":    
-    print("TVAC test starting...")
+    print("Starting serial log...")
 
     # It is necessary for the user to specify the UART port
-    parser = argparse.ArgumentParser(description=("TVAC test"))
+    parser = argparse.ArgumentParser(description=("Serial log"))
     # Method arguments include (in order), expected shell text, name of that argument (used below),
     # nargs specifies the number of arguments, with '+' inserting arguments of that type into a list
     # required is self-explanatory, metavar assigns a displayed name to each argument when using the help argument
