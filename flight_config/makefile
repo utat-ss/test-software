@@ -22,8 +22,12 @@ hash:
 		shasum -a 256 $$file ; \
 	done
 
+# TODO - test on macOS, Windows, Linux
 ports:
-	ls /dev/tty.*
+	@echo "Programming port(s):"
+	pavr2cmd --prog-port
+	@echo "UART port(s):"
+	pavr2cmd --ttl-port
 
 read_fuses:
 	avrdude -P $(PORT) -c $(PGMR) -p $(DEVICE) -v
