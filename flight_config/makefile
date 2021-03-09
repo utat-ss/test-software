@@ -38,7 +38,6 @@ else
 	done
 endif
 
-# TODO - test on macOS, Windows, Linux
 ports:
 	@echo "Programming port(s):"
 	pavr2cmd --prog-port
